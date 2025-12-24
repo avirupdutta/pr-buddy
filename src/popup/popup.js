@@ -12,25 +12,40 @@ const ELEMENTS = {
 
 // Load saved state
 document.addEventListener("DOMContentLoaded", () => {
-  chrome.storage.local.get(
-    [
-      "prTemplate",
-      "customContext",
-      "autoUpdate",
-      "includeTickets",
-      "descriptionTone",
-    ],
-    (result) => {
-      if (result.prTemplate) ELEMENTS.templateSelect.value = result.prTemplate;
-      if (result.customContext)
-        ELEMENTS.customContext.value = result.customContext;
-      if (result.autoUpdate !== undefined)
-        ELEMENTS.autoUpdateToggle.checked = result.autoUpdate;
-      if (result.includeTickets !== undefined)
-        ELEMENTS.includeTicketsToggle.checked = result.includeTickets;
-      // Tone selection logic would go here (add active class to buttons)
+  // Check for API Keys first
+  chrome.storage.local.get(["githubToken", "openRouterKey"], (result) => {
+    if (!result.githubToken || !result.openRouterKey) {
+      if (chrome.runtime.openOptionsPage) {
+        chrome.runtime.openOptionsPage();
+      } else {
+        window.open(chrome.runtime.getURL("options/index.html"));
+      }
+      window.close();
+      return;
     }
-  );
+
+    // Load user preferences if keys exist
+    chrome.storage.local.get(
+      [
+        "prTemplate",
+        "customContext",
+        "autoUpdate",
+        "includeTickets",
+        "descriptionTone",
+      ],
+      (result) => {
+        if (result.prTemplate)
+          ELEMENTS.templateSelect.value = result.prTemplate;
+        if (result.customContext)
+          ELEMENTS.customContext.value = result.customContext;
+        if (result.autoUpdate !== undefined)
+          ELEMENTS.autoUpdateToggle.checked = result.autoUpdate;
+        if (result.includeTickets !== undefined)
+          ELEMENTS.includeTicketsToggle.checked = result.includeTickets;
+        // Tone selection logic would go here (add active class to buttons)
+      }
+    );
+  });
 });
 
 // Save state on change
