@@ -8,6 +8,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch((err) => sendResponse({ success: false, error: err.message }));
     return true; // Async response
   }
+
+  if (request.action === "UPDATE_PR_DESCRIPTION") {
+    handleUpdatePR(request)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true; // Async response
+  }
 });
 
 async function handleGeneration(request) {
@@ -25,7 +32,9 @@ async function handleGeneration(request) {
   // 2. Parse GitHub URL
   const prDetails = parseGitHubUrl(url);
   if (!prDetails) {
-    throw new Error("Invalid GitHub PR URL.");
+    throw new Error(
+      "Invalid GitHub PR URL. Please navigate to a PR page like: github.com/owner/repo/pull/123"
+    );
   }
 
   // 3. Fetch PR Data
@@ -39,15 +48,49 @@ async function handleGeneration(request) {
     openRouterKey
   );
 
-  // 5. Update content if auto-update is on
-  if (settings.autoUpdate && request.tabId) {
-    chrome.tabs.sendMessage(request.tabId, {
-      action: "UPDATE_DESCRIPTION",
-      description: description,
-    });
+  return { success: true, description, prDetails };
+}
+
+async function handleUpdatePR(request) {
+  const { url, description } = request;
+
+  // 1. Get GitHub Token
+  const { githubToken } = await chrome.storage.local.get(["githubToken"]);
+  if (!githubToken) {
+    throw new Error("Missing GitHub Token. Please configure it in Settings.");
   }
 
-  return { success: true, description };
+  // 2. Parse GitHub URL
+  const prDetails = parseGitHubUrl(url);
+  if (!prDetails) {
+    throw new Error("Invalid GitHub PR URL.");
+  }
+
+  // 3. Update PR via GitHub API
+  const { owner, repo, number } = prDetails;
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `token ${githubToken}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        body: description,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(
+      "Failed to update PR: " + (err.message || response.statusText)
+    );
+  }
+
+  return { success: true };
 }
 
 function parseGitHubUrl(url) {
@@ -69,8 +112,12 @@ async function fetchPRData({ owner, repo, number }, token) {
     `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
     { headers }
   );
-  if (!metaRes.ok)
-    throw new Error("Failed to fetch PR metadata: " + metaRes.statusText);
+  if (!metaRes.ok) {
+    const err = await metaRes.json();
+    throw new Error(
+      "Failed to fetch PR metadata: " + (err.message || metaRes.statusText)
+    );
+  }
   const metadata = await metaRes.json();
 
   // Fetch Diff
@@ -84,43 +131,125 @@ async function fetchPRData({ owner, repo, number }, token) {
 
   // Truncate diff if too large (approx 50k characters to be safe for now)
   if (diff.length > 50000) {
-    diff = diff.substring(0, 50000) + "\n...[Diff Truncated]...";
+    diff =
+      diff.substring(0, 50000) +
+      "\n...[Diff Truncated - showing first 50k characters]...";
   }
 
   return { diff, metadata };
 }
 
 async function generateWithAI(diff, metadata, settings, apiKey) {
+  const toneDescriptions = {
+    professional:
+      "Professional, formal, and detailed. Use clear technical language.",
+    casual: "Friendly and conversational, while still being informative.",
+    concise: "Brief and to the point. Focus on key changes only.",
+  };
+
+  const templateInstructions = {
+    default: `Structure the description with these sections:
+    ## Summary
+    Brief overview of what this PR does.
+    
+    ## Changes
+    - List the key changes made
+    
+    ## Testing
+    How this was tested.`,
+
+    bug: `Structure the description with these sections:
+    ## Bug Description
+    What was the bug?
+    
+    ## Root Cause
+    Why did this bug occur?
+    
+    ## Solution
+    How was it fixed?
+    
+    ## Testing
+    How the fix was verified.`,
+
+    feature: `Structure the description with these sections:
+    ## Feature Overview
+    What does this feature do?
+    
+    ## Implementation
+    How was it implemented?
+    
+    ## Usage
+    How to use this feature.
+    
+    ## Testing
+    How this was tested.`,
+
+    refactor: `Structure the description with these sections:
+    ## Refactor Overview
+    What was refactored and why?
+    
+    ## Changes
+    Key architectural or structural changes.
+    
+    ## Benefits
+    What improvements does this bring?
+    
+    ## Testing
+    How this was verified to not break existing functionality.`,
+
+    hotfix: `Structure the description with these sections:
+    ## Issue
+    What critical issue is being fixed?
+    
+    ## Fix
+    What was done to fix it?
+    
+    ## Impact
+    What systems/users are affected?
+    
+    ## Testing
+    Verification steps.`,
+  };
+
   const systemPrompt = `You are an expert software engineer assistant. Your task is to write a high-quality Pull Request description based on the provided code diffs and context.
-    
-    Output Format: Markdown.
-    
-    Templates:
-    - Default: Standard summary, changes, testing.
-    - Bug: Focus on the bug fix, root cause, and solution.
-    - Feature: Focus on new capabilities and usage.
-    - Refactor: Focus on architectural changes and benefits.
-    
-    Selected Template: ${settings.template}
-    Tone: Professional, Clear, Concise.
-    `;
+
+Output Format: Markdown.
+
+Writing Style: ${
+    toneDescriptions[settings.tone] || toneDescriptions.professional
+  }
+
+${templateInstructions[settings.template] || templateInstructions.default}
+
+Important guidelines:
+- Be specific about what changed
+- Reference file names when relevant
+- Keep it readable and scannable
+- Don't include the diff in your response
+- Don't make up information not present in the diff`;
 
   const userPrompt = `
-    PR Title: ${metadata.title}
-    User Context: ${settings.context || "None"}
-    Tickets to Include: ${
-      settings.includeTickets
-        ? "Auto-detect from branch name: " + metadata.head.ref
-        : "None"
-    }
+PR Title: ${metadata.title}
+Branch: ${metadata.head.ref} -> ${metadata.base.ref}
+${
+  settings.context ? `\nAdditional Context from User:\n${settings.context}` : ""
+}
+${
+  settings.includeTickets
+    ? `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them in the description.`
+    : ""
+}
 
-    Diff:
-    \`\`\`diff
-    ${diff}
-    \`\`\`
+File Changes Summary:
+- ${metadata.changed_files || "N/A"} files changed
+- +${metadata.additions || 0} additions, -${metadata.deletions || 0} deletions
 
-    Please generate the description now.
-    `;
+Diff:
+\`\`\`diff
+${diff}
+\`\`\`
+
+Please generate the PR description now based on the above information.`;
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
@@ -129,13 +258,11 @@ async function generateWithAI(diff, metadata, settings, apiKey) {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        // Start-Of-Change: Added HTTP-Referer and X-Title for OpenRouter rankings
-        "HTTP-Referer": "https://github.com/CodeBuddy-Extension",
+        "HTTP-Referer": "https://github.com/pr-buddy-extension",
         "X-Title": "PR Buddy",
-        // End-Of-Change
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001", // Using Gemini Flash as requested/implied availability
+        model: "google/gemini-2.0-flash-001",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
