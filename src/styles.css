@@ -38,3 +38,6 @@
 /* Complex Shadows approximation */
 .shadow-primary\/30 { box-shadow: 0 10px 15px -3px rgba(19, 91, 236, 0.3), 0 4px 6px -2px rgba(19, 91, 236, 0.15); }
 .shadow-primary\/20 { box-shadow: 0 10px 15px -3px rgba(19, 91, 236, 0.2), 0 4px 6px -2px rgba(19, 91, 236, 0.1); }
+
+/* Safety Polyfills for Options Page */
+.max-w-\[640px\] { max-width: 640px; }
