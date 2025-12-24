@@ -33,7 +33,7 @@
         }
     </style>
 </head>
-<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white transition-colors duration-200">
+<body class="bg-background-dark font-display text-white transition-colors duration-200">
 <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
 <!-- Main Layout -->
 <main class="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
@@ -44,59 +44,59 @@
 <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/30">
 <span class="material-symbols-outlined text-[28px]">extension</span>
 </div>
-<h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Extension Settings</h1>
+<h1 class="text-3xl font-bold tracking-tight text-white">Extension Settings</h1>
 </div>
-<p class="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-xl">
+<p class="text-text-secondary text-lg leading-relaxed max-w-xl">
                         Configure your API keys to enable AI-generated PR descriptions. Your keys are stored locally in your browser.
                     </p>
 </header>
 <!-- Settings Card -->
-<form class="flex flex-col gap-6 rounded-2xl bg-white dark:bg-surface-dark p-6 sm:p-8 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-700/50">
+<form class="flex flex-col gap-6 rounded-2xl bg-surface-dark p-6 sm:p-8 shadow-none border border-border-dark">
 <!-- GitHub Token Section -->
 <div class="flex flex-col gap-3">
 <div class="flex items-center justify-between">
-<label class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" for="github-token">
+<label class="text-sm font-semibold uppercase tracking-wider text-text-secondary" for="github-token">
                                 GitHub Personal Access Token
                             </label>
 <a class="text-xs font-medium text-primary hover:text-blue-400 hover:underline transition-colors flex items-center gap-1 group" href="#">
                                 Generate Token <span class="material-symbols-outlined text-[14px] group-hover:translate-x-0.5 transition-transform">open_in_new</span>
 </a>
 </div>
-<div class="form-input-wrapper group flex w-full items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-background-dark transition-all duration-200">
-<div class="flex h-12 w-12 items-center justify-center text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-slate-600/50">
+<div class="form-input-wrapper group flex w-full items-center rounded-xl border border-border-dark bg-background-dark transition-all duration-200">
+<div class="flex h-12 w-12 items-center justify-center text-text-secondary border-r border-border-dark">
 <span class="material-symbols-outlined">key</span>
 </div>
-<input class="h-12 w-full flex-1 bg-transparent px-4 py-2 text-base font-normal text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none border-none focus:ring-0" id="github-token" placeholder="ghp_************************************" type="password" value=""/>
-<button class="flex h-12 w-12 items-center justify-center text-slate-400 hover:text-primary transition-colors focus:outline-none" type="button">
+<input class="h-12 w-full flex-1 bg-transparent px-4 py-2 text-base font-normal text-white placeholder:text-text-secondary focus:outline-none border-none focus:ring-0" id="github-token" placeholder="ghp_************************************" type="password" value=""/>
+<button class="flex h-12 w-12 items-center justify-center text-text-secondary hover:text-primary transition-colors focus:outline-none" type="button">
 <span class="material-symbols-outlined">visibility_off</span>
 </button>
 </div>
-<p class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+<p class="flex items-center gap-2 text-xs text-text-secondary">
 <span class="material-symbols-outlined text-[16px] text-primary">info</span>
-                            Required scope: <span class="font-mono rounded bg-slate-100 dark:bg-slate-700 px-1 py-0.5 text-slate-700 dark:text-slate-200">repo</span> to read repository context.
+                            Required scope: <span class="font-mono rounded bg-background-dark border border-border-dark px-1 py-0.5 text-white">repo</span> to read repository context.
                         </p>
 </div>
-<div class="h-px w-full bg-slate-100 dark:bg-slate-700/50 my-1"></div>
+<div class="h-px w-full bg-border-dark my-1"></div>
 <!-- OpenRouter Key Section -->
 <div class="flex flex-col gap-3">
 <div class="flex items-center justify-between">
-<label class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" for="openrouter-key">
+<label class="text-sm font-semibold uppercase tracking-wider text-text-secondary" for="openrouter-key">
                                 OpenRouter API Key
                             </label>
 <a class="text-xs font-medium text-primary hover:text-blue-400 hover:underline transition-colors flex items-center gap-1 group" href="#">
                                 Get Key <span class="material-symbols-outlined text-[14px] group-hover:translate-x-0.5 transition-transform">open_in_new</span>
 </a>
 </div>
-<div class="form-input-wrapper group flex w-full items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-[#101622] transition-all duration-200">
-<div class="flex h-12 w-12 items-center justify-center text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-slate-600/50">
+<div class="form-input-wrapper group flex w-full items-center rounded-xl border border-border-dark bg-background-dark transition-all duration-200">
+<div class="flex h-12 w-12 items-center justify-center text-text-secondary border-r border-border-dark">
 <span class="material-symbols-outlined">smart_toy</span>
 </div>
-<input class="h-12 w-full flex-1 bg-transparent px-4 py-2 text-base font-normal text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none border-none focus:ring-0" id="openrouter-key" placeholder="sk-or-************************************" type="password" value=""/>
-<button class="flex h-12 w-12 items-center justify-center text-slate-400 hover:text-primary transition-colors focus:outline-none" type="button">
+<input class="h-12 w-full flex-1 bg-transparent px-4 py-2 text-base font-normal text-white placeholder:text-text-secondary focus:outline-none border-none focus:ring-0" id="openrouter-key" placeholder="sk-or-************************************" type="password" value=""/>
+<button class="flex h-12 w-12 items-center justify-center text-text-secondary hover:text-primary transition-colors focus:outline-none" type="button">
 <span class="material-symbols-outlined">visibility_off</span>
 </button>
 </div>
-<p class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+<p class="flex items-center gap-2 text-xs text-text-secondary">
 <span class="material-symbols-outlined text-[16px] text-primary">info</span>
                             Required to generate the text descriptions via LLM.
                         </p>
@@ -116,7 +116,7 @@
 </div>
 </form>
 <!-- Footer Info -->
-<div class="flex justify-center gap-6 text-sm text-slate-400 dark:text-slate-600">
+<div class="flex justify-center gap-6 text-sm text-text-secondary">
 <a class="hover:text-primary transition-colors" href="#">Documentation</a>
 <span>•</span>
 <a class="hover:text-primary transition-colors" href="#">Support</a>
@@ -127,7 +127,7 @@
 </main>
 <!-- Decoration Background -->
 <div class="pointer-events-none fixed inset-0 -z-10 flex justify-center overflow-hidden">
-<div class="h-[500px] w-[500px] rounded-full bg-[#135bec]/5 blur-[120px] dark:bg-[#135bec]/10"></div>
+<div class="h-[500px] w-[500px] rounded-full bg-[#135bec]/10 blur-[120px]"></div>
 </div>
 </div>
 <script src="options.js"></script>

@@ -262,7 +262,7 @@ Please generate the PR description now based on the above information.`;
         "X-Title": "PR Buddy",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
+        model: "xiaomi/mimo-v2-flash:free",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
