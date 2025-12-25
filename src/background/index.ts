@@ -9,7 +9,105 @@ import type {
   PRMetadata,
   GenerateResponse,
   UpdateResponse,
+  PRTemplate,
+  AIModel,
 } from "@/types/chrome";
+
+// Default templates (fallback if none in storage)
+const DEFAULT_TEMPLATES: PRTemplate[] = [
+  {
+    id: "default",
+    title: "Default",
+    structure: `## Describe your changes
+
+## Clickup link
+
+## PR Type
+
+- [ ] Backend
+- [ ] Frontend
+
+## Checklist before requesting a review
+
+- [x] I have self-reviewed my code.
+- [x] All my code is following Codebuddy Coding Standards and Guidelines.
+- [x] I have tested my code.
+- [x] My PR title is meaningful and max 60 characters.
+- [x] I have made sure only the changes in context of the feature are in this PR.
+- [x] I have made sure I am not including any env secrets in this PR.
+- [x] I have made sure the PR does not have conflict`,
+  },
+  {
+    id: "bug",
+    title: "Bug Fix Report",
+    structure: `## Bug Description
+What was the bug?
+
+## Root Cause
+Why did this bug occur?
+
+## Solution
+How was it fixed?
+
+## Testing
+How the fix was verified.`,
+  },
+  {
+    id: "feature",
+    title: "Feature Implementation",
+    structure: `## Feature Overview
+What does this feature do?
+
+## Implementation
+How was it implemented?
+
+## Usage
+How to use this feature.
+
+## Testing
+How this was tested.`,
+  },
+  {
+    id: "refactor",
+    title: "Code Refactor",
+    structure: `## Refactor Overview
+What was refactored and why?
+
+## Changes
+Key architectural or structural changes.
+
+## Benefits
+What improvements does this bring?
+
+## Testing
+How this was verified to not break existing functionality.`,
+  },
+  {
+    id: "hotfix",
+    title: "Hotfix",
+    structure: `## Issue
+What critical issue is being fixed?
+
+## Fix
+What was done to fix it?
+
+## Impact
+What systems/users are affected?
+
+## Testing
+Verification steps.`,
+  },
+];
+
+// Default AI model (fallback if none in storage)
+const DEFAULT_AI_MODELS: AIModel[] = [
+  {
+    id: "mimo-v2-flash",
+    name: "Xiaomi MiMo v2 Flash (Free)",
+    modelId: "xiaomi/mimo-v2-flash:free",
+    isActive: true,
+  },
+];
 
 // Message listener
 chrome.runtime.onMessage.addListener(
@@ -40,16 +138,38 @@ async function handleGeneration(
   url: string,
   settings: GeneratorSettings
 ): Promise<GenerateResponse> {
-  // 1. Get Credentials
+  // 1. Get Credentials, Templates, and Models
   const result = (await chrome.storage.local.get([
     "githubToken",
     "openRouterKey",
-  ])) as { githubToken?: string; openRouterKey?: string };
+    "templates",
+    "aiModels",
+  ])) as {
+    githubToken?: string;
+    openRouterKey?: string;
+    templates?: PRTemplate[];
+    aiModels?: AIModel[];
+  };
   const { githubToken, openRouterKey } = result;
+  const templates =
+    result.templates && result.templates.length > 0
+      ? result.templates
+      : DEFAULT_TEMPLATES;
+  const aiModels =
+    result.aiModels && result.aiModels.length > 0
+      ? result.aiModels
+      : DEFAULT_AI_MODELS;
 
   if (!githubToken || !openRouterKey) {
     throw new Error("Missing API Keys. Please configure them in Settings.");
   }
+
+  // Find active model
+  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+
+  // Find selected template
+  const selectedTemplate =
+    templates.find((t) => t.id === settings.templateId) || templates[0];
 
   // 2. Parse GitHub URL
   const prDetails = parseGitHubUrl(url);
@@ -67,6 +187,8 @@ async function handleGeneration(
     diff,
     metadata,
     settings,
+    selectedTemplate,
+    activeModel.modelId,
     openRouterKey
   );
 
@@ -179,85 +301,12 @@ const TONE_DESCRIPTIONS: Record<string, string> = {
   concise: "Brief and to the point. Focus on key changes only.",
 };
 
-const TEMPLATE_INSTRUCTIONS: Record<string, string> = {
-  default: `Structure the description with these sections:
-## Describe your changes
-
-## Clickup link
-
-## PR Type
-
-- [ ] Backend
-- [ ] Frontend
-
-## Checklist before requesting a review
-
-- [x] I have self-reviewed my code.
-- [x] All my code is following Codebuddy Coding Standards and Guidelines.
-- [x] I have tested my code.
-- [x] My PR title is meaningful and max 60 characters.
-- [x] I have made sure only the changes in context of the feature are in this PR.
-- [x] I have made sure I am not including any env secrets in this PR.
-- [x] I have made sure the PR does not have conflict
-`,
-
-  bug: `Structure the description with these sections:
-## Bug Description
-What was the bug?
-
-## Root Cause
-Why did this bug occur?
-
-## Solution
-How was it fixed?
-
-## Testing
-How the fix was verified.`,
-
-  feature: `Structure the description with these sections:
-## Feature Overview
-What does this feature do?
-
-## Implementation
-How was it implemented?
-
-## Usage
-How to use this feature.
-
-## Testing
-How this was tested.`,
-
-  refactor: `Structure the description with these sections:
-## Refactor Overview
-What was refactored and why?
-
-## Changes
-Key architectural or structural changes.
-
-## Benefits
-What improvements does this bring?
-
-## Testing
-How this was verified to not break existing functionality.`,
-
-  hotfix: `Structure the description with these sections:
-## Issue
-What critical issue is being fixed?
-
-## Fix
-What was done to fix it?
-
-## Impact
-What systems/users are affected?
-
-## Testing
-Verification steps.`,
-};
-
 async function generateWithAI(
   diff: string,
   metadata: PRMetadata,
   settings: GeneratorSettings,
+  template: PRTemplate,
+  modelId: string,
   apiKey: string
 ): Promise<string> {
   const systemPrompt = `You are an expert software engineer assistant. Your task is to write a high-quality Pull Request description based on the provided code diffs and context.
@@ -268,7 +317,8 @@ Writing Style: ${
     TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional
   }
 
-${TEMPLATE_INSTRUCTIONS[settings.template] || TEMPLATE_INSTRUCTIONS.default}
+Structure the description following this template format:
+${template.structure}
 
 Important guidelines:
 - Be specific about what changed
@@ -311,7 +361,7 @@ Please generate the PR description now based on the above information.`;
         "X-Title": "PR Buddy",
       },
       body: JSON.stringify({
-        model: "xiaomi/mimo-v2-flash:free",
+        model: modelId,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

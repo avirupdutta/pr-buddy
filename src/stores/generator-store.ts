@@ -1,11 +1,6 @@
 // Zustand store for PR description generator state
 import { create } from "zustand";
-import type {
-  TemplateType,
-  ToneType,
-  GeneratorSettings,
-  PRDetails,
-} from "@/types/chrome";
+import type { ToneType, PRDetails, GeneratorSettings } from "@/types/chrome";
 import { getStorage, setStorage } from "@/services/chrome-storage";
 import { generateDescription as generateDescriptionApi } from "@/services/chrome-messaging";
 
@@ -13,7 +8,7 @@ type ViewType = "generator" | "result";
 
 interface GeneratorState {
   // Form state
-  template: TemplateType;
+  template: string; // Now stores template ID instead of TemplateType
   tone: ToneType;
   context: string;
   includeTickets: boolean;
@@ -29,7 +24,7 @@ interface GeneratorState {
   error: string | null;
 
   // Actions
-  setTemplate: (template: TemplateType) => void;
+  setTemplate: (template: string) => void;
   setTone: (tone: ToneType) => void;
   setContext: (context: string) => void;
   toggleTickets: () => void;
@@ -41,7 +36,7 @@ interface GeneratorState {
 }
 
 const DEFAULT_STATE = {
-  template: "default" as TemplateType,
+  template: "default", // Default template ID
   tone: "professional" as ToneType,
   context: "",
   includeTickets: false,
@@ -91,7 +86,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
     try {
       const { template, tone, context, includeTickets } = get();
       const settings: GeneratorSettings = {
-        template,
+        templateId: template,
         tone,
         context,
         includeTickets,

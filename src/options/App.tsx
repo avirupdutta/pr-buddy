@@ -8,6 +8,13 @@ import {
   IconExternalLink,
   IconCode,
   IconArrowLeft,
+  IconTemplate,
+  IconCpu,
+  IconPlus,
+  IconPencil,
+  IconTrash,
+  IconCircleCheck,
+  IconX,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,11 +29,428 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Textarea } from "@/components/ui/textarea";
+import type { PRTemplate, AIModel } from "@/types/chrome";
 
-// ... existing imports ...
+// ============================================
+// Template Editor Component
+// ============================================
+interface TemplateEditorProps {
+  template?: PRTemplate;
+  onSave: (data: { title: string; structure: string }) => void;
+  onCancel: () => void;
+}
 
-// Separate component for the settings form - this mounts only after loading completes,
-// so useState initializers naturally receive the correct values from the store
+function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
+  const [title, setTitle] = useState(template?.title || "");
+  const [structure, setStructure] = useState(template?.structure || "");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !structure.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    onSave({ title: title.trim(), structure: structure.trim() });
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/30"
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="template-title">Template Title</Label>
+        <Input
+          id="template-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g., Bug Fix Report"
+          autoFocus
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="template-structure">Template Structure</Label>
+        <Textarea
+          id="template-structure"
+          value={structure}
+          onChange={(e) => setStructure(e.target.value)}
+          placeholder="Enter template structure with markdown..."
+          className="min-h-[200px] font-mono text-sm"
+        />
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          <IconX className="w-4 h-4 mr-1" />
+          Cancel
+        </Button>
+        <Button type="submit">
+          <IconCheck className="w-4 h-4 mr-1" />
+          {template ? "Update" : "Add"} Template
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ============================================
+// Model Editor Component
+// ============================================
+interface ModelEditorProps {
+  model?: AIModel;
+  onSave: (data: { name: string; modelId: string }) => void;
+  onCancel: () => void;
+}
+
+function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
+  const [name, setName] = useState(model?.name || "");
+  const [modelId, setModelId] = useState(model?.modelId || "");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !modelId.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    onSave({ name: name.trim(), modelId: modelId.trim() });
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/30"
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="model-name">Model Name</Label>
+        <Input
+          id="model-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g., GPT-4 Turbo"
+          autoFocus
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="model-id">Model ID</Label>
+        <Input
+          id="model-id"
+          value={modelId}
+          onChange={(e) => setModelId(e.target.value)}
+          placeholder="e.g., openai/gpt-4-turbo"
+          className="font-mono text-sm"
+        />
+        <p className="text-xs text-muted-foreground">
+          Enter the OpenRouter model ID (e.g., openai/gpt-4-turbo,
+          anthropic/claude-3-opus)
+        </p>
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          <IconX className="w-4 h-4 mr-1" />
+          Cancel
+        </Button>
+        <Button type="submit">
+          <IconCheck className="w-4 h-4 mr-1" />
+          {model ? "Update" : "Add"} Model
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ============================================
+// Templates Tab Component
+// ============================================
+function TemplatesTab() {
+  const { templates, addTemplate, updateTemplate, deleteTemplate } =
+    useSettingsStore();
+  const [editingTemplate, setEditingTemplate] = useState<PRTemplate | null>(
+    null
+  );
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAdd = async (data: { title: string; structure: string }) => {
+    try {
+      await addTemplate(data);
+      toast.success("Template added successfully");
+      setIsAdding(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add template"
+      );
+    }
+  };
+
+  const handleUpdate = async (data: { title: string; structure: string }) => {
+    if (!editingTemplate) return;
+    try {
+      await updateTemplate(editingTemplate.id, data);
+      toast.success("Template updated successfully");
+      setEditingTemplate(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update template"
+      );
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTemplate(id);
+      toast.success("Template deleted successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete template"
+      );
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-medium">PR Templates</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage your PR description templates
+          </p>
+        </div>
+        {!isAdding && !editingTemplate && (
+          <Button
+            size="sm"
+            onClick={() => {
+              setIsAdding(true);
+              setEditingTemplate(null);
+            }}
+          >
+            <IconPlus className="w-4 h-4 mr-1" />
+            Add Template
+          </Button>
+        )}
+      </div>
+
+      {isAdding && (
+        <TemplateEditor
+          onSave={handleAdd}
+          onCancel={() => setIsAdding(false)}
+        />
+      )}
+
+      {editingTemplate && (
+        <TemplateEditor
+          template={editingTemplate}
+          onSave={handleUpdate}
+          onCancel={() => setEditingTemplate(null)}
+        />
+      )}
+
+      <div className="flex flex-col gap-2">
+        {templates.map((template) => (
+          <div
+            key={template.id}
+            className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+          >
+            <div className="flex flex-col gap-1">
+              <span className="font-medium">{template.title}</span>
+              <span className="text-xs text-muted-foreground line-clamp-1">
+                {template.structure.substring(0, 80)}...
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  setEditingTemplate(template);
+                  setIsAdding(false);
+                }}
+              >
+                <IconPencil className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={() => handleDelete(template.id)}
+                disabled={templates.length <= 1}
+                title={
+                  templates.length <= 1
+                    ? "Cannot delete the last template"
+                    : "Delete template"
+                }
+              >
+                <IconTrash className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// AI Models Tab Component
+// ============================================
+function AIModelsTab() {
+  const { aiModels, addModel, updateModel, deleteModel, setActiveModel } =
+    useSettingsStore();
+  const [editingModel, setEditingModel] = useState<AIModel | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAdd = async (data: { name: string; modelId: string }) => {
+    try {
+      await addModel(data);
+      toast.success("Model added successfully");
+      setIsAdding(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add model"
+      );
+    }
+  };
+
+  const handleUpdate = async (data: { name: string; modelId: string }) => {
+    if (!editingModel) return;
+    try {
+      await updateModel(editingModel.id, data);
+      toast.success("Model updated successfully");
+      setEditingModel(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update model"
+      );
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteModel(id);
+      toast.success("Model deleted successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete model"
+      );
+    }
+  };
+
+  const handleSetActive = async (id: string) => {
+    try {
+      await setActiveModel(id);
+      toast.success("Active model updated");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to set active model"
+      );
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-medium">AI Models</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage AI models for generating descriptions
+          </p>
+        </div>
+        {!isAdding && !editingModel && (
+          <Button
+            size="sm"
+            onClick={() => {
+              setIsAdding(true);
+              setEditingModel(null);
+            }}
+          >
+            <IconPlus className="w-4 h-4 mr-1" />
+            Add Model
+          </Button>
+        )}
+      </div>
+
+      {isAdding && (
+        <ModelEditor onSave={handleAdd} onCancel={() => setIsAdding(false)} />
+      )}
+
+      {editingModel && (
+        <ModelEditor
+          model={editingModel}
+          onSave={handleUpdate}
+          onCancel={() => setEditingModel(null)}
+        />
+      )}
+
+      <div className="flex flex-col gap-2">
+        {aiModels.map((model) => (
+          <div
+            key={model.id}
+            className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+              model.isActive
+                ? "bg-primary/10 border-primary/50"
+                : "bg-card hover:bg-accent/50"
+            }`}
+          >
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{model.name}</span>
+                {model.isActive && (
+                  <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                    Active
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground font-mono">
+                {model.modelId}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              {!model.isActive && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-primary hover:text-primary"
+                  onClick={() => handleSetActive(model.id)}
+                  title="Set as active model"
+                >
+                  <IconCircleCheck className="w-4 h-4" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  setEditingModel(model);
+                  setIsAdding(false);
+                }}
+              >
+                <IconPencil className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={() => handleDelete(model.id)}
+                disabled={aiModels.length <= 1}
+                title={
+                  aiModels.length <= 1
+                    ? "Cannot delete the last model"
+                    : "Delete model"
+                }
+              >
+                <IconTrash className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Settings Form Component
+// ============================================
 interface SettingsFormProps {
   initialGithubToken: string;
   initialOpenRouterKey: string;
@@ -69,15 +493,25 @@ function SettingsForm({
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
+  // Calculate grid columns based on available tabs
+  // We use explicit class names so Tailwind can detect them
+  const gridCols = isDev ? "grid-cols-4" : "grid-cols-3";
+
   return (
     <div className="flex flex-col gap-6">
       <Tabs defaultValue="general" className="w-full">
-        <TabsList
-          className={`grid w-full ${isDev ? "grid-cols-2" : "grid-cols-1"}`}
-        >
+        <TabsList className={`grid w-full ${gridCols}`}>
           <TabsTrigger value="general" className="gap-2">
             <IconPuzzle className="w-4 h-4" />
             General
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="gap-2">
+            <IconTemplate className="w-4 h-4" />
+            Templates
+          </TabsTrigger>
+          <TabsTrigger value="ai-models" className="gap-2">
+            <IconCpu className="w-4 h-4" />
+            AI Models
           </TabsTrigger>
           {isDev && (
             <TabsTrigger value="developer" className="gap-2">
@@ -166,6 +600,14 @@ function SettingsForm({
           </div>
         </TabsContent>
 
+        <TabsContent value="templates" className="mt-4">
+          <TemplatesTab />
+        </TabsContent>
+
+        <TabsContent value="ai-models" className="mt-4">
+          <AIModelsTab />
+        </TabsContent>
+
         {isDev && (
           <TabsContent value="developer" className="flex flex-col gap-6 mt-4">
             <div className="flex items-center justify-between space-x-2">
@@ -234,6 +676,9 @@ function SettingsForm({
   );
 }
 
+// ============================================
+// Main Options App Component
+// ============================================
 export function OptionsApp() {
   const {
     githubToken,

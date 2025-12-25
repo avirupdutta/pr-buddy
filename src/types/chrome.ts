@@ -1,5 +1,21 @@
 // Chrome extension message types for type-safe communication
 
+// PR Template for CRUD management
+export interface PRTemplate {
+  id: string;
+  title: string;
+  structure: string;
+}
+
+// AI Model for CRUD management
+export interface AIModel {
+  id: string;
+  name: string;
+  modelId: string;
+  isActive: boolean;
+}
+
+// Legacy type - kept for backwards compatibility during migration
 export type TemplateType =
   | "default"
   | "bug"
@@ -15,7 +31,7 @@ export interface PRDetails {
 }
 
 export interface GeneratorSettings {
-  template: TemplateType;
+  templateId: string; // Template ID from user-defined templates
   context: string;
   tone: ToneType;
   includeTickets: boolean;
@@ -76,10 +92,12 @@ export interface StoredSettings {
   devMode?: boolean;
   devPrUrl?: string;
   theme?: "dark" | "light" | "system";
+  templates?: PRTemplate[];
+  aiModels?: AIModel[];
 }
 
 export interface StoredPreferences {
-  prTemplate?: TemplateType;
+  prTemplate?: string; // Template ID
   customContext?: string;
   includeTickets?: boolean;
   descriptionTone?: ToneType;

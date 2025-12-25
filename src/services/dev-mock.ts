@@ -1,6 +1,104 @@
 // Mock Chrome APIs for development in browser context
 // This file provides fallbacks when chrome.* APIs are not available
 
+import type { PRTemplate, AIModel } from "@/types/chrome";
+
+// Default templates (same as background script)
+const DEFAULT_TEMPLATES: PRTemplate[] = [
+  {
+    id: "default",
+    title: "Default",
+    structure: `## Describe your changes
+
+## Clickup link
+
+## PR Type
+
+- [ ] Backend
+- [ ] Frontend
+
+## Checklist before requesting a review
+
+- [x] I have self-reviewed my code.
+- [x] All my code is following Codebuddy Coding Standards and Guidelines.
+- [x] I have tested my code.
+- [x] My PR title is meaningful and max 60 characters.
+- [x] I have made sure only the changes in context of the feature are in this PR.
+- [x] I have made sure I am not including any env secrets in this PR.
+- [x] I have made sure the PR does not have conflict`,
+  },
+  {
+    id: "bug",
+    title: "Bug Fix Report",
+    structure: `## Bug Description
+What was the bug?
+
+## Root Cause
+Why did this bug occur?
+
+## Solution
+How was it fixed?
+
+## Testing
+How the fix was verified.`,
+  },
+  {
+    id: "feature",
+    title: "Feature Implementation",
+    structure: `## Feature Overview
+What does this feature do?
+
+## Implementation
+How was it implemented?
+
+## Usage
+How to use this feature.
+
+## Testing
+How this was tested.`,
+  },
+  {
+    id: "refactor",
+    title: "Code Refactor",
+    structure: `## Refactor Overview
+What was refactored and why?
+
+## Changes
+Key architectural or structural changes.
+
+## Benefits
+What improvements does this bring?
+
+## Testing
+How this was verified to not break existing functionality.`,
+  },
+  {
+    id: "hotfix",
+    title: "Hotfix",
+    structure: `## Issue
+What critical issue is being fixed?
+
+## Fix
+What was done to fix it?
+
+## Impact
+What systems/users are affected?
+
+## Testing
+Verification steps.`,
+  },
+];
+
+// Default AI model
+const DEFAULT_AI_MODELS: AIModel[] = [
+  {
+    id: "mimo-v2-flash",
+    name: "Xiaomi MiMo v2 Flash (Free)",
+    modelId: "xiaomi/mimo-v2-flash:free",
+    isActive: true,
+  },
+];
+
 /**
  * Check if we're running in a Chrome extension context
  */
@@ -175,9 +273,29 @@ async function handleDevGeneration(
   const githubToken = devStorage.githubToken as string;
   const openRouterKey = devStorage.openRouterKey as string;
 
+  // Get templates and models from storage or use defaults
+  const templates = (devStorage.templates as PRTemplate[]) || DEFAULT_TEMPLATES;
+  const aiModels = (devStorage.aiModels as AIModel[]) || DEFAULT_AI_MODELS;
+
   if (!githubToken || !openRouterKey) {
     throw new Error("Missing API Keys. Please configure them in Settings.");
   }
+
+  // Find active model
+  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+
+  // Parse settings
+  const s =
+    (settings as {
+      templateId?: string;
+      tone?: string;
+      context?: string;
+      includeTickets?: boolean;
+    }) || {};
+
+  // Find selected template
+  const selectedTemplate =
+    templates.find((t) => t.id === s.templateId) || templates[0];
 
   // Parse GitHub URL
   const regex = /github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/;
@@ -219,17 +337,12 @@ async function handleDevGeneration(
   }
 
   // Generate with AI
-  const s =
-    (settings as {
-      template?: string;
-      tone?: string;
-      context?: string;
-      includeTickets?: boolean;
-    }) || {};
   const description = await generateWithOpenRouter(
     diff,
     metadata,
     s,
+    selectedTemplate,
+    activeModel.modelId,
     openRouterKey
   );
 
@@ -271,6 +384,12 @@ async function handleDevUpdatePR(
   return { success: true };
 }
 
+const TONE_DESCRIPTIONS: Record<string, string> = {
+  professional: "Professional, formal, and detailed.",
+  casual: "Friendly and conversational.",
+  concise: "Brief and to the point.",
+};
+
 async function generateWithOpenRouter(
   diff: string,
   metadata: {
@@ -282,22 +401,23 @@ async function generateWithOpenRouter(
     deletions?: number;
   },
   settings: {
-    template?: string;
+    templateId?: string;
     tone?: string;
     context?: string;
     includeTickets?: boolean;
   },
+  template: PRTemplate,
+  modelId: string,
   apiKey: string
 ): Promise<string> {
-  const tones: Record<string, string> = {
-    professional: "Professional, formal, and detailed.",
-    casual: "Friendly and conversational.",
-    concise: "Brief and to the point.",
-  };
-
   const systemPrompt = `You are an expert software engineer. Write a PR description in Markdown.
-Style: ${tones[settings.tone || "professional"] || tones.professional}
-Include: Summary, Changes, Testing sections.`;
+Style: ${
+    TONE_DESCRIPTIONS[settings.tone || "professional"] ||
+    TONE_DESCRIPTIONS.professional
+  }
+
+Structure the description following this template format:
+${template.structure}`;
 
   const userPrompt = `PR Title: ${metadata.title}
 Branch: ${metadata.head.ref} -> ${metadata.base.ref}
@@ -327,7 +447,7 @@ ${diff}
         "X-Title": "PR Buddy",
       },
       body: JSON.stringify({
-        model: "xiaomi/mimo-v2-flash:free",
+        model: modelId,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
