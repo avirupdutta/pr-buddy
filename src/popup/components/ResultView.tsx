@@ -23,6 +23,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     setGeneratedDescription,
     generate,
     isGenerating,
+    reset,
   } = useGeneratorStore();
 
   const [isCopied, setIsCopied] = useState(false);
@@ -46,6 +47,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     try {
       await updatePRDescription(currentUrl, generatedDescription);
       toast.success("PR description updated!");
+      reset();
       setTimeout(() => window.close(), 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update PR");

@@ -7,6 +7,7 @@ import {
   IconCheck,
   IconExternalLink,
   IconCode,
+  IconArrowLeft,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { toast } from "sonner";
 import { isDev } from "@/services/is-dev";
+import { isExtensionContext } from "@/services/dev-mock";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -251,6 +253,22 @@ export function OptionsApp() {
         <div className="w-full max-w-[640px] flex flex-col gap-8">
           {/* Header */}
           <header className="flex flex-col gap-4 text-center sm:text-left animate-in fade-in slide-in-from-top-4 duration-500">
+            {/* Back button for dev mode */}
+            {!isExtensionContext() && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-fit -ml-2 gap-1 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  window.dispatchEvent(
+                    new CustomEvent("dev-navigate", { detail: { path: "/" } })
+                  );
+                }}
+              >
+                <IconArrowLeft className="w-4 h-4" />
+                Back to Popup
+              </Button>
+            )}
             <div className="flex items-center justify-center sm:justify-start gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
                 <IconPuzzle className="w-7 h-7" />
