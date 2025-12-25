@@ -4,7 +4,6 @@ import { useGeneratorStore } from "@/stores/generator-store";
 import { TemplateSelector } from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
 import { ContextInput } from "./ContextInput";
-import { TicketToggle } from "./TicketToggle";
 import { toast } from "sonner";
 import { openOptionsPage } from "@/services/chrome-messaging";
 
@@ -52,10 +51,12 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
         {/* Tone Selector */}
         <ToneSelector />
 
-        {/* Ticket Toggle */}
-        <div className="pt-2 border-t border-border/50">
+        {/* ================= */}
+        {/* Ticket Toggle - This is currently in progress. Will be introduced in a future release */}
+        {/* <div className="pt-2 border-t border-border/50">
           <TicketToggle />
-        </div>
+        </div> */}
+        {/* ================= */}
       </div>
 
       {/* Footer */}

@@ -8,7 +8,7 @@ export function ContextInput() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-baseline">
-        <Label className="text-sm font-medium">Custom Context</Label>
+        <Label className="text-sm font-medium">Custom Instructions</Label>
         <span className="text-xs text-muted-foreground">Optional</span>
       </div>
       <Textarea

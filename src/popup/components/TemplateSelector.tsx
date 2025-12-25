@@ -27,10 +27,10 @@ export function TemplateSelector() {
         value={template}
         onValueChange={(v) => setTemplate(v as TemplateType)}
       >
-        <SelectTrigger className="h-12 text-sm">
+        <SelectTrigger className="h-12 text-sm w-full">
           <SelectValue placeholder="Select a template" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent position="popper">
           {TEMPLATES.map((t) => (
             <SelectItem key={t.value} value={t.value}>
               {t.label}
