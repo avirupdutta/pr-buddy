@@ -7,6 +7,20 @@ import { ContextInput } from "./ContextInput";
 import { toast } from "sonner";
 import { openOptionsPage } from "@/services/chrome-messaging";
 import packageJson from "../../../package.json";
+import { useState, useEffect } from "react";
+
+const LOADING_LABELS = [
+  "Reading your diffs...",
+  "Thinking for you...",
+  "Translating code to human...",
+  "Summarizing the chaos...",
+  "Making you look pro...",
+  "Avoiding generic titles...",
+  "Impressing the boss...",
+  "Crafting the perfect PR...",
+  "Digging for context...",
+  "Explaining your genius...",
+];
 
 interface GeneratorViewProps {
   currentUrl: string;
@@ -14,6 +28,39 @@ interface GeneratorViewProps {
 
 export function GeneratorView({ currentUrl }: GeneratorViewProps) {
   const { generate, isGenerating, error } = useGeneratorStore();
+  const [loadingLabel, setLoadingLabel] = useState("Generating...");
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    let timeout: ReturnType<typeof setTimeout>;
+
+    if (isGenerating) {
+      // Set initial random label immediately but async to avoid linter warning
+      timeout = setTimeout(() => {
+        setLoadingLabel(
+          LOADING_LABELS[Math.floor(Math.random() * LOADING_LABELS.length)]
+        );
+      }, 0);
+
+      interval = setInterval(() => {
+        setLoadingLabel((prev) => {
+          const currentIndex = LOADING_LABELS.indexOf(prev);
+          const nextIndex = (currentIndex + 1) % LOADING_LABELS.length;
+          return LOADING_LABELS[nextIndex];
+        });
+      }, 2000);
+    } else {
+      // Reset label async to avoid linter warning
+      timeout = setTimeout(() => {
+        setLoadingLabel("Generating...");
+      }, 0);
+    }
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [isGenerating]);
 
   const handleGenerate = async () => {
     if (!currentUrl || !currentUrl.includes("github.com/")) {
@@ -65,13 +112,18 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
         <Button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className="w-full h-12 gap-2 text-base font-bold rounded-xl shadow-lg"
+          className="w-full h-12 gap-2 text-base font-bold rounded-xl shadow-lg transition-all duration-300"
           size="lg"
         >
           {isGenerating ? (
             <>
               <IconLoader2 className="w-5 h-5 animate-spin" />
-              <span>Generating...</span>
+              <span
+                className="animate-in fade-in slide-in-from-bottom-1 duration-300"
+                key={loadingLabel}
+              >
+                {loadingLabel}
+              </span>
             </>
           ) : (
             <>
