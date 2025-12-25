@@ -9,6 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ReactMarkdown from "react-markdown";
 import { useGeneratorStore } from "@/stores/generator-store";
 import { updatePRDescription } from "@/services/chrome-messaging";
 import { toast } from "sonner";
@@ -68,15 +70,42 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   return (
     <>
       <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Label className="text-sm font-medium">Generated Description</Label>
-          <Textarea
-            value={generatedDescription}
-            onChange={(e) => setGeneratedDescription(e.target.value)}
-            className="resize-none h-80 text-sm"
-            placeholder="Your generated description will appear here..."
-          />
-        </div>
+        <Tabs defaultValue="raw" className="flex flex-col gap-2 h-full">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">Generated Description</Label>
+            <TabsList className="h-8">
+              <TabsTrigger value="raw" className="text-xs">
+                Raw
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="text-xs">
+                Preview
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="raw" className="mt-0 flex-1">
+            <Textarea
+              value={generatedDescription}
+              onChange={(e) => setGeneratedDescription(e.target.value)}
+              className="resize-none h-80 w-full text-sm font-mono"
+              placeholder="Your generated description will appear here..."
+            />
+          </TabsContent>
+
+          <TabsContent value="preview" className="mt-0 flex-1">
+            <div className="h-80 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto">
+              {generatedDescription ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
+                  <ReactMarkdown>{generatedDescription}</ReactMarkdown>
+                </div>
+              ) : (
+                <div className="text-muted-foreground">
+                  Your generated description will appear here...
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
         <p className="text-xs text-muted-foreground text-center">
           Review the generated description above. You can copy it or auto-insert
           it into the PR.
