@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "PR Buddy - AI Description Generator",
-  "version": "2.0",
-  "description": "Generate detailed GitHub PR descriptions using AI.",
+  "version": "1.0",
+  "description": "Document your work seamlessly.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://github.com/*",

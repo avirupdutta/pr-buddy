@@ -89,12 +89,14 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-6">
-        {/* Template Selection */}
-        <TemplateSelector />
+      <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-6 justify-between">
+        <div className="flex flex-col gap-6">
+          {/* Template Selection */}
+          <TemplateSelector />
 
-        {/* Custom Context */}
-        <ContextInput />
+          {/* Custom Context */}
+          <ContextInput />
+        </div>
 
         {/* Tone Selector */}
         <ToneSelector />
