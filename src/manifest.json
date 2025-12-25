@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PR Buddy - AI Description Generator",
   "version": "1.0",
-  "description": "Generate detailed GitHub PR descriptions using AI.",
+  "description": "Document your work seamlessly.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://github.com/*",
@@ -10,20 +10,21 @@
     "https://openrouter.ai/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/index.ts",
+    "type": "module"
   },
   "action": {
-    "default_popup": "popup/index.html",
+    "default_popup": "src/popup/index.html",
     "default_title": "Generate PR Description"
   },
   "options_ui": {
-    "page": "options/index.html",
+    "page": "src/options/index.html",
     "open_in_tab": true
   },
   "content_scripts": [
     {
       "matches": ["https://github.com/*"],
-      "js": ["content.js"]
+      "js": ["src/content/index.ts"]
     }
   ]
 }
