@@ -23,7 +23,7 @@ These can be configured in the extension's settings page.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js `v20+` (LTS recommended)
 - pnpm (`npm install -g pnpm`)
 
 ### Build & Install
