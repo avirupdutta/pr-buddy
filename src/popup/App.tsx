@@ -5,6 +5,7 @@ import { getCurrentTabUrl, openOptionsPage } from "@/services/chrome-messaging";
 import { Header } from "./components/Header";
 import { GeneratorView } from "./components/GeneratorView";
 import { ResultView } from "./components/ResultView";
+import { isDev } from "@/services/is-dev";
 
 export function PopupApp() {
   const [currentUrl, setCurrentUrl] = useState<string>("");
@@ -29,7 +30,7 @@ export function PopupApp() {
     const fetchUrl = async () => {
       if (isLoadingSettings) return;
 
-      if (devMode && devPrUrl) {
+      if (isDev && devMode && devPrUrl) {
         setCurrentUrl(devPrUrl);
         return;
       }
@@ -63,7 +64,7 @@ export function PopupApp() {
   return (
     <div className="w-full h-full flex flex-col bg-background">
       <Header />
-      {devMode && (
+      {isDev && devMode && (
         <div className="bg-amber-500/10 text-amber-600 text-[10px] uppercase tracking-wider px-4 py-1 flex items-center justify-center font-bold border-b border-amber-500/20">
           Developer Mode Active using Sample PR
         </div>

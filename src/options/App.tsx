@@ -10,14 +10,17 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSettingsStore } from "@/stores/settings-store";
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { toast } from "sonner";
+import { isDev } from "@/services/is-dev";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+
+// ... existing imports ...
 
 // Separate component for the settings form - this mounts only after loading completes,
 // so useState initializers naturally receive the correct values from the store
@@ -66,15 +69,19 @@ function SettingsForm({
   return (
     <div className="flex flex-col gap-6">
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList
+          className={`grid w-full ${isDev ? "grid-cols-2" : "grid-cols-1"}`}
+        >
           <TabsTrigger value="general" className="gap-2">
             <IconPuzzle className="w-4 h-4" />
             General
           </TabsTrigger>
-          <TabsTrigger value="developer" className="gap-2">
-            <IconCode className="w-4 h-4" />
-            Developer
-          </TabsTrigger>
+          {isDev && (
+            <TabsTrigger value="developer" className="gap-2">
+              <IconCode className="w-4 h-4" />
+              Developer
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="general" className="flex flex-col gap-6 mt-4">
@@ -141,40 +148,42 @@ function SettingsForm({
           </div>
         </TabsContent>
 
-        <TabsContent value="developer" className="flex flex-col gap-6 mt-4">
-          <div className="flex items-center justify-between space-x-2">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="dev-mode" className="font-medium">
-                Developer Mode
-              </Label>
-              <span className="text-xs text-muted-foreground">
-                Enable testing with a sample PR URL instead of the active tab.
-              </span>
-            </div>
-            <Switch
-              id="dev-mode"
-              checked={localDevMode}
-              onCheckedChange={setLocalDevMode}
-            />
-          </div>
-
-          {localDevMode && (
-            <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Sample PR URL
-              </Label>
-              <Input
-                value={localDevPrUrl}
-                onChange={(e) => setLocalDevPrUrl(e.target.value)}
-                placeholder="https://github.com/owner/repo/pull/123"
-                className="font-mono text-sm"
+        {isDev && (
+          <TabsContent value="developer" className="flex flex-col gap-6 mt-4">
+            <div className="flex items-center justify-between space-x-2">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="dev-mode" className="font-medium">
+                  Developer Mode
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  Enable testing with a sample PR URL instead of the active tab.
+                </span>
+              </div>
+              <Switch
+                id="dev-mode"
+                checked={localDevMode}
+                onCheckedChange={setLocalDevMode}
               />
-              <p className="text-xs text-muted-foreground">
-                Enter a full GitHub pull request URL to test against.
-              </p>
             </div>
-          )}
-        </TabsContent>
+
+            {localDevMode && (
+              <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Sample PR URL
+                </Label>
+                <Input
+                  value={localDevPrUrl}
+                  onChange={(e) => setLocalDevPrUrl(e.target.value)}
+                  placeholder="https://github.com/owner/repo/pull/123"
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter a full GitHub pull request URL to test against.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Actions */}
