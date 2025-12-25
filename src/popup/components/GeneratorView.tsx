@@ -76,7 +76,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
           ) : (
             <>
               <IconSparkles className="w-5 h-5" />
-              <span>Generate Description</span>
+              <span>Generate</span>
             </>
           )}
         </Button>
