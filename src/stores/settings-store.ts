@@ -1,6 +1,7 @@
 // Zustand store for API key settings
 import { create } from "zustand";
 import { getStorage, setStorage } from "@/services/chrome-storage";
+import { encryptApiKey, decryptApiKey } from "@/services/encryption";
 import type { PRTemplate, AIModel } from "@/types/chrome";
 
 // Default templates based on current hardcoded values
@@ -183,9 +184,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         "templates",
         "aiModels",
       ]);
+
+      // Decrypt API keys
+      const decryptedGithubToken = result.githubToken
+        ? await decryptApiKey(result.githubToken)
+        : null;
+      const decryptedOpenRouterKey = result.openRouterKey
+        ? await decryptApiKey(result.openRouterKey)
+        : null;
+
       set({
-        githubToken: result.githubToken || null,
-        openRouterKey: result.openRouterKey || null,
+        githubToken: decryptedGithubToken,
+        openRouterKey: decryptedOpenRouterKey,
         devMode: result.devMode || false,
         devPrUrl: result.devPrUrl || null,
         theme: result.theme || "system",
@@ -212,11 +222,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ isSaving: true, error: null });
     try {
       const updates: Record<string, string | boolean | undefined> = {};
+
+      // Encrypt API keys before storing
       if (settings.githubToken !== undefined) {
-        updates.githubToken = settings.githubToken;
+        updates.githubToken = await encryptApiKey(settings.githubToken);
       }
       if (settings.openRouterKey !== undefined) {
-        updates.openRouterKey = settings.openRouterKey;
+        updates.openRouterKey = await encryptApiKey(settings.openRouterKey);
       }
       if (settings.devMode !== undefined) {
         updates.devMode = settings.devMode;

@@ -94,6 +94,7 @@ export interface StoredSettings {
   theme?: "dark" | "light" | "system";
   templates?: PRTemplate[];
   aiModels?: AIModel[];
+  encryptionSalt?: string; // Salt for API key encryption
 }
 
 export interface StoredPreferences {

@@ -12,6 +12,7 @@ import type {
   PRTemplate,
   AIModel,
 } from "@/types/chrome";
+import { decryptApiKey } from "@/services/encryption";
 
 // Default templates (fallback if none in storage)
 const DEFAULT_TEMPLATES: PRTemplate[] = [
@@ -150,7 +151,15 @@ async function handleGeneration(
     templates?: PRTemplate[];
     aiModels?: AIModel[];
   };
-  const { githubToken, openRouterKey } = result;
+
+  // Decrypt API keys
+  const githubToken = result.githubToken
+    ? await decryptApiKey(result.githubToken)
+    : null;
+  const openRouterKey = result.openRouterKey
+    ? await decryptApiKey(result.openRouterKey)
+    : null;
+
   const templates =
     result.templates && result.templates.length > 0
       ? result.templates
@@ -203,7 +212,12 @@ async function handleUpdatePR(
   const result = (await chrome.storage.local.get(["githubToken"])) as {
     githubToken?: string;
   };
-  const { githubToken } = result;
+
+  // Decrypt API key
+  const githubToken = result.githubToken
+    ? await decryptApiKey(result.githubToken)
+    : null;
+
   if (!githubToken) {
     throw new Error("Missing GitHub Token. Please configure it in Settings.");
   }

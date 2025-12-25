@@ -3,6 +3,7 @@
 
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 import type { PRTemplate, AIModel } from "@/types/chrome";
+import { decryptApiKey } from "./encryption";
 
 /**
  * Check if we're running in a Chrome extension context
@@ -175,8 +176,16 @@ async function handleDevGeneration(
   settings: unknown
 ): Promise<unknown> {
   const devStorage = getDevStorage();
-  const githubToken = devStorage.githubToken as string;
-  const openRouterKey = devStorage.openRouterKey as string;
+  const encryptedGithubToken = devStorage.githubToken as string;
+  const encryptedOpenRouterKey = devStorage.openRouterKey as string;
+
+  // Decrypt API keys
+  const githubToken = encryptedGithubToken
+    ? await decryptApiKey(encryptedGithubToken)
+    : null;
+  const openRouterKey = encryptedOpenRouterKey
+    ? await decryptApiKey(encryptedOpenRouterKey)
+    : null;
 
   // Get templates and models from storage or use defaults
   const templates = (devStorage.templates as PRTemplate[]) || DEFAULT_TEMPLATES;
@@ -259,7 +268,13 @@ async function handleDevUpdatePR(
   description: string
 ): Promise<unknown> {
   const devStorage = getDevStorage();
-  const githubToken = devStorage.githubToken as string;
+  const encryptedGithubToken = devStorage.githubToken as string;
+
+  // Decrypt API key
+  const githubToken = encryptedGithubToken
+    ? await decryptApiKey(encryptedGithubToken)
+    : null;
+
   if (!githubToken) throw new Error("Missing GitHub Token.");
 
   const regex = /github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/;
