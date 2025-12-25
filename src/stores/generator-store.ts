@@ -37,7 +37,7 @@ interface GeneratorState {
 
 const DEFAULT_STATE = {
   template: "default", // Default template ID
-  tone: "professional" as ToneType,
+  tone: "auto" as ToneType,
   context: "",
   includeTickets: false,
   generatedDescription: "",
@@ -130,7 +130,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
         template: prefs.prTemplate || "default",
         context: prefs.customContext || "",
         includeTickets: prefs.includeTickets || false,
-        tone: prefs.descriptionTone || "professional",
+        tone: prefs.descriptionTone || "auto",
       });
     } catch (error) {
       console.error("Failed to load preferences:", error);

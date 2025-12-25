@@ -295,6 +295,7 @@ async function fetchPRData(
 }
 
 const TONE_DESCRIPTIONS: Record<string, string> = {
+  auto: "Balanced and objective.",
   professional:
     "Professional, formal, and detailed. Use clear technical language.",
   casual: "Friendly and conversational, while still being informative.",

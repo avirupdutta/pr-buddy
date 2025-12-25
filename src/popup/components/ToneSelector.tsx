@@ -1,4 +1,9 @@
-import { IconBriefcase, IconCoffee, IconBolt } from "@tabler/icons-react";
+import {
+  IconBriefcase,
+  IconCoffee,
+  IconBolt,
+  IconArrowsShuffle,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useGeneratorStore } from "@/stores/generator-store";
@@ -6,6 +11,11 @@ import type { ToneType } from "@/types/chrome";
 import { cn } from "@/lib/utils";
 
 const TONES: { value: ToneType; label: string; icon: React.ReactNode }[] = [
+  {
+    value: "auto",
+    label: "Auto",
+    icon: <IconArrowsShuffle className="w-4 h-4" />,
+  },
   {
     value: "professional",
     label: "Professional",

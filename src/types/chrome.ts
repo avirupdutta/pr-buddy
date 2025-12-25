@@ -22,7 +22,7 @@ export type TemplateType =
   | "feature"
   | "refactor"
   | "hotfix";
-export type ToneType = "professional" | "casual" | "concise";
+export type ToneType = "professional" | "casual" | "concise" | "auto";
 
 export interface PRDetails {
   owner: string;
