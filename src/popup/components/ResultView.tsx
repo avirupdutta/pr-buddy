@@ -72,7 +72,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
         <Tabs defaultValue="raw" className="flex flex-col gap-2 h-full">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Generated Description</Label>
+            <Label className="text-sm font-medium">Description</Label>
             <TabsList className="h-8">
               <TabsTrigger value="raw" className="text-xs">
                 Raw
@@ -119,7 +119,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             variant="outline"
             onClick={handleCopy}
             disabled={isCopied}
-            className="flex-1 h-12 gap-2 text-base font-bold rounded-xl"
+            className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm"
           >
             {isCopied ? (
               <>
@@ -137,7 +137,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           <Button
             onClick={handleInsert}
             disabled={isInserting}
-            className="flex-1 h-12 gap-2 text-base font-bold rounded-xl shadow-lg"
+            className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm shadow-lg"
           >
             {isInserting ? (
               <>

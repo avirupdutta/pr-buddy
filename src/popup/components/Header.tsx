@@ -16,7 +16,6 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-2">
-        <ThemeToggle />
         {view === "result" && (
           <Button
             variant="ghost"
@@ -27,6 +26,7 @@ export function Header() {
             <IconArrowLeft className="w-5 h-5" />
           </Button>
         )}
+        <ThemeToggle />
       </div>
     </header>
   );
