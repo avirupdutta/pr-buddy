@@ -13,25 +13,35 @@ export function PopupApp() {
     load: loadSettings,
     hasValidKeys,
     isLoading: isLoadingSettings,
+    devMode,
+    devPrUrl,
   } = useSettingsStore();
   const { view, loadPreferences } = useGeneratorStore();
 
   // Initialize on mount
   useEffect(() => {
-    const init = async () => {
-      // Load settings and preferences
-      await loadSettings();
-      await loadPreferences();
+    loadSettings();
+    loadPreferences();
+  }, [loadSettings, loadPreferences]);
 
-      // Get current tab info
+  // Determine URL based on settings (Dev Mode) or active tab
+  useEffect(() => {
+    const fetchUrl = async () => {
+      if (isLoadingSettings) return;
+
+      if (devMode && devPrUrl) {
+        setCurrentUrl(devPrUrl);
+        return;
+      }
+
       const tabInfo = await getCurrentTabUrl();
       if (tabInfo) {
         setCurrentUrl(tabInfo.url);
       }
     };
 
-    init();
-  }, [loadSettings, loadPreferences]);
+    fetchUrl();
+  }, [devMode, devPrUrl, isLoadingSettings]);
 
   // Redirect to options if no API keys
   useEffect(() => {
@@ -53,6 +63,11 @@ export function PopupApp() {
   return (
     <div className="w-full h-full flex flex-col bg-background">
       <Header />
+      {devMode && (
+        <div className="bg-amber-500/10 text-amber-600 text-[10px] uppercase tracking-wider px-4 py-1 flex items-center justify-center font-bold border-b border-amber-500/20">
+          Developer Mode Active using Sample PR
+        </div>
+      )}
       {view === "generator" ? (
         <GeneratorView currentUrl={currentUrl} />
       ) : (

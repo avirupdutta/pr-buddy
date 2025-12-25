@@ -6,15 +6,19 @@ import type {
   UpdateResponse,
   GeneratorSettings,
 } from "@/types/chrome";
+import { getChromeAPI } from "./dev-mock";
+
+// Get Chrome API (real or mock depending on context)
+const chromeAPI = getChromeAPI();
 
 /**
  * Send a message to the background script and wait for response
  */
 export async function sendMessage<T>(message: MessageAction): Promise<T> {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(message, (response: MessageResponse<T>) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
+    chromeAPI.runtime.sendMessage(message, (response: MessageResponse<T>) => {
+      if (chromeAPI.runtime.lastError) {
+        reject(new Error(chromeAPI.runtime.lastError.message));
         return;
       }
 
@@ -68,7 +72,7 @@ export async function getCurrentTabUrl(): Promise<{
   tabId: number;
 } | null> {
   return new Promise((resolve) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chromeAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.url && tabs[0]?.id) {
         resolve({ url: tabs[0].url, tabId: tabs[0].id });
       } else {
@@ -82,9 +86,9 @@ export async function getCurrentTabUrl(): Promise<{
  * Open the options page
  */
 export function openOptionsPage(): void {
-  if (chrome.runtime.openOptionsPage) {
-    chrome.runtime.openOptionsPage();
+  if (chromeAPI.runtime.openOptionsPage) {
+    chromeAPI.runtime.openOptionsPage();
   } else {
-    window.open(chrome.runtime.getURL("src/options/index.html"));
+    window.open(chromeAPI.runtime.getURL("src/options/index.html"));
   }
 }

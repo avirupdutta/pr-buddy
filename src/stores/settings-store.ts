@@ -5,6 +5,8 @@ import { getStorage, setStorage } from "@/services/chrome-storage";
 interface SettingsState {
   githubToken: string | null;
   openRouterKey: string | null;
+  devMode: boolean;
+  devPrUrl: string | null;
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -14,15 +16,21 @@ interface SettingsState {
   save: (settings: {
     githubToken?: string;
     openRouterKey?: string;
+    devMode?: boolean;
+    devPrUrl?: string;
   }) => Promise<void>;
   setGithubToken: (token: string) => void;
   setOpenRouterKey: (key: string) => void;
+  setDevMode: (enabled: boolean) => void;
+  setDevPrUrl: (url: string) => void;
   hasValidKeys: () => boolean;
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   githubToken: null,
   openRouterKey: null,
+  devMode: false,
+  devPrUrl: null,
   isLoading: true,
   isSaving: false,
   error: null,
@@ -30,10 +38,17 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   load: async () => {
     set({ isLoading: true, error: null });
     try {
-      const result = await getStorage(["githubToken", "openRouterKey"]);
+      const result = await getStorage([
+        "githubToken",
+        "openRouterKey",
+        "devMode",
+        "devPrUrl",
+      ]);
       set({
         githubToken: result.githubToken || null,
         openRouterKey: result.openRouterKey || null,
+        devMode: result.devMode || false,
+        devPrUrl: result.devPrUrl || null,
         isLoading: false,
       });
     } catch (error) {
@@ -48,12 +63,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   save: async (settings) => {
     set({ isSaving: true, error: null });
     try {
-      const updates: Record<string, string> = {};
+      const updates: Record<string, string | boolean | undefined> = {};
       if (settings.githubToken !== undefined) {
         updates.githubToken = settings.githubToken;
       }
       if (settings.openRouterKey !== undefined) {
         updates.openRouterKey = settings.openRouterKey;
+      }
+      if (settings.devMode !== undefined) {
+        updates.devMode = settings.devMode;
+      }
+      if (settings.devPrUrl !== undefined) {
+        updates.devPrUrl = settings.devPrUrl;
       }
 
       await setStorage(updates);
@@ -72,6 +93,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setGithubToken: (token) => set({ githubToken: token }),
   setOpenRouterKey: (key) => set({ openRouterKey: key }),
+  setDevMode: (enabled) => set({ devMode: enabled }),
+  setDevPrUrl: (url) => set({ devPrUrl: url }),
 
   hasValidKeys: () => {
     const { githubToken, openRouterKey } = get();

@@ -73,6 +73,8 @@ export type MessageResponse<T = unknown> =
 export interface StoredSettings {
   githubToken?: string;
   openRouterKey?: string;
+  devMode?: boolean;
+  devPrUrl?: string;
 }
 
 export interface StoredPreferences {

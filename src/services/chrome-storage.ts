@@ -1,7 +1,11 @@
 // Chrome storage utilities with type safety
 import type { StoredSettings, StoredPreferences } from "@/types/chrome";
+import { getChromeAPI } from "./dev-mock";
 
 type StorageKeys = StoredSettings & StoredPreferences;
+
+// Get Chrome API (real or mock depending on context)
+const chromeAPI = getChromeAPI();
 
 /**
  * Get values from Chrome local storage
@@ -10,7 +14,7 @@ export async function getStorage<K extends keyof StorageKeys>(
   keys: K[]
 ): Promise<Pick<StorageKeys, K>> {
   return new Promise((resolve) => {
-    chrome.storage.local.get(keys, (result) => {
+    chromeAPI.storage.local.get(keys, (result) => {
       resolve(result as Pick<StorageKeys, K>);
     });
   });
@@ -21,7 +25,7 @@ export async function getStorage<K extends keyof StorageKeys>(
  */
 export async function setStorage(items: Partial<StorageKeys>): Promise<void> {
   return new Promise((resolve) => {
-    chrome.storage.local.set(items, resolve);
+    chromeAPI.storage.local.set(items, resolve);
   });
 }
 
@@ -32,7 +36,7 @@ export async function removeStorage(
   keys: (keyof StorageKeys)[]
 ): Promise<void> {
   return new Promise((resolve) => {
-    chrome.storage.local.remove(keys, resolve);
+    chromeAPI.storage.local.remove(keys, resolve);
   });
 }
 
@@ -51,9 +55,9 @@ export function onStorageChange(
     }
   };
 
-  chrome.storage.onChanged.addListener(listener);
+  chromeAPI.storage.onChanged.addListener(listener);
 
   return () => {
-    chrome.storage.onChanged.removeListener(listener);
+    chromeAPI.storage.onChanged.removeListener(listener);
   };
 }
