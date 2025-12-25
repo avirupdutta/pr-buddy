@@ -7,6 +7,7 @@ interface SettingsState {
   openRouterKey: string | null;
   devMode: boolean;
   devPrUrl: string | null;
+  theme: "dark" | "light" | "system";
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -18,7 +19,9 @@ interface SettingsState {
     openRouterKey?: string;
     devMode?: boolean;
     devPrUrl?: string;
+    theme?: "dark" | "light" | "system";
   }) => Promise<void>;
+  setTheme: (theme: "dark" | "light" | "system") => void;
   setGithubToken: (token: string) => void;
   setOpenRouterKey: (key: string) => void;
   setDevMode: (enabled: boolean) => void;
@@ -31,6 +34,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   openRouterKey: null,
   devMode: false,
   devPrUrl: null,
+  theme: "system",
   isLoading: true,
   isSaving: false,
   error: null,
@@ -43,12 +47,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         "openRouterKey",
         "devMode",
         "devPrUrl",
+        "theme",
       ]);
       set({
         githubToken: result.githubToken || null,
         openRouterKey: result.openRouterKey || null,
         devMode: result.devMode || false,
         devPrUrl: result.devPrUrl || null,
+        theme: result.theme || "system",
         isLoading: false,
       });
     } catch (error) {
@@ -76,6 +82,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       if (settings.devPrUrl !== undefined) {
         updates.devPrUrl = settings.devPrUrl;
       }
+      if (settings.theme !== undefined) {
+        updates.theme = settings.theme;
+      }
 
       await setStorage(updates);
       set({
@@ -95,6 +104,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setOpenRouterKey: (key) => set({ openRouterKey: key }),
   setDevMode: (enabled) => set({ devMode: enabled }),
   setDevPrUrl: (url) => set({ devPrUrl: url }),
+  setTheme: (theme) => {
+    set({ theme });
+    get().save({ theme });
+  },
 
   hasValidKeys: () => {
     const { githubToken, openRouterKey } = get();

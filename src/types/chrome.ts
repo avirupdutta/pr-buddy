@@ -75,6 +75,7 @@ export interface StoredSettings {
   openRouterKey?: string;
   devMode?: boolean;
   devPrUrl?: string;
+  theme?: "dark" | "light" | "system";
 }
 
 export interface StoredPreferences {

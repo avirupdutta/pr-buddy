@@ -4,6 +4,8 @@ import { PopupApp } from "@/popup/App";
 import { OptionsApp } from "@/options/App";
 import { isExtensionContext } from "@/services/dev-mock";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Navigation event listener for dev mode
 function NavigationListener() {
@@ -38,6 +40,9 @@ function DevPopupLayout() {
         <div className="w-[400px] h-[500px] border border-border rounded-lg overflow-hidden shadow-2xl bg-background">
           <PopupApp />
         </div>
+        <div className="fixed bottom-8 right-8">
+          <ThemeToggle variant="full" />
+        </div>
       </div>
     </div>
   );
@@ -46,19 +51,25 @@ function DevPopupLayout() {
 export function App() {
   // In Chrome extension context, don't use router
   if (isExtensionContext()) {
-    return <PopupApp />;
+    return (
+      <ThemeProvider>
+        <PopupApp />
+      </ThemeProvider>
+    );
   }
 
   // In dev mode, use React Router for navigation
   return (
-    <BrowserRouter>
-      <NavigationListener />
-      <Routes>
-        <Route path="/" element={<DevPopupLayout />} />
-        <Route path="/options" element={<OptionsApp />} />
-      </Routes>
-      <Toaster position="top-center" />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <NavigationListener />
+        <Routes>
+          <Route path="/" element={<DevPopupLayout />} />
+          <Route path="/options" element={<OptionsApp />} />
+        </Routes>
+        <Toaster position="top-center" />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

@@ -66,7 +66,7 @@ export function PopupApp() {
       <Header />
       {isDev && devMode && (
         <div className="bg-amber-500/10 text-amber-600 text-[10px] uppercase tracking-wider px-4 py-1 flex items-center justify-center font-bold border-b border-amber-500/20">
-          Developer Mode Active using Sample PR
+          Developer Mode: Active
         </div>
       )}
       {view === "generator" ? (

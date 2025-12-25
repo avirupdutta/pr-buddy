@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // ... existing imports ...
 
@@ -147,6 +148,21 @@ function SettingsForm({
               <span className="text-primary">ℹ</span>
               Required to generate the text descriptions via LLM.
             </p>
+          </div>
+
+          <Separator />
+
+          {/* Theme Selection */}
+          <div className="flex flex-col gap-3">
+            <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Appearance
+            </Label>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Choose your preferred theme for the extension.
+              </span>
+              <ThemeToggle variant="full" />
+            </div>
           </div>
         </TabsContent>
 

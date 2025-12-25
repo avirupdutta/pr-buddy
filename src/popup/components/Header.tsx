@@ -1,6 +1,7 @@
 import { IconSparkles, IconArrowLeft } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { useGeneratorStore } from "@/stores/generator-store";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Header() {
   const { view, reset } = useGeneratorStore();
@@ -14,16 +15,19 @@ export function Header() {
         <h1 className="text-lg font-bold leading-tight">PR Buddy</h1>
       </div>
 
-      {view === "result" && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={reset}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <IconArrowLeft className="w-5 h-5" />
-        </Button>
-      )}
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        {view === "result" && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={reset}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <IconArrowLeft className="w-5 h-5" />
+          </Button>
+        )}
+      </div>
     </header>
   );
 }
