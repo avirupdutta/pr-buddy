@@ -15,27 +15,31 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { toast } from "sonner";
 
-export function OptionsApp() {
-  const { githubToken, openRouterKey, isLoading, isSaving, load, save } =
-    useSettingsStore();
+// Separate component for the settings form - this mounts only after loading completes,
+// so useState initializers naturally receive the correct values from the store
+interface SettingsFormProps {
+  initialGithubToken: string;
+  initialOpenRouterKey: string;
+  isSaving: boolean;
+  onSave: (settings: {
+    githubToken: string;
+    openRouterKey: string;
+  }) => Promise<void>;
+}
 
-  const [localGithubToken, setLocalGithubToken] = useState("");
-  const [localOpenRouterKey, setLocalOpenRouterKey] = useState("");
+function SettingsForm({
+  initialGithubToken,
+  initialOpenRouterKey,
+  isSaving,
+  onSave,
+}: SettingsFormProps) {
+  const [localGithubToken, setLocalGithubToken] = useState(initialGithubToken);
+  const [localOpenRouterKey, setLocalOpenRouterKey] =
+    useState(initialOpenRouterKey);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      setLocalGithubToken(githubToken || "");
-      setLocalOpenRouterKey(openRouterKey || "");
-    }
-  }, [isLoading, githubToken, openRouterKey]);
-
   const handleSave = async () => {
-    await save({
+    await onSave({
       githubToken: localGithubToken,
       openRouterKey: localOpenRouterKey,
     });
@@ -44,6 +48,108 @@ export function OptionsApp() {
     toast.success("Settings saved successfully!");
     setTimeout(() => setShowSuccess(false), 3000);
   };
+
+  return (
+    <>
+      {/* GitHub Token */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            GitHub Personal Access Token
+          </Label>
+          <a
+            href="https://github.com/settings/tokens/new"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+          >
+            Generate Token
+            <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+          </a>
+        </div>
+        <ApiKeyInput
+          value={localGithubToken}
+          onChange={setLocalGithubToken}
+          placeholder="ghp_************************************"
+          icon={<IconKey className="w-5 h-5" />}
+        />
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="text-primary">ℹ</span>
+          Required scope:{" "}
+          <code className="font-mono rounded bg-muted px-1 py-0.5">
+            repo
+          </code>{" "}
+          to read repository context.
+        </p>
+      </div>
+
+      <Separator />
+
+      {/* OpenRouter Key */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            OpenRouter API Key
+          </Label>
+          <a
+            href="https://openrouter.ai/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+          >
+            Get Key
+            <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+          </a>
+        </div>
+        <ApiKeyInput
+          value={localOpenRouterKey}
+          onChange={setLocalOpenRouterKey}
+          placeholder="sk-or-************************************"
+          icon={<IconRobot className="w-5 h-5" />}
+        />
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="text-primary">ℹ</span>
+          Required to generate the text descriptions via LLM.
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-4 flex flex-col gap-3 pt-2">
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="w-full gap-2 shadow-lg"
+          size="lg"
+        >
+          {isSaving ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+              Saving...
+            </>
+          ) : showSuccess ? (
+            <>
+              <IconCheck className="w-5 h-5" />
+              Saved!
+            </>
+          ) : (
+            <>
+              <IconDeviceFloppy className="w-5 h-5" />
+              Save Configuration
+            </>
+          )}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+export function OptionsApp() {
+  const { githubToken, openRouterKey, isLoading, isSaving, load, save } =
+    useSettingsStore();
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (isLoading) {
     return (
@@ -81,94 +187,12 @@ export function OptionsApp() {
           {/* Settings Card */}
           <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
             <CardContent className="pt-6 flex flex-col gap-6">
-              {/* GitHub Token */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                    GitHub Personal Access Token
-                  </Label>
-                  <a
-                    href="https://github.com/settings/tokens/new"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
-                  >
-                    Generate Token
-                    <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </a>
-                </div>
-                <ApiKeyInput
-                  value={localGithubToken}
-                  onChange={setLocalGithubToken}
-                  placeholder="ghp_************************************"
-                  icon={<IconKey className="w-5 h-5" />}
-                />
-                <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="text-primary">ℹ</span>
-                  Required scope:{" "}
-                  <code className="font-mono rounded bg-muted px-1 py-0.5">
-                    repo
-                  </code>{" "}
-                  to read repository context.
-                </p>
-              </div>
-
-              <Separator />
-
-              {/* OpenRouter Key */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                    OpenRouter API Key
-                  </Label>
-                  <a
-                    href="https://openrouter.ai/keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
-                  >
-                    Get Key
-                    <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </a>
-                </div>
-                <ApiKeyInput
-                  value={localOpenRouterKey}
-                  onChange={setLocalOpenRouterKey}
-                  placeholder="sk-or-************************************"
-                  icon={<IconRobot className="w-5 h-5" />}
-                />
-                <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="text-primary">ℹ</span>
-                  Required to generate the text descriptions via LLM.
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="mt-4 flex flex-col gap-3 pt-2">
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="w-full gap-2 shadow-lg"
-                  size="lg"
-                >
-                  {isSaving ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                      Saving...
-                    </>
-                  ) : showSuccess ? (
-                    <>
-                      <IconCheck className="w-5 h-5" />
-                      Saved!
-                    </>
-                  ) : (
-                    <>
-                      <IconDeviceFloppy className="w-5 h-5" />
-                      Save Configuration
-                    </>
-                  )}
-                </Button>
-              </div>
+              <SettingsForm
+                initialGithubToken={githubToken || ""}
+                initialOpenRouterKey={openRouterKey || ""}
+                isSaving={isSaving}
+                onSave={save}
+              />
             </CardContent>
           </Card>
 

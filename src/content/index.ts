@@ -4,17 +4,11 @@
 import type { UpdateDescriptionMessage } from "@/types/chrome";
 
 // Message listener
-chrome.runtime.onMessage.addListener(
-  (
-    request: UpdateDescriptionMessage,
-    _sender: chrome.runtime.MessageSender,
-    _sendResponse: (response: unknown) => void
-  ) => {
-    if (request.action === "UPDATE_DESCRIPTION") {
-      updatePRDescription(request.description);
-    }
+chrome.runtime.onMessage.addListener((request: UpdateDescriptionMessage) => {
+  if (request.action === "UPDATE_DESCRIPTION") {
+    updatePRDescription(request.description);
   }
-);
+});
 
 function updatePRDescription(text: string): void {
   // GitHub's PR body textarea
