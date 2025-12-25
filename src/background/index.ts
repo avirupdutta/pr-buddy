@@ -181,14 +181,25 @@ const TONE_DESCRIPTIONS: Record<string, string> = {
 
 const TEMPLATE_INSTRUCTIONS: Record<string, string> = {
   default: `Structure the description with these sections:
-## Summary
-Brief overview of what this PR does.
+## Describe your changes
 
-## Changes
-- List the key changes made
+## Clickup link
 
-## Testing
-How this was tested.`,
+## PR Type
+
+- [ ] Backend
+- [ ] Frontend
+
+## Checklist before requesting a review
+
+- [x] I have self-reviewed my code.
+- [x] All my code is following Codebuddy Coding Standards and Guidelines.
+- [x] I have tested my code.
+- [x] My PR title is meaningful and max 60 characters.
+- [x] I have made sure only the changes in context of the feature are in this PR.
+- [x] I have made sure I am not including any env secrets in this PR.
+- [x] I have made sure the PR does not have conflict
+`,
 
   bug: `Structure the description with these sections:
 ## Bug Description

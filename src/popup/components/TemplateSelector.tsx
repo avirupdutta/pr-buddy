@@ -10,7 +10,7 @@ import { useGeneratorStore } from "@/stores/generator-store";
 import type { TemplateType } from "@/types/chrome";
 
 const TEMPLATES: { value: TemplateType; label: string }[] = [
-  { value: "default", label: "Standard Pull Request" },
+  { value: "default", label: "Default" },
   { value: "bug", label: "Bug Fix Report" },
   { value: "feature", label: "Feature Implementation" },
   { value: "refactor", label: "Code Refactor" },
