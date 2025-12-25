@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   IconCopy,
   IconUpload,
@@ -30,6 +30,18 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
   const [isCopied, setIsCopied] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
+
+  useEffect(() => {
+    if (!isGenerating && generatedDescription) {
+      const trimmed = generatedDescription.trim();
+      if (trimmed.startsWith("```markdown") && trimmed.endsWith("```")) {
+        const cleaned = trimmed
+          .replace(/^```markdown\s*/, "")
+          .replace(/\s*```$/, "");
+        setGeneratedDescription(cleaned);
+      }
+    }
+  }, [generatedDescription, isGenerating, setGeneratedDescription]);
 
   const handleCopy = async () => {
     try {

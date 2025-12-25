@@ -34,7 +34,7 @@ function DevPopupLayout() {
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center p-8">
       <div className="flex flex-col gap-4 items-center">
-        <div className="w-[550px] h-auto max-h-[800px] border border-border rounded-lg overflow-hidden shadow-2xl bg-background">
+        <div className="w-[500px] h-auto max-h-[800px] border border-border rounded-lg overflow-hidden shadow-2xl bg-background">
           <PopupApp />
         </div>
         <div className="fixed bottom-8 right-8">
