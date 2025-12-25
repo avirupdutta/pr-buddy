@@ -10,16 +10,16 @@ import packageJson from "../../../package.json";
 import { useState, useEffect } from "react";
 
 const LOADING_LABELS = [
-  "Reading your diffs...",
-  "Thinking for you...",
-  "Translating code to human...",
-  "Summarizing the chaos...",
-  "Making you look pro...",
-  "Avoiding generic titles...",
-  "Impressing the boss...",
-  "Crafting the perfect PR...",
-  "Digging for context...",
-  "Explaining your genius...",
+  "👓 Reading your diffs...",
+  "🧠 Thinking for you...",
+  "🤖 Translating to human...",
+  "🌪️ Summarizing the chaos...",
+  "🕶️ Making you look pro...",
+  "🏷️ Killing generic titles...",
+  "👔 Impressing the boss...",
+  "✨ Crafting perfect PR...",
+  "⛏️ Digging for context...",
+  "💡 Explaining your genius...",
 ];
 
 interface GeneratorViewProps {
@@ -48,7 +48,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
           const nextIndex = (currentIndex + 1) % LOADING_LABELS.length;
           return LOADING_LABELS[nextIndex];
         });
-      }, 2000);
+      }, 3000);
     } else {
       // Reset label async to avoid linter warning
       timeout = setTimeout(() => {
@@ -117,13 +117,13 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
         >
           {isGenerating ? (
             <>
-              <IconLoader2 className="w-5 h-5 animate-spin" />
               <span
                 className="animate-in fade-in slide-in-from-bottom-1 duration-300"
                 key={loadingLabel}
               >
                 {loadingLabel}
               </span>
+              <IconLoader2 className="w-5 h-5 animate-spin" />
             </>
           ) : (
             <>
