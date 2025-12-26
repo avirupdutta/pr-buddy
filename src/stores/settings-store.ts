@@ -93,16 +93,16 @@ Verification steps.`,
 // Default AI model
 export const DEFAULT_AI_MODELS: AIModel[] = [
   {
-    id: "devstral-2512",
-    name: "Mistral: Devstral 2 2512 (Free)",
-    modelId: "mistralai/devstral-2512:free",
-    isActive: false,
-  },
-  {
     id: "mimo-v2-flash",
     name: "Xiaomi MiMo v2 Flash (Free)",
     modelId: "xiaomi/mimo-v2-flash:free",
     isActive: true,
+  },
+  {
+    id: "devstral-2512",
+    name: "Mistral: Devstral 2 2512 (Free)",
+    modelId: "mistralai/devstral-2512:free",
+    isActive: false,
   },
 ];
 
