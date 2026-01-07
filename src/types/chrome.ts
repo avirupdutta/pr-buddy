@@ -35,6 +35,8 @@ export interface GeneratorSettings {
   context: string;
   tone: ToneType;
   includeTickets: boolean;
+  generateTitle?: boolean;
+  titleContext?: string;
 }
 
 export interface PRMetadata {
@@ -49,7 +51,12 @@ export interface PRMetadata {
 // Message types for chrome.runtime.sendMessage
 export type MessageAction =
   | { action: "GENERATE_DESCRIPTION"; url: string; settings: GeneratorSettings }
-  | { action: "UPDATE_PR_DESCRIPTION"; url: string; description: string }
+  | {
+      action: "UPDATE_PR_DESCRIPTION";
+      url: string;
+      description: string;
+      title?: string;
+    }
   | { action: "UPDATE_DESCRIPTION"; description: string };
 
 export type GenerateDescriptionMessage = Extract<
@@ -69,6 +76,7 @@ export type UpdateDescriptionMessage = Extract<
 export interface GenerateResponse {
   success: true;
   description: string;
+  title?: string;
   prDetails: PRDetails;
 }
 
@@ -102,4 +110,6 @@ export interface StoredPreferences {
   customContext?: string;
   includeTickets?: boolean;
   descriptionTone?: ToneType;
+  generateTitle?: boolean;
+  titleContext?: string;
 }

@@ -192,7 +192,7 @@ async function handleGeneration(
   const { diff, metadata } = await fetchPRData(prDetails, githubToken);
 
   // 4. Generate Description
-  const description = await generateWithAI(
+  const descriptionPromise = generateWithAI(
     diff,
     metadata,
     settings,
@@ -201,12 +201,29 @@ async function handleGeneration(
     openRouterKey
   );
 
-  return { success: true, description, prDetails };
+  let titlePromise: Promise<string> | undefined;
+  if (settings.generateTitle) {
+    titlePromise = generateTitleWithAI(
+      diff,
+      metadata,
+      settings.titleContext,
+      activeModel.modelId,
+      openRouterKey
+    );
+  }
+
+  const [description, title] = await Promise.all([
+    descriptionPromise,
+    titlePromise || Promise.resolve(undefined),
+  ]);
+
+  return { success: true, description, title, prDetails };
 }
 
 async function handleUpdatePR(
   url: string,
-  description: string
+  description: string,
+  title?: string
 ): Promise<UpdateResponse> {
   // 1. Get GitHub Token
   const result = (await chrome.storage.local.get(["githubToken"])) as {
@@ -230,6 +247,11 @@ async function handleUpdatePR(
 
   // 3. Update PR via GitHub API
   const { owner, repo, number } = prDetails;
+  const body: { body: string; title?: string } = { body: description };
+  if (title) {
+    body.title = title;
+  }
+
   const response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
     {
@@ -239,7 +261,7 @@ async function handleUpdatePR(
         Accept: "application/vnd.github.v3+json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ body: description }),
+      body: JSON.stringify(body),
     }
   );
 
@@ -394,4 +416,68 @@ Please generate the PR description now based on the above information.`;
 
   const data = await response.json();
   return data.choices[0].message.content;
+}
+
+async function generateTitleWithAI(
+  diff: string,
+  metadata: PRMetadata,
+  context: string | undefined,
+  modelId: string,
+  apiKey: string
+): Promise<string> {
+  const systemPrompt = `You are an expert software engineer. Generate a concise, meaningful Pull Request title based on the provided changes.
+Output only the title text, nothing else. No quotes, no markdown.
+
+Guidelines:
+- If provided, strictly follow the user's context/instructions.
+- Use the imperative mood (e.g., "Add feature" not "Added feature").
+- Max 60 characters is ideal, but up to 80 is acceptable.
+- Focus on the main change.`;
+
+  const userPrompt = `
+Current Title: ${metadata.title}
+Branch: ${metadata.head.ref}
+${context ? `\nUser Instructions:\n${context}` : ""}
+
+Diff Summary:
+- ${metadata.changed_files || "N/A"} files changed
+- +${metadata.additions || 0} / -${metadata.deletions || 0} lines
+
+Diff Snippet:
+\`\`\`diff
+${diff.substring(0, 10000)}
+\`\`\`
+
+Generate the PR title now.`;
+
+  const response = await fetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/pr-buddy-extension",
+        "X-Title": "PR Buddy",
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    console.warn("Title generation failed, returning empty string");
+    return "";
+  }
+
+  const data = await response.json();
+  let title = data.choices[0].message.content?.trim() || "";
+  // Cleanup potential quotes or markdown
+  title = title.replace(/^"|"$/g, "").replace(/^`|`$/g, "");
+  return title;
 }

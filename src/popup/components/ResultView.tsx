@@ -8,6 +8,7 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ReactMarkdown from "react-markdown";
@@ -23,6 +24,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   const {
     generatedDescription,
     setGeneratedDescription,
+    generatedTitle,
+    setGeneratedTitle,
     generate,
     isGenerating,
     reset,
@@ -59,8 +62,12 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
     setIsInserting(true);
     try {
-      await updatePRDescription(currentUrl, generatedDescription);
-      toast.success("PR description updated!");
+      await updatePRDescription(
+        currentUrl,
+        generatedDescription,
+        generatedTitle
+      );
+      toast.success("PR updated!");
       reset();
       setTimeout(() => window.close(), 1500);
     } catch (err) {
@@ -82,6 +89,18 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   return (
     <>
       <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+        {generatedTitle && (
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium">Title</Label>
+            <Input
+              value={generatedTitle}
+              onChange={(e) => setGeneratedTitle(e.target.value)}
+              className="font-medium"
+              placeholder="PR Title"
+            />
+          </div>
+        )}
+
         <Tabs defaultValue="preview" className="flex flex-col gap-2 h-full">
           <div className="flex items-center justify-between">
             <Label className="text-sm font-medium">Description</Label>

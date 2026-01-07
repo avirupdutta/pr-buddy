@@ -55,12 +55,14 @@ export async function generateDescription(
  */
 export async function updatePRDescription(
   url: string,
-  description: string
+  description: string,
+  title?: string
 ): Promise<UpdateResponse> {
   return sendMessage<UpdateResponse>({
     action: "UPDATE_PR_DESCRIPTION",
     url,
     description,
+    title,
   });
 }
 
