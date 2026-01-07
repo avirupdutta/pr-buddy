@@ -4,7 +4,6 @@ import { useGeneratorStore } from "@/stores/generator-store";
 import { TemplateSelector } from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
 import { ContextInput } from "./ContextInput";
-import { TitleOptions } from "./TitleOptions";
 import { toast } from "sonner";
 import { openOptionsPage } from "@/services/chrome-messaging";
 import packageJson from "../../../package.json";
@@ -95,10 +94,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
           {/* Template Selection */}
           <TemplateSelector />
 
-          {/* Title Generation Options */}
-          <TitleOptions />
-
-          {/* Custom Context */}
+          {/* Custom Instructions (merged with title instructions) */}
           <ContextInput />
         </div>
 

@@ -32,11 +32,10 @@ export interface PRDetails {
 
 export interface GeneratorSettings {
   templateId: string; // Template ID from user-defined templates
-  context: string;
+  context: string; // Combined instructions for both title and description
   tone: ToneType;
   includeTickets: boolean;
   generateTitle?: boolean;
-  titleContext?: string;
 }
 
 export interface PRMetadata {
@@ -107,9 +106,8 @@ export interface StoredSettings {
 
 export interface StoredPreferences {
   prTemplate?: string; // Template ID
-  customContext?: string;
+  customContext?: string; // Combined instructions for title and description
   includeTickets?: boolean;
   descriptionTone?: ToneType;
   generateTitle?: boolean;
-  titleContext?: string;
 }

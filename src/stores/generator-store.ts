@@ -10,10 +10,9 @@ interface GeneratorState {
   // Form state
   template: string; // Now stores template ID instead of TemplateType
   tone: ToneType;
-  context: string;
+  context: string; // Combined instructions for title and description
   includeTickets: boolean;
   generateTitle: boolean;
-  titleContext: string;
 
   // Result state
   generatedDescription: string;
@@ -31,7 +30,6 @@ interface GeneratorState {
   setTone: (tone: ToneType) => void;
   setContext: (context: string) => void;
   setGenerateTitle: (enabled: boolean) => void;
-  setTitleContext: (context: string) => void;
   toggleTickets: () => void;
   setGeneratedDescription: (description: string) => void;
   setGeneratedTitle: (title: string) => void;
@@ -47,7 +45,6 @@ const DEFAULT_STATE = {
   context: "",
   includeTickets: false,
   generateTitle: false,
-  titleContext: "",
   generatedDescription: "",
   generatedTitle: "",
   prDetails: null,
@@ -80,11 +77,6 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
     setStorage({ generateTitle: enabled });
   },
 
-  setTitleContext: (context) => {
-    set({ titleContext: context });
-    setStorage({ titleContext: context });
-  },
-
   toggleTickets: () => {
     const newValue = !get().includeTickets;
     set({ includeTickets: newValue });
@@ -107,21 +99,13 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
     set({ isGenerating: true, error: null });
 
     try {
-      const {
-        template,
-        tone,
-        context,
-        includeTickets,
-        generateTitle,
-        titleContext,
-      } = get();
+      const { template, tone, context, includeTickets, generateTitle } = get();
       const settings: GeneratorSettings = {
         templateId: template,
         tone,
         context,
         includeTickets,
         generateTitle,
-        titleContext,
       };
 
       const response = await generateDescriptionApi(url, settings);
@@ -159,7 +143,6 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
         "includeTickets",
         "descriptionTone",
         "generateTitle",
-        "titleContext",
       ]);
 
       set({
@@ -168,14 +151,12 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
         includeTickets: prefs.includeTickets || false,
         tone: prefs.descriptionTone || "auto",
         generateTitle: prefs.generateTitle ?? true,
-        titleContext: prefs.titleContext || "",
       });
     } catch (error) {
       console.error("Failed to load preferences:", error);
       // Fallback defaults
       set({
         generateTitle: true,
-        titleContext: "",
       });
     }
   },

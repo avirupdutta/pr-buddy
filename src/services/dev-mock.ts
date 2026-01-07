@@ -215,7 +215,6 @@ async function handleDevGeneration(
       context?: string;
       includeTickets?: boolean;
       generateTitle?: boolean;
-      titleContext?: string;
     }) || {};
 
   // Find selected template
@@ -261,8 +260,8 @@ async function handleDevGeneration(
     diff = diff.substring(0, 50000) + "\n...[Diff Truncated]...";
   }
 
-  // Generate with AI
-  const description = await generateWithOpenRouter(
+  // Generate with AI (single API call with structured output)
+  const aiResult = await generateWithOpenRouter(
     diff,
     metadata,
     s,
@@ -271,19 +270,12 @@ async function handleDevGeneration(
     openRouterKey
   );
 
-  // Generate title if requested
-  let title: string | undefined;
-  if (s.generateTitle) {
-    title = await generateTitleWithOpenRouter(
-      diff,
-      metadata,
-      s.titleContext,
-      activeModel.modelId,
-      openRouterKey
-    );
-  }
-
-  return { success: true, description, title, prDetails };
+  return {
+    success: true,
+    description: aiResult.description,
+    title: s.generateTitle ? aiResult.title : undefined,
+    prDetails,
+  };
 }
 
 async function handleDevUpdatePR(
@@ -334,10 +326,17 @@ async function handleDevUpdatePR(
 }
 
 const TONE_DESCRIPTIONS: Record<string, string> = {
+  auto: "Balanced and objective.",
   professional: "Professional, formal, and detailed.",
   casual: "Friendly and conversational.",
   concise: "Brief and to the point.",
 };
+
+// Response structure for AI generation
+interface AIGenerationResult {
+  title: string;
+  description: string;
+}
 
 async function generateWithOpenRouter(
   diff: string,
@@ -358,32 +357,60 @@ async function generateWithOpenRouter(
   template: PRTemplate,
   modelId: string,
   apiKey: string
-): Promise<string> {
-  const systemPrompt = `You are an expert software engineer. Write a PR description in Markdown.
-Style: ${
+): Promise<AIGenerationResult> {
+  const toneDescription =
     TONE_DESCRIPTIONS[settings.tone || "professional"] ||
-    TONE_DESCRIPTIONS.professional
-  }
+    TONE_DESCRIPTIONS.professional;
 
-Structure the description following this template format:
-${template.structure}`;
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description based on the provided code diffs and context.
 
-  const userPrompt = `PR Title: ${metadata.title}
+You MUST respond with valid JSON in this exact format:
+{
+  "title": "A concise PR title",
+  "description": "The full PR description in Markdown format"
+}
+
+TITLE GUIDELINES:
+- Use the imperative mood (e.g., "Add feature" not "Added feature")
+- Max 60 characters is ideal, but up to 80 is acceptable
+- Focus on the main change
+- No quotes or markdown formatting
+
+DESCRIPTION GUIDELINES:
+- Writing Style: ${toneDescription}
+- Use this template structure:
+${template.structure}
+- Be specific about what changed
+- Reference file names when relevant
+- Keep it readable and scannable
+- Don't include the diff in your response
+- Don't make up information not present in the diff
+
+${
+  settings.context
+    ? `USER INSTRUCTIONS (apply to both title and description):\n${settings.context}`
+    : ""
+}`;
+
+  const userPrompt = `
+Current PR Title: ${metadata.title}
 Branch: ${metadata.head.ref} -> ${metadata.base.ref}
-${settings.context ? `\nContext: ${settings.context}` : ""}
 ${
   settings.includeTickets
-    ? `\nLook for ticket IDs in branch "${metadata.head.ref}"`
+    ? `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.`
     : ""
 }
-Files: ${metadata.changed_files || "N/A"} changed, +${
-    metadata.additions || 0
-  }/-${metadata.deletions || 0}
+
+File Changes Summary:
+- ${metadata.changed_files || "N/A"} files changed
+- +${metadata.additions || 0} additions, -${metadata.deletions || 0} deletions
 
 Diff:
 \`\`\`diff
 ${diff}
-\`\`\``;
+\`\`\`
+
+Generate the JSON response with title and description now.`;
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
@@ -401,6 +428,7 @@ ${diff}
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        response_format: { type: "json_object" },
       }),
     }
   );
@@ -413,77 +441,21 @@ ${diff}
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
-}
+  const content = data.choices[0].message.content;
 
-async function generateTitleWithOpenRouter(
-  diff: string,
-  metadata: {
-    title: string;
-    head: { ref: string };
-    changed_files?: number;
-    additions?: number;
-    deletions?: number;
-  },
-  context: string | undefined,
-  modelId: string,
-  apiKey: string
-): Promise<string> {
-  const systemPrompt = `You are an expert software engineer. Generate a concise, meaningful Pull Request title based on the provided changes.
-Output only the title text, nothing else. No quotes, no markdown.
-
-Guidelines:
-- If provided, strictly follow the user's context/instructions.
-- Use the imperative mood (e.g., "Add feature" not "Added feature").
-- Max 60 characters is ideal, but up to 80 is acceptable.
-- Focus on the main change.`;
-
-  const userPrompt = `
-Current Title: ${metadata.title}
-Branch: ${metadata.head.ref}
-${context ? `\nUser Instructions:\n${context}` : ""}
-
-Diff Summary:
-- ${metadata.changed_files || "N/A"} files changed
-- +${metadata.additions || 0} / -${metadata.deletions || 0} lines
-
-Diff Snippet:
-\`\`\`diff
-${diff.substring(0, 10000)}
-\`\`\`
-
-Generate the PR title now.`;
-
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/pr-buddy-extension",
-        "X-Title": "PR Buddy",
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    console.warn("Title generation failed, returning empty string");
-    return "";
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      title: (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, ""),
+      description: parsed.description || "",
+    };
+  } catch {
+    // Fallback: if JSON parsing fails, treat content as description
+    return {
+      title: "",
+      description: content,
+    };
   }
-
-  const data = await response.json();
-  let title = data.choices[0].message.content?.trim() || "";
-  // Cleanup potential quotes or markdown
-  title = title.replace(/^"|"$/g, "").replace(/^`|`$/g, "");
-  return title;
 }
 
 /**
