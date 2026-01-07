@@ -26,6 +26,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     setGeneratedDescription,
     generatedTitle,
     setGeneratedTitle,
+    generateTitle,
     generate,
     isGenerating,
     reset,
@@ -89,7 +90,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   return (
     <>
       <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
-        {generatedTitle && (
+        {(generateTitle || generatedTitle) && (
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium">Title</Label>
             <Input
