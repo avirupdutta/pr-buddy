@@ -125,7 +125,7 @@ chrome.runtime.onMessage.addListener(
     }
 
     if (request.action === "UPDATE_PR_DESCRIPTION") {
-      handleUpdatePR(request.url, request.description)
+      handleUpdatePR(request.url, request.description, request.title)
         .then((result) => sendResponse(result))
         .catch((err) => sendResponse({ success: false, error: err.message }));
       return true; // Async response
