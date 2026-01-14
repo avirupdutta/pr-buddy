@@ -12,11 +12,20 @@ A Chrome extension that helps generate PR descriptions using AI.
   <img src="screenshots/settings.png" width="32%" alt="Settings View">
 </p>
 
+## 📋 Requirements
+
+To use this extension, you will need:
+
+- **GitHub PAT (Personal Access Token)**: Required to fetch PR details and diffs.
+- **OpenRouter API Key**: Required to generate descriptions using AI models.
+
+These can be configured in the extension's settings page.
+
 ## 🚀 Quickstart
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js `v20+` (LTS recommended)
 - pnpm (`npm install -g pnpm`)
 
 ### Build & Install
