@@ -12,6 +12,7 @@ import type {
   PRTemplate,
   AIModel,
 } from "@/types/chrome";
+import { DEFAULT_AI_MODELS } from "@/stores/settings-store";
 import { decryptApiKey } from "@/services/encryption";
 
 // Default templates (fallback if none in storage)
@@ -97,16 +98,6 @@ What systems/users are affected?
 
 ## Testing
 Verification steps.`,
-  },
-];
-
-// Default AI model (fallback if none in storage)
-const DEFAULT_AI_MODELS: AIModel[] = [
-  {
-    id: "mimo-v2-flash",
-    name: "Xiaomi MiMo v2 Flash (Free)",
-    modelId: "xiaomi/mimo-v2-flash:free",
-    isActive: true,
   },
 ];
 
