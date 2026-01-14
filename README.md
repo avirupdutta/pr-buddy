@@ -2,6 +2,8 @@
 
 A Chrome extension that helps generate PR descriptions using AI.
 
+> **⚠️ Note:** This extension currently works only on raised PRs.
+
 ## 📷 Screenshots
 
 <p align="center">

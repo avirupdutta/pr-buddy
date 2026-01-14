@@ -94,7 +94,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
           {/* Template Selection */}
           <TemplateSelector />
 
-          {/* Custom Context */}
+          {/* Custom Instructions (merged with title instructions) */}
           <ContextInput />
         </div>
 

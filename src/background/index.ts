@@ -12,6 +12,7 @@ import type {
   PRTemplate,
   AIModel,
 } from "@/types/chrome";
+import { DEFAULT_AI_MODELS } from "@/stores/settings-store";
 import { decryptApiKey } from "@/services/encryption";
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 
@@ -30,7 +31,7 @@ chrome.runtime.onMessage.addListener(
     }
 
     if (request.action === "UPDATE_PR_DESCRIPTION") {
-      handleUpdatePR(request.url, request.description)
+      handleUpdatePR(request.url, request.description, request.title)
         .then((result) => sendResponse(result))
         .catch((err) => sendResponse({ success: false, error: err.message }));
       return true; // Async response
@@ -96,8 +97,8 @@ async function handleGeneration(
   // 3. Fetch PR Data
   const { diff, metadata } = await fetchPRData(prDetails, githubToken);
 
-  // 4. Generate Description
-  const description = await generateWithAI(
+  // 4. Generate with AI (single API call with structured output)
+  const aiResult = await generateWithAI(
     diff,
     metadata,
     settings,
@@ -106,12 +107,18 @@ async function handleGeneration(
     openRouterKey
   );
 
-  return { success: true, description, prDetails };
+  return {
+    success: true,
+    description: aiResult.description,
+    title: settings.generateTitle ? aiResult.title : undefined,
+    prDetails,
+  };
 }
 
 async function handleUpdatePR(
   url: string,
-  description: string
+  description: string,
+  title?: string
 ): Promise<UpdateResponse> {
   // 1. Get GitHub Token
   const result = (await chrome.storage.local.get(["githubToken"])) as {
@@ -135,6 +142,11 @@ async function handleUpdatePR(
 
   // 3. Update PR via GitHub API
   const { owner, repo, number } = prDetails;
+  const body: { body: string; title?: string } = { body: description };
+  if (title) {
+    body.title = title;
+  }
+
   const response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
     {
@@ -144,7 +156,7 @@ async function handleUpdatePR(
         Accept: "application/vnd.github.v3+json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ body: description }),
+      body: JSON.stringify(body),
     }
   );
 
@@ -221,6 +233,12 @@ const TONE_DESCRIPTIONS: Record<string, string> = {
   concise: "Brief and to the point. Focus on key changes only.",
 };
 
+// Response structure for AI generation
+interface AIGenerationResult {
+  title: string;
+  description: string;
+}
+
 async function generateWithAI(
   diff: string,
   metadata: PRMetadata,
@@ -228,34 +246,46 @@ async function generateWithAI(
   template: PRTemplate,
   modelId: string,
   apiKey: string
-): Promise<string> {
-  const systemPrompt = `You are an expert software engineer assistant. Your task is to write a high-quality Pull Request description based on the provided code diffs and context.
+): Promise<AIGenerationResult> {
+  const toneDescription =
+    TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
 
-Output Format: Markdown.
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description based on the provided code diffs and context.
 
-Writing Style: ${
-    TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional
-  }
+You MUST respond with valid JSON in this exact format:
+{
+  "title": "A concise PR title",
+  "description": "The full PR description in Markdown format"
+}
 
-Structure the description following this template format:
+TITLE GUIDELINES:
+- Use the imperative mood (e.g., "Add feature" not "Added feature")
+- Max 60 characters is ideal, but up to 80 is acceptable
+- Focus on the main change
+- No quotes or markdown formatting
+
+DESCRIPTION GUIDELINES:
+- Writing Style: ${toneDescription}
+- Use this template structure:
 ${template.structure}
-
-Important guidelines:
 - Be specific about what changed
 - Reference file names when relevant
 - Keep it readable and scannable
 - Don't include the diff in your response
-- Don't make up information not present in the diff`;
+- Don't make up information not present in the diff
+
+${
+  settings.context
+    ? `USER INSTRUCTIONS (apply to both title and description):\n${settings.context}`
+    : ""
+}`;
 
   const userPrompt = `
-PR Title: ${metadata.title}
+Current PR Title: ${metadata.title}
 Branch: ${metadata.head.ref} -> ${metadata.base.ref}
 ${
-  settings.context ? `\nAdditional Context from User:\n${settings.context}` : ""
-}
-${
   settings.includeTickets
-    ? `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them in the description.`
+    ? `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.`
     : ""
 }
 
@@ -268,7 +298,7 @@ Diff:
 ${diff}
 \`\`\`
 
-Please generate the PR description now based on the above information.`;
+Generate the JSON response with title and description now.`;
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
@@ -286,6 +316,7 @@ Please generate the PR description now based on the above information.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        response_format: { type: "json_object" },
       }),
     }
   );
@@ -298,5 +329,19 @@ Please generate the PR description now based on the above information.`;
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const content = data.choices[0].message.content;
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      title: (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, ""),
+      description: parsed.description || "",
+    };
+  } catch {
+    // Fallback: if JSON parsing fails, treat content as description
+    return {
+      title: "",
+      description: content,
+    };
+  }
 }
