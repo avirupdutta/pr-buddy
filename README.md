@@ -45,6 +45,15 @@ pnpm build
 
 The extension icon should now appear in your toolbar!
 
+## 🔄 Steps to upgrade (manually)
+
+1. Go to the [GitHub releases page](https://github.com/avirupdutta/pr-buddy/releases) for this repository.
+2. Download the latest `dist.zip` file from the releases section.
+3. Extract the contents of the zip file.
+4. Replace the existing contents of your `dist` folder with the extracted files.
+5. Open Chrome and navigate to `chrome://extensions`.
+6. Find the PR Buddy extension and click the reload button (circular arrow icon).
+
 ## 🛠️ Development Setup
 
 ```bash
