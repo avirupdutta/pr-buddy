@@ -94,3 +94,10 @@ export function openOptionsPage(): void {
     window.open(chromeAPI.runtime.getURL("src/options/index.html"));
   }
 }
+
+/**
+ * Open the review page
+ */
+export function openReviewPage(prNumber: string): void {
+  window.open(chromeAPI.runtime.getURL(`src/review/index.html?pr=${prNumber}`));
+}

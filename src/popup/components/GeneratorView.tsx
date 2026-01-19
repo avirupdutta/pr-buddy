@@ -5,7 +5,7 @@ import { TemplateSelector } from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
 import { ContextInput } from "./ContextInput";
 import { toast } from "sonner";
-import { openOptionsPage } from "@/services/chrome-messaging";
+import { openOptionsPage, openReviewPage } from "@/services/chrome-messaging";
 import packageJson from "../../../package.json";
 import { useState, useEffect } from "react";
 
@@ -136,7 +136,23 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
         </Button>
 
         <p className="text-center text-xs text-muted-foreground mt-3">
-          v{packageJson.version} • Powered by Codebuddy •{" "}
+          v{packageJson.version} • Powered by Codebuddy
+          {currentUrl.match(/pull\/(\d+)/)?.[1] && (
+            <>
+              {" "}
+              •{" "}
+              <button
+                onClick={() => {
+                  const match = currentUrl.match(/pull\/(\d+)/);
+                  if (match) openReviewPage(match[1]);
+                }}
+                className="underline hover:text-foreground transition-colors text-primary cursor-pointer"
+              >
+                Review PR #{currentUrl.match(/pull\/(\d+)/)?.[1]}
+              </button>
+            </>
+          )}{" "}
+          •{" "}
           <button
             onClick={openOptionsPage}
             className="underline hover:text-foreground transition-colors text-primary cursor-pointer"
