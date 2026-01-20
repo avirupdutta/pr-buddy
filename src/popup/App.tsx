@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useGeneratorStore } from "@/stores/generator-store";
 import { getCurrentTabUrl, openOptionsPage } from "@/services/chrome-messaging";
-import { Header } from "./components/Header";
 import { GeneratorView } from "./components/GeneratorView";
 import { ResultView } from "./components/ResultView";
 import { isDev } from "@/services/is-dev";
+import { Link } from "react-router-dom";
+import { IconFileSearch } from "@tabler/icons-react";
+import { Header } from "./components/Header";
 
 export function PopupApp() {
   const [currentUrl, setCurrentUrl] = useState<string>("");
@@ -61,6 +63,11 @@ export function PopupApp() {
     );
   }
 
+  console.log({
+    devMode,
+    isDev,
+  });
+
   return (
     <div className="w-full h-full flex flex-col bg-background">
       {isDev && devMode && (
@@ -69,6 +76,15 @@ export function PopupApp() {
         </div>
       )}
       <Header />
+      <div className="flex justify-center mt-4">
+        <Link
+          to="/review?pr=123"
+          className="flex items-center gap-2 text-yellow-500 underline"
+        >
+          <IconFileSearch className="w-5 h-5" />
+          Review PR: #123
+        </Link>
+      </div>
       {view === "generator" ? (
         <GeneratorView currentUrl={currentUrl} />
       ) : (
