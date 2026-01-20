@@ -12,7 +12,6 @@ import type {
   PRTemplate,
   AIModel,
 } from "@/types/chrome";
-import { DEFAULT_AI_MODELS } from "@/stores/settings-store";
 import { decryptApiKey } from "@/services/encryption";
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 

@@ -38,7 +38,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       // Set initial random label immediately but async to avoid linter warning
       timeout = setTimeout(() => {
         setLoadingLabel(
-          LOADING_LABELS[Math.floor(Math.random() * LOADING_LABELS.length)]
+          LOADING_LABELS[Math.floor(Math.random() * LOADING_LABELS.length)],
         );
       }, 0);
 
@@ -70,7 +70,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
 
     if (!currentUrl.match(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/)) {
       toast.error(
-        "Invalid PR URL. Navigate to a PR page like: github.com/owner/repo/pull/123"
+        "Invalid PR URL. Navigate to a PR page like: github.com/owner/repo/pull/123",
       );
       return;
     }

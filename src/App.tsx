@@ -6,6 +6,7 @@ import { isExtensionContext } from "@/services/dev-mock";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ReviewApp } from "./review/App";
 
 // Navigation event listener for dev mode
 function NavigationListener() {
@@ -21,7 +22,7 @@ function NavigationListener() {
     return () => {
       window.removeEventListener(
         "dev-navigate",
-        handleNavigation as EventListener
+        handleNavigation as EventListener,
       );
     };
   }, [navigate]);
@@ -63,6 +64,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<DevPopupLayout />} />
           <Route path="/options" element={<OptionsApp />} />
+          <Route path="/review" element={<ReviewApp />} />
         </Routes>
         <Toaster position="top-center" />
       </BrowserRouter>
