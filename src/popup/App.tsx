@@ -63,11 +63,6 @@ export function PopupApp() {
     );
   }
 
-  console.log({
-    devMode,
-    isDev,
-  });
-
   return (
     <div className="w-full h-full flex flex-col bg-background">
       {isDev && devMode && (
