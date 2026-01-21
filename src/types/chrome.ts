@@ -92,6 +92,15 @@ export type MessageResponse<T = unknown> =
   | (T & { success: true })
   | ErrorResponse;
 
+export type StreamEventType = "chunk" | "complete" | "error";
+
+export interface StreamMessage {
+  type: StreamEventType;
+  content?: string;
+  error?: string;
+  data?: GenerateResponse;
+}
+
 // Chrome storage types
 export interface StoredSettings {
   githubToken?: string;

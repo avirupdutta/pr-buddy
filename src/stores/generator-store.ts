@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import type { ToneType, PRDetails, GeneratorSettings } from "@/types/chrome";
 import { getStorage, setStorage } from "@/services/chrome-storage";
-import { generateDescription as generateDescriptionApi } from "@/services/chrome-messaging";
+import { streamDescription } from "@/services/chrome-messaging";
 
 type ViewType = "generator" | "result";
 
@@ -96,7 +96,14 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
   },
 
   generate: async (url) => {
-    set({ isGenerating: true, error: null });
+    // Reset state and switch to result view immediately
+    set({ 
+      isGenerating: true, 
+      error: null, 
+      generatedDescription: "", 
+      generatedTitle: "",
+      view: "result" 
+    });
 
     try {
       const { template, tone, context, includeTickets, generateTitle } = get();
@@ -108,15 +115,51 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
         generateTitle,
       };
 
-      const response = await generateDescriptionApi(url, settings);
+      // Streaming state
+      let fullContent = "";
+      const separator = "<<<SEPARATOR>>>";
 
-      set({
-        generatedDescription: response.description,
-        generatedTitle: response.title || "",
-        prDetails: response.prDetails,
-        view: "result",
-        isGenerating: false,
+      await new Promise<void>((resolve, reject) => {
+        streamDescription(
+          url, 
+          settings,
+          (chunk) => {
+            fullContent += chunk;
+            
+            // Basic parsing
+            const separatorIndex = fullContent.indexOf(separator);
+            
+            if (separatorIndex === -1) {
+              // Still in title section
+              const titleMatch = fullContent.match(/TITLE:\s*(.*)/s);
+              if (titleMatch) {
+                 set({ generatedTitle: titleMatch[1].trim() });
+              }
+            } else {
+              // We have separator
+              // 1. Update Title (final)
+              const beforeSeparator = fullContent.substring(0, separatorIndex);
+              const titleMatch = beforeSeparator.match(/TITLE:\s*(.*)/s);
+              if (titleMatch) {
+                 set({ generatedTitle: titleMatch[1].trim() });
+              }
+
+              // 2. Update Description
+              const afterSeparator = fullContent.substring(separatorIndex + separator.length);
+              const desc = afterSeparator.replace(/^\s*DESCRIPTION:\s*/, "");
+              set({ generatedDescription: desc });
+            }
+          },
+          (data) => {
+            set({ isGenerating: false, prDetails: data.prDetails });
+            resolve();
+          },
+          (error) => {
+            reject(new Error(error));
+          }
+        );
       });
+
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Generation failed",

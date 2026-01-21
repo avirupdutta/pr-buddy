@@ -15,7 +15,23 @@ import type {
 import { decryptApiKey } from "@/services/encryption";
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 
-// Message listener
+// Listen for long-lived connections (streaming)
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "GENERATE_DESCRIPTION_STREAM") return;
+
+  port.onMessage.addListener(async (msg: { url: string; settings: GeneratorSettings }) => {
+    try {
+      await handleGenerationStream(msg.url, msg.settings, port);
+    } catch (err) {
+      port.postMessage({
+        type: "error",
+        error: err instanceof Error ? err.message : "Generation failed",
+      });
+    }
+  });
+});
+
+// Message listener (one-off messages)
 chrome.runtime.onMessage.addListener(
   (
     request: MessageAction,
@@ -39,6 +55,77 @@ chrome.runtime.onMessage.addListener(
     return false;
   },
 );
+
+async function handleGenerationStream(
+  url: string,
+  settings: GeneratorSettings,
+  port: chrome.runtime.Port
+): Promise<void> {
+  // 1. Get Credentials, Templates, and Models
+  const result = (await chrome.storage.local.get([
+    "githubToken",
+    "openRouterKey",
+    "templates",
+    "aiModels",
+  ])) as {
+    githubToken?: string;
+    openRouterKey?: string;
+    templates?: PRTemplate[];
+    aiModels?: AIModel[];
+  };
+
+  // Decrypt API keys
+  const githubToken = result.githubToken
+    ? await decryptApiKey(result.githubToken)
+    : null;
+  const openRouterKey = result.openRouterKey
+    ? await decryptApiKey(result.openRouterKey)
+    : null;
+
+  const templates = 
+    result.templates && result.templates.length > 0
+      ? result.templates
+      : DEFAULT_TEMPLATES;
+  const aiModels = 
+    result.aiModels && result.aiModels.length > 0
+      ? result.aiModels
+      : DEFAULT_AI_MODELS;
+
+  if (!githubToken || !openRouterKey) {
+    throw new Error("Missing API Keys. Please configure them in Settings.");
+  }
+
+  // Find active model
+  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+
+  // Find selected template
+  const selectedTemplate = 
+    templates.find((t) => t.id === settings.templateId) || templates[0];
+
+  // 2. Parse GitHub URL
+  const prDetails = parseGitHubUrl(url);
+  if (!prDetails) {
+    throw new Error(
+      "Invalid GitHub PR URL. Please navigate to a PR page like: github.com/owner/repo/pull/123",
+    );
+  }
+
+  // 3. Fetch PR Data
+  const { diff, metadata } = await fetchPRData(prDetails, githubToken);
+
+  // 4. Generate with AI (streaming)
+  await generateWithAIStream(
+    diff,
+    metadata,
+    settings,
+    selectedTemplate,
+    activeModel.modelId,
+    openRouterKey,
+    port
+  );
+  
+  // Note: generateWithAIStream handles sending the 'complete' message
+}
 
 async function handleGeneration(
   url: string,
@@ -65,11 +152,11 @@ async function handleGeneration(
     ? await decryptApiKey(result.openRouterKey)
     : null;
 
-  const templates =
+  const templates = 
     result.templates && result.templates.length > 0
       ? result.templates
       : DEFAULT_TEMPLATES;
-  const aiModels =
+  const aiModels = 
     result.aiModels && result.aiModels.length > 0
       ? result.aiModels
       : DEFAULT_AI_MODELS;
@@ -82,7 +169,7 @@ async function handleGeneration(
   const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
 
   // Find selected template
-  const selectedTemplate =
+  const selectedTemplate = 
     templates.find((t) => t.id === settings.templateId) || templates[0];
 
   // 2. Parse GitHub URL
@@ -238,6 +325,151 @@ interface AIGenerationResult {
   description: string;
 }
 
+// Separate prompt construction to be reused if needed, but for now modified for streaming
+function buildStreamingSystemPrompt(template: PRTemplate, toneDescription: string, context: string): string {
+    return `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description.
+
+IMPORTANT: You must stream the response in this EXACT format:
+TITLE: <Your concise title here>
+<<<SEPARATOR>>>
+DESCRIPTION: <Your markdown description here>
+
+TITLE GUIDELINES:
+- Use the imperative mood
+- Max 60 chars
+- Focus on main change
+
+DESCRIPTION GUIDELINES:
+- Writing Style: ${toneDescription}
+- Use this structure:
+${template.structure}
+- Be specific, reference files.
+- No diffs.
+
+${context ? `USER INSTRUCTIONS:
+${context}` : ""}`;
+}
+
+async function generateWithAIStream(
+  diff: string,
+  metadata: PRMetadata,
+  settings: GeneratorSettings,
+  template: PRTemplate,
+  modelId: string,
+  apiKey: string,
+  port: chrome.runtime.Port
+): Promise<void> {
+  const toneDescription = 
+    TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
+
+  const systemPrompt = buildStreamingSystemPrompt(template, toneDescription, settings.context);
+
+  const userPrompt = `
+Current PR Title: ${metadata.title}
+Branch: ${metadata.head.ref} -> ${metadata.base.ref}
+${
+    settings.includeTickets
+      ? `
+Ticket Detection: Look for ticket IDs in "${metadata.head.ref}" and include them.`
+      : ""
+}
+
+File Changes Summary:
+- ${metadata.changed_files || "N/A"} files changed
+- +${metadata.additions || 0} additions, -${metadata.deletions || 0} deletions
+
+Diff:
+\`\`\`diff
+${diff}
+\`\`\`
+
+Generate the TITLE and DESCRIPTION now in the requested format.`;
+
+  try {
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/pr-buddy-extension",
+            "X-Title": "PR Buddy",
+          },
+          body: JSON.stringify({
+            model: modelId,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            stream: true, // Enable streaming
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(
+          "AI Generation failed: " + (err.error?.message || response.statusText),
+        );
+      }
+      
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Response body is null");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process lines in buffer
+        const lines = buffer.split("\n");
+        // Keep the last incomplete line in buffer
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === "data: [DONE]") continue;
+            
+            if (trimmed.startsWith("data: ")) {
+                try {
+                    const data = JSON.parse(trimmed.slice(6));
+                    const content = data.choices?.[0]?.delta?.content;
+                    if (content) {
+                        port.postMessage({ type: "chunk", content });
+                    }
+                } catch (e) {
+                    console.error("Error parsing stream chunk", e);
+                }
+            }
+        }
+      }
+
+      // Final success message
+      port.postMessage({ 
+          type: "complete", 
+          data: {
+              success: true,
+              description: "", // Client will have assembled it
+              title: "",       // Client will have assembled it
+              prDetails: {
+                  owner: metadata.base.ref.split(':')[0] || "unknown", // Fallback, not critical for result
+                  repo: "unknown", 
+                  number: "0" 
+              }
+          } 
+      });
+
+  } catch (error) {
+      throw error;
+  }
+}
+
+
 async function generateWithAI(
   diff: string,
   metadata: PRMetadata,
@@ -276,8 +508,7 @@ ${template.structure}
 ${
   settings.context
     ? `USER INSTRUCTIONS (apply to both title and description):\n${settings.context}`
-    : ""
-}`;
+    : ""}`;
 
   const userPrompt = `
 Current PR Title: ${metadata.title}
