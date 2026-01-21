@@ -36,6 +36,7 @@ export interface GeneratorSettings {
   tone: ToneType;
   includeTickets: boolean;
   generateTitle?: boolean;
+  autoUpdate?: boolean;
 }
 
 export interface PRMetadata {
@@ -110,4 +111,5 @@ export interface StoredPreferences {
   includeTickets?: boolean;
   descriptionTone?: ToneType;
   generateTitle?: boolean;
+  autoUpdateInBackground?: boolean;
 }

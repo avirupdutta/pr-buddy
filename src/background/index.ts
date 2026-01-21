@@ -106,6 +106,20 @@ async function handleGeneration(
     openRouterKey,
   );
 
+  // 5. Auto-update if enabled
+  if (settings.autoUpdate) {
+    try {
+      await handleUpdatePR(
+        url,
+        aiResult.description,
+        settings.generateTitle ? aiResult.title : undefined,
+      );
+    } catch (err) {
+      console.error("Auto-update failed:", err);
+      // We continue to return the result so the user can see it in the popup if it's open
+    }
+  }
+
   return {
     success: true,
     description: aiResult.description,
