@@ -1,5 +1,7 @@
 import { IconSparkles, IconLoader2 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useGeneratorStore } from "@/stores/generator-store";
 import { TemplateSelector } from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
@@ -27,7 +29,13 @@ interface GeneratorViewProps {
 }
 
 export function GeneratorView({ currentUrl }: GeneratorViewProps) {
-  const { generate, isGenerating, error } = useGeneratorStore();
+  const {
+    generate,
+    isGenerating,
+    error,
+    autoUpdateInBackground,
+    setAutoUpdateInBackground,
+  } = useGeneratorStore();
   const [loadingLabel, setLoadingLabel] = useState("Generating...");
 
   useEffect(() => {
@@ -75,6 +83,10 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       return;
     }
 
+    if (autoUpdateInBackground) {
+      toast.info("Started in background. You can close this popup.");
+    }
+
     try {
       await generate(currentUrl);
     } catch (err) {
@@ -100,6 +112,23 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
 
         {/* Tone Selector */}
         <ToneSelector />
+
+        {/* Auto Update Switch */}
+        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+          <div className="flex flex-col gap-0.5">
+            <Label className="text-sm font-medium">
+              Auto-update in background
+            </Label>
+            <span className="text-xs text-muted-foreground">
+              Generate and update PR even if popup closes
+            </span>
+          </div>
+          <Switch
+            checked={autoUpdateInBackground}
+            onCheckedChange={setAutoUpdateInBackground}
+            className="data-[state=checked]:bg-primary"
+          />
+        </div>
 
         {/* ================= */}
         {/* Ticket Toggle - This is currently in progress. Will be introduced in a future release */}
