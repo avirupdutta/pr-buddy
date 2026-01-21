@@ -12,7 +12,6 @@ import type {
   PRTemplate,
   AIModel,
 } from "@/types/chrome";
-import { DEFAULT_AI_MODELS } from "@/stores/settings-store";
 import { decryptApiKey } from "@/services/encryption";
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 
@@ -21,7 +20,7 @@ chrome.runtime.onMessage.addListener(
   (
     request: MessageAction,
     _sender: chrome.runtime.MessageSender,
-    sendResponse: (response: MessageResponse<unknown>) => void
+    sendResponse: (response: MessageResponse<unknown>) => void,
   ) => {
     if (request.action === "GENERATE_DESCRIPTION") {
       handleGeneration(request.url, request.settings)
@@ -38,12 +37,12 @@ chrome.runtime.onMessage.addListener(
     }
 
     return false;
-  }
+  },
 );
 
 async function handleGeneration(
   url: string,
-  settings: GeneratorSettings
+  settings: GeneratorSettings,
 ): Promise<GenerateResponse> {
   // 1. Get Credentials, Templates, and Models
   const result = (await chrome.storage.local.get([
@@ -90,7 +89,7 @@ async function handleGeneration(
   const prDetails = parseGitHubUrl(url);
   if (!prDetails) {
     throw new Error(
-      "Invalid GitHub PR URL. Please navigate to a PR page like: github.com/owner/repo/pull/123"
+      "Invalid GitHub PR URL. Please navigate to a PR page like: github.com/owner/repo/pull/123",
     );
   }
 
@@ -104,7 +103,7 @@ async function handleGeneration(
     settings,
     selectedTemplate,
     activeModel.modelId,
-    openRouterKey
+    openRouterKey,
   );
 
   return {
@@ -118,7 +117,7 @@ async function handleGeneration(
 async function handleUpdatePR(
   url: string,
   description: string,
-  title?: string
+  title?: string,
 ): Promise<UpdateResponse> {
   // 1. Get GitHub Token
   const result = (await chrome.storage.local.get(["githubToken"])) as {
@@ -157,13 +156,13 @@ async function handleUpdatePR(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
-    }
+    },
   );
 
   if (!response.ok) {
     const err = await response.json();
     throw new Error(
-      "Failed to update PR: " + (err.message || response.statusText)
+      "Failed to update PR: " + (err.message || response.statusText),
     );
   }
 
@@ -180,7 +179,7 @@ function parseGitHubUrl(url: string): PRDetails | null {
 
 async function fetchPRData(
   { owner, repo, number }: PRDetails,
-  token: string
+  token: string,
 ): Promise<{ diff: string; metadata: PRMetadata }> {
   const headers = {
     Authorization: `token ${token}`,
@@ -190,13 +189,13 @@ async function fetchPRData(
   // Fetch Metadata
   const metaRes = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
-    { headers }
+    { headers },
   );
 
   if (!metaRes.ok) {
     const err = await metaRes.json();
     throw new Error(
-      "Failed to fetch PR metadata: " + (err.message || metaRes.statusText)
+      "Failed to fetch PR metadata: " + (err.message || metaRes.statusText),
     );
   }
 
@@ -206,7 +205,7 @@ async function fetchPRData(
   const diffHeaders = { ...headers, Accept: "application/vnd.github.v3.diff" };
   const diffRes = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
-    { headers: diffHeaders }
+    { headers: diffHeaders },
   );
 
   if (!diffRes.ok) {
@@ -245,7 +244,7 @@ async function generateWithAI(
   settings: GeneratorSettings,
   template: PRTemplate,
   modelId: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<AIGenerationResult> {
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
@@ -318,13 +317,13 @@ Generate the JSON response with title and description now.`;
         ],
         response_format: { type: "json_object" },
       }),
-    }
+    },
   );
 
   if (!response.ok) {
     const err = await response.json();
     throw new Error(
-      "AI Generation failed: " + (err.error?.message || response.statusText)
+      "AI Generation failed: " + (err.error?.message || response.statusText),
     );
   }
 
