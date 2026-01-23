@@ -51,6 +51,49 @@ export async function generateDescription(
 }
 
 /**
+ * Generate PR description via background script (Streamed)
+ */
+export function streamDescription(
+  url: string,
+  settings: GeneratorSettings,
+  onChunk: (content: string) => void,
+  onComplete: (data: GenerateResponse) => void,
+  onError: (error: string) => void
+): () => void {
+  const port = chromeAPI.runtime.connect({
+    name: "GENERATE_DESCRIPTION_STREAM",
+  });
+
+  port.onMessage.addListener((msg: any) => {
+    if (msg.type === "chunk" && msg.content) {
+      onChunk(msg.content);
+    } else if (msg.type === "complete" && msg.data) {
+      onComplete(msg.data);
+    } else if (msg.type === "error") {
+      onError(msg.error || "Unknown error");
+    }
+  });
+
+  port.onDisconnect.addListener(() => {
+    if (chromeAPI.runtime.lastError) {
+      onError(chromeAPI.runtime.lastError.message || "Connection disconnected");
+    }
+  });
+
+  // Send initial request
+  port.postMessage({ url, settings });
+
+  // Return disconnect function
+  return () => {
+    try {
+      port.disconnect();
+    } catch (e) {
+      // Ignore if already disconnected
+    }
+  };
+}
+
+/**
  * Update PR description via GitHub API (background script)
  */
 export async function updatePRDescription(

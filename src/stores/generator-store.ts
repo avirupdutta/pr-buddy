@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import type { ToneType, PRDetails, GeneratorSettings } from "@/types/chrome";
 import { getStorage, setStorage } from "@/services/chrome-storage";
-import { generateDescription as generateDescriptionApi } from "@/services/chrome-messaging";
+import { streamDescription } from "@/services/chrome-messaging";
 
 type ViewType = "generator" | "result";
 
@@ -22,6 +22,7 @@ interface GeneratorState {
   // UI state
   view: ViewType;
   isGenerating: boolean;
+  isRegenerating: boolean;
   isUpdating: boolean;
   error: string | null;
 
@@ -34,7 +35,8 @@ interface GeneratorState {
   setGeneratedDescription: (description: string) => void;
   setGeneratedTitle: (title: string) => void;
   setView: (view: ViewType) => void;
-  generate: (url: string) => Promise<void>;
+  setIsRegenerating: (regenerating: boolean) => void;
+  generate: (url: string, isRegeneration?: boolean) => Promise<void>;
   reset: () => void;
   loadPreferences: () => Promise<void>;
 }
@@ -50,6 +52,7 @@ const DEFAULT_STATE = {
   prDetails: null,
   view: "generator" as ViewType,
   isGenerating: false,
+  isRegenerating: false,
   isUpdating: false,
   error: null,
 };
@@ -95,8 +98,19 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
     set({ view });
   },
 
-  generate: async (url) => {
-    set({ isGenerating: true, error: null });
+  setIsRegenerating: (isRegenerating) => {
+    set({ isRegenerating });
+  },
+
+  generate: async (url, isRegeneration = false) => {
+    // Reset state but keep focus on generator view until streaming starts
+    set({
+      isGenerating: true,
+      isRegenerating: isRegeneration,
+      error: null,
+      generatedDescription: "",
+      generatedTitle: "",
+    });
 
     try {
       const { template, tone, context, includeTickets, generateTitle } = get();
@@ -108,19 +122,63 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
         generateTitle,
       };
 
-      const response = await generateDescriptionApi(url, settings);
+      // Streaming state
+      let fullContent = "";
+      const separator = "<<<SEPARATOR>>>";
+      let hasSwitchedToResult = false;
 
-      set({
-        generatedDescription: response.description,
-        generatedTitle: response.title || "",
-        prDetails: response.prDetails,
-        view: "result",
-        isGenerating: false,
+      await new Promise<void>((resolve, reject) => {
+        streamDescription(
+          url,
+          settings,
+          (chunk) => {
+            // Switch to result view on first chunk
+            if (!hasSwitchedToResult) {
+              set({ view: "result" });
+              hasSwitchedToResult = true;
+            }
+
+            fullContent += chunk;
+
+            // Basic parsing
+            const separatorIndex = fullContent.indexOf(separator);
+
+            if (separatorIndex === -1) {
+              // Still in title section
+              const titleMatch = fullContent.match(/TITLE:\s*(.*)/s);
+              if (titleMatch) {
+                 set({ generatedTitle: titleMatch[1].trim() });
+              }
+            } else {
+              // We have separator
+              // 1. Update Title (final)
+              const beforeSeparator = fullContent.substring(0, separatorIndex);
+              const titleMatch = beforeSeparator.match(/TITLE:\s*(.*)/s);
+              if (titleMatch) {
+                 set({ generatedTitle: titleMatch[1].trim() });
+              }
+
+              // 2. Update Description
+              const afterSeparator = fullContent.substring(separatorIndex + separator.length);
+              const desc = afterSeparator.replace(/^\s*DESCRIPTION:\s*/, "");
+              set({ generatedDescription: desc });
+            }
+          },
+          (data) => {
+            set({ isGenerating: false, isRegenerating: false, prDetails: data.prDetails });
+            resolve();
+          },
+          (error) => {
+            reject(new Error(error));
+          }
+        );
       });
+
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Generation failed",
         isGenerating: false,
+        isRegenerating: false,
       });
     }
   },
@@ -131,6 +189,8 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
       generatedTitle: "",
       prDetails: null,
       view: "generator",
+      isGenerating: false,
+      isRegenerating: false,
       error: null,
     });
   },
