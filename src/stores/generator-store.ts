@@ -22,6 +22,7 @@ interface GeneratorState {
   // UI state
   view: ViewType;
   isGenerating: boolean;
+  isRegenerating: boolean;
   isUpdating: boolean;
   error: string | null;
 
@@ -34,7 +35,8 @@ interface GeneratorState {
   setGeneratedDescription: (description: string) => void;
   setGeneratedTitle: (title: string) => void;
   setView: (view: ViewType) => void;
-  generate: (url: string) => Promise<void>;
+  setIsRegenerating: (regenerating: boolean) => void;
+  generate: (url: string, isRegeneration?: boolean) => Promise<void>;
   reset: () => void;
   loadPreferences: () => Promise<void>;
 }
@@ -50,6 +52,7 @@ const DEFAULT_STATE = {
   prDetails: null,
   view: "generator" as ViewType,
   isGenerating: false,
+  isRegenerating: false,
   isUpdating: false,
   error: null,
 };
@@ -95,10 +98,15 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
     set({ view });
   },
 
-  generate: async (url) => {
+  setIsRegenerating: (isRegenerating) => {
+    set({ isRegenerating });
+  },
+
+  generate: async (url, isRegeneration = false) => {
     // Reset state but keep focus on generator view until streaming starts
     set({
       isGenerating: true,
+      isRegenerating: isRegeneration,
       error: null,
       generatedDescription: "",
       generatedTitle: "",
@@ -157,7 +165,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
             }
           },
           (data) => {
-            set({ isGenerating: false, prDetails: data.prDetails });
+            set({ isGenerating: false, isRegenerating: false, prDetails: data.prDetails });
             resolve();
           },
           (error) => {
@@ -170,6 +178,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : "Generation failed",
         isGenerating: false,
+        isRegenerating: false,
       });
     }
   },
@@ -180,6 +189,8 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
       generatedTitle: "",
       prDetails: null,
       view: "generator",
+      isGenerating: false,
+      isRegenerating: false,
       error: null,
     });
   },

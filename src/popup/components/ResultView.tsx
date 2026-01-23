@@ -29,6 +29,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     generateTitle,
     generate,
     isGenerating,
+    isRegenerating,
     reset,
   } = useGeneratorStore();
 
@@ -100,7 +101,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   const handleRegenerate = async () => {
     if (!currentUrl) return;
     try {
-      await generate(currentUrl);
+      await generate(currentUrl, true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Regeneration failed");
     }
@@ -171,60 +172,65 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       </div>
 
       {/* Footer */}
-      {!isGenerating && (
-        <div className="p-6 pt-2 bg-background border-t border-transparent flex flex-col gap-3">
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleCopy}
-              disabled={isCopied}
-              className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm"
-            >
-              {isCopied ? (
-                <>
-                  <IconCheck className="w-5 h-5" />
-                  <span>Copied!</span>
-                </>
-              ) : (
-                <>
-                  <IconCopy className="w-5 h-5" />
-                  <span>Copy</span>
-                </>
-              )}
-            </Button>
-
-            <Button
-              onClick={handleInsert}
-              disabled={isInserting}
-              className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm shadow-lg"
-            >
-              {isInserting ? (
-                <>
-                  <IconLoader2 className="w-5 h-5 animate-spin" />
-                  <span>Updating...</span>
-                </>
-              ) : (
-                <>
-                  <IconUpload className="w-5 h-5" />
-                  <span>Auto-Insert</span>
-                </>
-              )}
-            </Button>
-          </div>
+      <div className="p-6 pt-2 bg-background border-t border-transparent flex flex-col gap-3">
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={handleCopy}
+            disabled={isCopied || isGenerating}
+            className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm"
+          >
+            {isCopied ? (
+              <>
+                <IconCheck className="w-5 h-5" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <IconCopy className="w-5 h-5" />
+                <span>Copy</span>
+              </>
+            )}
+          </Button>
 
           <Button
-            variant="ghost"
-            onClick={handleRegenerate}
-            disabled={isGenerating}
-            className="w-full h-10 gap-2 text-sm font-medium rounded-lg border border-border"
+            onClick={handleInsert}
+            disabled={isInserting || isGenerating}
+            className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm shadow-lg"
           >
+            {isInserting ? (
+              <>
+                <IconLoader2 className="w-5 h-5 animate-spin" />
+                <span>Updating...</span>
+              </>
+            ) : (
+              <>
+                <IconUpload className="w-5 h-5" />
+                <span>Auto-Insert</span>
+              </>
+            )}
+          </Button>
+        </div>
+
+        <Button
+          variant="ghost"
+          onClick={handleRegenerate}
+          disabled={isGenerating}
+          className="w-full h-10 gap-2 text-sm font-medium rounded-lg border border-border"
+        >
+          {isRegenerating ? (
+            <>
+              <IconLoader2 className="w-4 h-4 animate-spin" />
+              <span>Regenerating...</span>
+            </>
+          ) : (
             <>
               <IconRefresh className="w-4 h-4" />
               <span>Regenerate</span>
             </>
-          </Button>
-        </div>
-      )}
+          )}
+        </Button>
+      </div>
     </>
   );
 }
