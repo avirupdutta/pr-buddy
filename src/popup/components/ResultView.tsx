@@ -171,65 +171,60 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       </div>
 
       {/* Footer */}
-      <div className="p-6 pt-2 bg-background border-t border-transparent flex flex-col gap-3">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handleCopy}
-            disabled={isCopied}
-            className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm"
-          >
-            {isCopied ? (
-              <>
-                <IconCheck className="w-5 h-5" />
-                <span>Copied!</span>
-              </>
-            ) : (
-              <>
-                <IconCopy className="w-5 h-5" />
-                <span>Copy</span>
-              </>
-            )}
-          </Button>
+      {!isGenerating && (
+        <div className="p-6 pt-2 bg-background border-t border-transparent flex flex-col gap-3">
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleCopy}
+              disabled={isCopied}
+              className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm"
+            >
+              {isCopied ? (
+                <>
+                  <IconCheck className="w-5 h-5" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <IconCopy className="w-5 h-5" />
+                  <span>Copy</span>
+                </>
+              )}
+            </Button>
+
+            <Button
+              onClick={handleInsert}
+              disabled={isInserting}
+              className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm shadow-lg"
+            >
+              {isInserting ? (
+                <>
+                  <IconLoader2 className="w-5 h-5 animate-spin" />
+                  <span>Updating...</span>
+                </>
+              ) : (
+                <>
+                  <IconUpload className="w-5 h-5" />
+                  <span>Auto-Insert</span>
+                </>
+              )}
+            </Button>
+          </div>
 
           <Button
-            onClick={handleInsert}
-            disabled={isInserting}
-            className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm shadow-lg"
+            variant="ghost"
+            onClick={handleRegenerate}
+            disabled={isGenerating}
+            className="w-full h-10 gap-2 text-sm font-medium rounded-lg border border-border"
           >
-            {isInserting ? (
-              <>
-                <IconLoader2 className="w-5 h-5 animate-spin" />
-                <span>Updating...</span>
-              </>
-            ) : (
-              <>
-                <IconUpload className="w-5 h-5" />
-                <span>Auto-Insert</span>
-              </>
-            )}
-          </Button>
-        </div>
-
-        <Button
-          variant="ghost"
-          onClick={handleRegenerate}
-          disabled={isGenerating}
-          className="w-full h-10 gap-2 text-sm font-medium rounded-lg border border-border"
-        >
-          {isGenerating ? (
-            <>
-              <IconLoader2 className="w-4 h-4 animate-spin" />
-              <span>Regenerating...</span>
-            </>
-          ) : (
             <>
               <IconRefresh className="w-4 h-4" />
               <span>Regenerate</span>
             </>
-          )}
-        </Button>
-      </div>
+          </Button>
+        </div>
+      )}
     </>
   );
 }

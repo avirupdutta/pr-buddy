@@ -96,13 +96,12 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
   },
 
   generate: async (url) => {
-    // Reset state and switch to result view immediately
-    set({ 
-      isGenerating: true, 
-      error: null, 
-      generatedDescription: "", 
+    // Reset state but keep focus on generator view until streaming starts
+    set({
+      isGenerating: true,
+      error: null,
+      generatedDescription: "",
       generatedTitle: "",
-      view: "result" 
     });
 
     try {
@@ -118,17 +117,24 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
       // Streaming state
       let fullContent = "";
       const separator = "<<<SEPARATOR>>>";
+      let hasSwitchedToResult = false;
 
       await new Promise<void>((resolve, reject) => {
         streamDescription(
-          url, 
+          url,
           settings,
           (chunk) => {
+            // Switch to result view on first chunk
+            if (!hasSwitchedToResult) {
+              set({ view: "result" });
+              hasSwitchedToResult = true;
+            }
+
             fullContent += chunk;
-            
+
             // Basic parsing
             const separatorIndex = fullContent.indexOf(separator);
-            
+
             if (separatorIndex === -1) {
               // Still in title section
               const titleMatch = fullContent.match(/TITLE:\s*(.*)/s);
