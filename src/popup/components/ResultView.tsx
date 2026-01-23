@@ -7,6 +7,7 @@ import {
   IconLoader2,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,11 +109,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   };
 
   return (
-    <>
-      <div
-        ref={mainRef}
-        className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4"
-      >
+    <div className="px-6 py-4 flex flex-col gap-4 min-h-full">
+      <div ref={mainRef} className="flex-1">
         {(generateTitle || generatedTitle) && (
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium">Title</Label>
@@ -143,7 +141,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               ref={textareaRef}
               value={generatedDescription}
               onChange={(e) => setGeneratedDescription(e.target.value)}
-              className="resize-none h-80 w-full text-sm font-mono"
+              className="resize-none h-80 w-full text-sm font-mono scrollbar-thin"
               placeholder="Your generated description will appear here..."
             />
           </TabsContent>
@@ -151,7 +149,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           <TabsContent value="preview" className="mt-0 flex-1">
             <div
               ref={previewRef}
-              className="h-80 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto"
+              className="h-80 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto scrollbar-thin"
+              style={{ maxHeight: "320px" }}
             >
               {generatedDescription ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
@@ -231,6 +230,6 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           )}
         </Button>
       </div>
-    </>
+    </div>
   );
 }

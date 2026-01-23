@@ -1,5 +1,6 @@
 import { IconSparkles, IconLoader2 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+
 import { useGeneratorStore } from "@/stores/generator-store";
 import { TemplateSelector } from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
@@ -39,27 +40,25 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
     toast.error(error);
   }
 
-  return (
-    <>
-      <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-6 justify-between">
-        <div className="flex flex-col gap-6">
-          {/* Template Selection */}
-          <TemplateSelector />
+return (
+    <div className="px-6 py-4 flex flex-col gap-6 min-h-full">
+      <div className="flex flex-col gap-6 flex-1">
+        {/* Template Selection */}
+        <TemplateSelector />
 
-          {/* Custom Instructions (merged with title instructions) */}
-          <ContextInput />
-        </div>
+        {/* Custom Instructions (merged with title instructions) */}
+        <ContextInput />
+      </div>
 
-        {/* Tone Selector */}
-        <ToneSelector />
+      {/* Tone Selector */}
+      <ToneSelector />
 
-        {/* ================= */}
-        {/* Ticket Toggle - This is currently in progress. Will be introduced in a future release */}
-        {/* <div className="pt-2 border-t border-border/50">
+      {/* ================= */}
+      {/* Ticket Toggle - This is currently in progress. Will be introduced in a future release */}
+      {/* <div className="pt-2 border-t border-border/50">
           <TicketToggle />
         </div> */}
-        {/* ================= */}
-      </div>
+      {/* ================= */}
 
       {/* Footer */}
       <div className="p-6 pt-2 bg-background border-t border-transparent">
@@ -99,6 +98,6 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
           </button>
         </p>
       </div>
-    </>
+    </div>
   );
 }

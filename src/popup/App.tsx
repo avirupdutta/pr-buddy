@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useGeneratorStore } from "@/stores/generator-store";
 import { getCurrentTabUrl, openOptionsPage } from "@/services/chrome-messaging";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Header } from "./components/Header";
 import { GeneratorView } from "./components/GeneratorView";
 import { ResultView } from "./components/ResultView";
@@ -62,18 +63,20 @@ export function PopupApp() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-background">
+    <div className="w-full h-full flex flex-col bg-background overflow-hidden text-pretty">
       {isDev && devMode && (
         <div className="bg-amber-500/10 text-amber-600 text-[10px] uppercase tracking-wider px-4 py-1 flex items-center justify-center font-bold border-t border-amber-500/20">
           Developer Mode: Active
         </div>
       )}
       <Header />
-      {view === "generator" ? (
-        <GeneratorView currentUrl={currentUrl} />
-      ) : (
-        <ResultView currentUrl={currentUrl} />
-      )}
+      <ScrollArea className="flex-1 min-h-0">
+        {view === "generator" ? (
+          <GeneratorView currentUrl={currentUrl} />
+        ) : (
+          <ResultView currentUrl={currentUrl} />
+        )}
+      </ScrollArea>
     </div>
   );
 }
