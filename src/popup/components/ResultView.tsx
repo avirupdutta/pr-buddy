@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   IconCopy,
   IconUpload,
@@ -35,6 +35,25 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom during generation
+  useEffect(() => {
+    if (isGenerating) {
+      if (textareaRef.current) {
+        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+      }
+      if (previewRef.current) {
+        previewRef.current.scrollTop = previewRef.current.scrollHeight;
+      }
+      if (mainRef.current) {
+        mainRef.current.scrollTop = mainRef.current.scrollHeight;
+      }
+    }
+  }, [generatedDescription, isGenerating]);
+
   useEffect(() => {
     if (!isGenerating && generatedDescription) {
       const trimmed = generatedDescription.trim();
@@ -66,7 +85,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       await updatePRDescription(
         currentUrl,
         generatedDescription,
-        generatedTitle
+        generatedTitle,
       );
       toast.success("PR updated!");
       reset();
@@ -89,7 +108,10 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+      <div
+        ref={mainRef}
+        className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4"
+      >
         {(generateTitle || generatedTitle) && (
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium">Title</Label>
@@ -117,6 +139,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
           <TabsContent value="raw" className="mt-0 flex-1">
             <Textarea
+              ref={textareaRef}
               value={generatedDescription}
               onChange={(e) => setGeneratedDescription(e.target.value)}
               className="resize-none h-80 w-full text-sm font-mono"
@@ -125,7 +148,10 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           </TabsContent>
 
           <TabsContent value="preview" className="mt-0 flex-1">
-            <div className="h-80 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto">
+            <div
+              ref={previewRef}
+              className="h-80 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto"
+            >
               {generatedDescription ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
                   <ReactMarkdown>{generatedDescription}</ReactMarkdown>
