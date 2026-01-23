@@ -64,7 +64,7 @@ export function streamDescription(
     name: "GENERATE_DESCRIPTION_STREAM",
   });
 
-  port.onMessage.addListener((msg: any) => {
+   port.onMessage.addListener((msg: {type: 'chunk' | 'complete' | 'error', content?: string, data?: GenerateResponse, error?: string}) => {
     if (msg.type === "chunk" && msg.content) {
       onChunk(msg.content);
     } else if (msg.type === "complete" && msg.data) {
@@ -87,7 +87,7 @@ export function streamDescription(
   return () => {
     try {
       port.disconnect();
-    } catch (e) {
+    } catch {
       // Ignore if already disconnected
     }
   };
