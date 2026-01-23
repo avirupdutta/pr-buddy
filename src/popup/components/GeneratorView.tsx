@@ -41,7 +41,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
   }
 
   return (
-    <div className="px-6 py-4 flex flex-col gap-6 min-h-full">
+    <div className="px-6 pt-4 flex flex-col gap-6 min-h-full">
       <div className="flex flex-col gap-6 flex-1">
         {/* Template Selection */}
         <TemplateSelector />
@@ -61,7 +61,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       {/* ================= */}
 
       {/* Footer */}
-      <div className="px-0 pt-2 bg-background border-t border-transparent">
+      <div className="px-0 pt-2 bg-background border-t border-transparent sticky bottom-[0px] py-4">
         <Button
           onClick={handleGenerate}
           disabled={isGenerating}

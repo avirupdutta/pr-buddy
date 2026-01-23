@@ -109,7 +109,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   };
 
   return (
-    <div className="px-6 py-4 flex flex-col gap-4 min-h-full">
+    <div className="px-6 pt-4 flex flex-col gap-4 min-h-full">
       <div ref={mainRef} className="flex-1 space-y-4">
         {(generateTitle || generatedTitle) && (
           <div className="flex flex-col gap-2">
@@ -171,7 +171,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       </div>
 
       {/* Footer */}
-      <div className="px-0 pt-2 bg-background border-t border-transparent flex flex-col gap-3">
+      <div className="sticky bottom-[0px] px-0 py-4 bg-background border-t border-transparent flex flex-col gap-3">
         <div className="flex gap-3">
           <Button
             variant="outline"
