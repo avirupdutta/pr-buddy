@@ -40,7 +40,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
     toast.error(error);
   }
 
-return (
+  return (
     <div className="px-6 py-4 flex flex-col gap-6 min-h-full">
       <div className="flex flex-col gap-6 flex-1">
         {/* Template Selection */}
@@ -61,7 +61,7 @@ return (
       {/* ================= */}
 
       {/* Footer */}
-      <div className="p-6 pt-2 bg-background border-t border-transparent">
+      <div className="px-0 pt-2 bg-background border-t border-transparent">
         <Button
           onClick={handleGenerate}
           disabled={isGenerating}

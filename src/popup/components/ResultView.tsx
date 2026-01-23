@@ -110,7 +110,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
   return (
     <div className="px-6 py-4 flex flex-col gap-4 min-h-full">
-      <div ref={mainRef} className="flex-1">
+      <div ref={mainRef} className="flex-1 space-y-4">
         {(generateTitle || generatedTitle) && (
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium">Title</Label>
@@ -141,7 +141,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               ref={textareaRef}
               value={generatedDescription}
               onChange={(e) => setGeneratedDescription(e.target.value)}
-              className="resize-none h-80 w-full text-sm font-mono scrollbar-thin"
+              className="resize-none h-60 w-full text-sm font-mono scrollbar-thin"
               placeholder="Your generated description will appear here..."
             />
           </TabsContent>
@@ -171,7 +171,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       </div>
 
       {/* Footer */}
-      <div className="p-6 pt-2 bg-background border-t border-transparent flex flex-col gap-3">
+      <div className="px-0 pt-2 bg-background border-t border-transparent flex flex-col gap-3">
         <div className="flex gap-3">
           <Button
             variant="outline"
