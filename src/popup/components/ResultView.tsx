@@ -211,7 +211,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             variant="ghost"
             onClick={handleRegenerate}
             disabled={isGenerating}
-            className="flex-1 h-10 gap-2 text-sm font-medium rounded-lg border border-border"
+            className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border"
           >
             {isRegenerating ? (
               <>
@@ -229,7 +229,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           <Button
             onClick={handleInsert}
             disabled={isInserting || isGenerating}
-            className="flex-1 h-10 gap-2 text-xs font-semibold rounded-lg border border-border shadow-lg"
+            className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border shadow-lg"
           >
             {isInserting ? (
               <>

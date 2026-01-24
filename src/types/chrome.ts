@@ -56,7 +56,8 @@ export type MessageAction =
       description: string;
       title?: string;
     }
-  | { action: "UPDATE_DESCRIPTION"; description: string };
+  | { action: "UPDATE_DESCRIPTION"; description: string }
+  | { action: "SHOW_TOAST"; message: string; type: "error" | "success" | "info" | "warning" };
 
 export type GenerateDescriptionMessage = Extract<
   MessageAction,
@@ -69,6 +70,10 @@ export type UpdatePRDescriptionMessage = Extract<
 export type UpdateDescriptionMessage = Extract<
   MessageAction,
   { action: "UPDATE_DESCRIPTION" }
+>;
+export type ShowToastMessage = Extract<
+  MessageAction,
+  { action: "SHOW_TOAST" }
 >;
 
 // Response types

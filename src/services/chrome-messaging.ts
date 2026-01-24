@@ -127,6 +127,9 @@ export async function getCurrentTabUrl(): Promise<{
   });
 }
 
+// Re-export sendToastNotification from notifications module
+export { sendToastNotification } from "./notifications";
+
 /**
  * Open the options page
  */

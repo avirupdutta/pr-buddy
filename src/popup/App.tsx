@@ -6,6 +6,8 @@ import { Header } from "./components/Header";
 import { GeneratorView } from "./components/GeneratorView";
 import { ResultView } from "./components/ResultView";
 import { isDev } from "@/services/is-dev";
+import { toast } from "sonner";
+import type { MessageAction } from "@/types/chrome";
 
 export function PopupApp() {
   const [currentUrl, setCurrentUrl] = useState<string>("");
@@ -43,6 +45,41 @@ export function PopupApp() {
 
     fetchUrl();
   }, [devMode, devPrUrl, isLoadingSettings]);
+
+  // Listen for toast notifications from background script
+  useEffect(() => {
+    // Check if Chrome APIs are available (extension context)
+    if (typeof chrome === "undefined" || !chrome.runtime) {
+      return;
+    }
+
+    const handleMessage = (message: MessageAction) => {
+      if (message.action === "SHOW_TOAST") {
+        const { message: toastMessage, type } = message;
+
+        switch (type) {
+          case "error":
+            toast.error(toastMessage);
+            break;
+          case "success":
+            toast.success(toastMessage);
+            break;
+          case "warning":
+            toast.warning(toastMessage);
+            break;
+          case "info":
+            toast.info(toastMessage);
+            break;
+        }
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(handleMessage);
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleMessage);
+    };
+  }, []);
 
   // Redirect to options if no API keys
   useEffect(() => {

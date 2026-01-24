@@ -14,6 +14,7 @@ import type {
 } from "@/types/chrome";
 import { decryptApiKey } from "@/services/encryption";
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
+import { sendToastNotification } from "@/services/notifications";
 
 // Listen for long-lived connections (streaming)
 chrome.runtime.onConnect.addListener((port) => {
@@ -423,9 +424,15 @@ Generate the TITLE and DESCRIPTION now in the requested format.`;
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(
-        "AI Generation failed: " + (err.error?.message || response.statusText),
+      const errorMessage = err.error?.message || response.statusText;
+      
+      // Send specific toast notification for OpenRouter API failure
+      sendToastNotification(
+        `OpenRouter API Error: ${errorMessage}`,
+        "error"
       );
+      
+      throw new Error("AI Generation failed: " + errorMessage);
     }
 
     const reader = response.body?.getReader();
@@ -479,6 +486,16 @@ Generate the TITLE and DESCRIPTION now in the requested format.`;
     });
   } catch (error) {
     console.error("Error in generateWithAIStream", error);
+    
+    // Send toast notification for streaming errors
+    if (error instanceof Error) {
+      sendToastNotification(
+        `OpenRouter API Error: ${error.message}`,
+        "error"
+      );
+    }
+    
+    throw error;
   }
 }
 
@@ -566,9 +583,15 @@ Generate the JSON response with title and description now.`;
 
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(
-      "AI Generation failed: " + (err.error?.message || response.statusText),
+    const errorMessage = err.error?.message || response.statusText;
+    
+    // Send specific toast notification for OpenRouter API failure
+    sendToastNotification(
+      `OpenRouter API Error: ${errorMessage}`,
+      "error"
     );
+    
+    throw new Error("AI Generation failed: " + errorMessage);
   }
 
   const data = await response.json();

@@ -11,6 +11,7 @@ import type {
   GenerateResponse,
 } from "@/types/chrome";
 import { decryptApiKey } from "./encryption";
+import { sendToastNotification } from "./notifications";
 
 /**
  * Check if we're running in a Chrome extension context
@@ -216,6 +217,15 @@ export const mockRuntime = {
           } catch (err) {
             const errorMessage =
               err instanceof Error ? err.message : "Unknown error";
+            
+            // Send toast notification for OpenRouter API errors
+            if (errorMessage.includes("OpenRouter") || errorMessage.includes("API")) {
+              sendToastNotification(
+                `OpenRouter API Error: ${errorMessage}`,
+                "error"
+              );
+            }
+            
             listeners.forEach((cb) =>
               cb({
                 type: "error",
@@ -564,11 +574,17 @@ async function handleDevUpdatePR(
     },
   );
 
-  if (!response.ok) {
+if (!response.ok) {
     const err = await response.json();
-    throw new Error(
-      "Failed to update PR: " + (err.message || response.statusText),
+    const errorMessage = err.error?.message || response.statusText;
+    
+    // Send specific toast notification for OpenRouter API failure
+    sendToastNotification(
+      `OpenRouter API Error: ${errorMessage}`,
+      "error"
     );
+    
+    throw new Error("AI Generation failed: " + errorMessage);
   }
   return { success: true };
 }
@@ -678,9 +694,15 @@ Generate the JSON response with title and description now.`;
 
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(
-      "AI Generation failed: " + (err.error?.message || response.statusText),
+    const errorMessage = err.error?.message || response.statusText;
+    
+    // Send specific toast notification for OpenRouter API failure
+    sendToastNotification(
+      `OpenRouter API Error: ${errorMessage}`,
+      "error"
     );
+    
+    throw new Error("AI Generation failed: " + errorMessage);
   }
 
   const data = await response.json();
