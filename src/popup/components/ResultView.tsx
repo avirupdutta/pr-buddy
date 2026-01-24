@@ -15,6 +15,7 @@ import ReactMarkdown from "react-markdown";
 import { useGeneratorStore } from "@/stores/generator-store";
 import { updatePRDescription } from "@/services/chrome-messaging";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ResultViewProps {
   currentUrl: string;
@@ -61,9 +62,9 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
         // Also scroll the Radix ScrollArea viewport if we are inside one
         // This is crucial because the entire view might be inside a ScrollArea
-        const viewport = mainRef.current?.closest(
-          "[data-radix-scroll-area-viewport]",
-        );
+        const viewport =
+          mainRef.current?.closest("[data-radix-scroll-area-viewport]") ||
+          mainRef.current?.querySelector("[data-radix-scroll-area-viewport]");
         if (viewport) {
           viewport.scrollTop = viewport.scrollHeight;
         }
@@ -130,79 +131,81 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   return (
     <div
       ref={mainRef}
-      className="px-6 pt-4 flex flex-col gap-4 min-h-full overflow-y-auto"
+      className="flex flex-col h-full bg-background overflow-hidden"
     >
-      <div className="flex-1 space-y-4">
-        {(generateTitle || generatedTitle) && (
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium">Title</Label>
-            <Input
-              value={generatedTitle}
-              onChange={(e) => setGeneratedTitle(e.target.value)}
-              className="font-medium"
-              placeholder="PR Title"
-            />
-          </div>
-        )}
+      <ScrollArea classNames={{ root: "flex-1 min-h-0" }}>
+        <div className="px-6 pt-4 space-y-4 pb-4">
+          {(generateTitle || generatedTitle) && (
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium">Title</Label>
+              <Input
+                value={generatedTitle}
+                onChange={(e) => setGeneratedTitle(e.target.value)}
+                className="font-medium"
+                placeholder="PR Title"
+              />
+            </div>
+          )}
 
-        <Tabs defaultValue="preview" className="flex flex-col gap-2 h-full">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium">Description</Label>
-              <Button
-                variant="ghost"
-                onClick={handleCopy}
-                disabled={isCopied || isGenerating}
-                className="h-8 w-8 p-0 rounded-sm"
+          <Tabs defaultValue="preview" className="flex flex-col gap-2 h-full">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Description</Label>
+                <Button
+                  variant="ghost"
+                  onClick={handleCopy}
+                  disabled={isCopied || isGenerating}
+                  className="h-8 w-8 p-0 rounded-sm"
+                >
+                  {isCopied ? (
+                    <IconCheck className="w-4 h-4" />
+                  ) : (
+                    <IconCopy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              <TabsList className="h-8">
+                <TabsTrigger value="raw" className="text-xs">
+                  Raw
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="text-xs">
+                  Preview
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="raw" className="mt-0 flex-1">
+              <Textarea
+                ref={textareaRef}
+                value={generatedDescription}
+                onChange={(e) => setGeneratedDescription(e.target.value)}
+                className="resize-none h-60 w-full text-sm font-mono scrollbar-thin"
+                placeholder="Your generated description will appear here..."
+              />
+            </TabsContent>
+
+            <TabsContent value="preview" className="mt-0 flex-1">
+              <div
+                ref={previewRef}
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs overflow-y-auto scrollbar-thin"
               >
-                {isCopied ? (
-                  <IconCheck className="w-4 h-4" />
+                {generatedDescription ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
+                    <ReactMarkdown>{generatedDescription}</ReactMarkdown>
+                  </div>
                 ) : (
-                  <IconCopy className="w-4 h-4" />
+                  <div className="text-muted-foreground">
+                    Your generated description will appear here...
+                  </div>
                 )}
-              </Button>
-            </div>
-            <TabsList className="h-8">
-              <TabsTrigger value="raw" className="text-xs">
-                Raw
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="text-xs">
-                Preview
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="raw" className="mt-0 flex-1">
-            <Textarea
-              ref={textareaRef}
-              value={generatedDescription}
-              onChange={(e) => setGeneratedDescription(e.target.value)}
-              className="resize-none h-60 w-full text-sm font-mono scrollbar-thin"
-              placeholder="Your generated description will appear here..."
-            />
-          </TabsContent>
-
-          <TabsContent value="preview" className="mt-0 flex-1">
-            <div
-              ref={previewRef}
-              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs overflow-y-auto scrollbar-thin"
-            >
-              {generatedDescription ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
-                  <ReactMarkdown>{generatedDescription}</ReactMarkdown>
-                </div>
-              ) : (
-                <div className="text-muted-foreground">
-                  Your generated description will appear here...
-                </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </ScrollArea>
 
       {/* Footer */}
-      <div className="sticky left-0 right-0 bottom-0 py-4 bg-background border-t border-transparent flex flex-col gap-4">
+      <div className="shrink-0 px-6 py-4 bg-background border-t border-border/50 flex flex-col gap-4">
         <div className="flex gap-3">
           <Button
             variant="ghost"

@@ -8,6 +8,7 @@ import { ContextInput } from "./ContextInput";
 import { toast } from "sonner";
 import { openOptionsPage } from "@/services/chrome-messaging";
 import packageJson from "../../../package.json";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface GeneratorViewProps {
   currentUrl: string;
@@ -41,31 +42,28 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
   }
 
   return (
-    <div className="px-6 pt-4 flex flex-col gap-6 min-h-full">
-      <div className="flex flex-col gap-6 flex-1">
-        {/* Template Selection */}
-        <TemplateSelector />
+    <div className="flex flex-col h-full bg-background overflow-hidden px-0">
+      <ScrollArea classNames={{ root: "flex-1 min-h-0" }}>
+        <div className="px-6 pt-4 flex flex-col gap-6 pb-6">
+          <div className="flex flex-col gap-6 flex-1">
+            {/* Custom Instructions (merged with title instructions) */}
+            <ContextInput />
+          </div>
 
-        {/* Custom Instructions (merged with title instructions) */}
-        <ContextInput />
-      </div>
+          {/* Template Selection */}
+          <TemplateSelector />
 
-      {/* Tone Selector */}
-      <ToneSelector />
-
-      {/* ================= */}
-      {/* Ticket Toggle - This is currently in progress. Will be introduced in a future release */}
-      {/* <div className="pt-2 border-t border-border/50">
-          <TicketToggle />
-        </div> */}
-      {/* ================= */}
+          {/* Tone Selector */}
+          <ToneSelector />
+        </div>
+      </ScrollArea>
 
       {/* Footer */}
-      <div className="px-0 pt-2 bg-background border-t border-transparent sticky bottom-0 py-4">
+      <div className="px-6 py-4 bg-background border-t border-border/50 shrink-0">
         <Button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className={`w-full h-12 gap-2 text-base font-bold rounded-xl shadow-lg transition-all duration-300`}
+          className={`w-full h-10 gap-2 text-base font-bold rounded-lg shadow-lg transition-all duration-300`}
           size="lg"
         >
           {isGenerating ? (

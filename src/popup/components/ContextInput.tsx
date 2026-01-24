@@ -9,9 +9,24 @@ export function ContextInput() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Generate PR Title Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-0.5">
+          <Label className="text-sm font-medium">Generate Title</Label>
+          <span className="text-xs text-muted-foreground">
+            Auto-generate title based on changes
+          </span>
+        </div>
+        <Switch
+          checked={generateTitle}
+          onCheckedChange={setGenerateTitle}
+          className="data-[state=checked]:bg-primary"
+        />
+      </div>
+
       {/* Custom Instructions */}
       <div className="flex flex-col gap-2">
-        <div className="flex justify-between items-baseline">
+        <div className="flex items-baseline justify-between gap-2">
           <Label className="text-sm font-medium">Custom Instructions</Label>
           <span className="text-xs text-muted-foreground">Optional</span>
         </div>
@@ -22,23 +37,8 @@ export function ContextInput() {
           className="min-h-[100px] resize-y text-sm"
         />
         <p className="text-xs text-muted-foreground">
-          Instructions apply to both PR title and description.
+          Instructions apply to both PR title and description
         </p>
-      </div>
-
-      {/* Generate PR Title Toggle */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/50">
-        <div className="flex flex-col gap-0.5">
-          <Label className="text-sm font-medium">Generate PR Title</Label>
-          <span className="text-xs text-muted-foreground">
-            Auto-generate title based on changes
-          </span>
-        </div>
-        <Switch
-          checked={generateTitle}
-          onCheckedChange={setGenerateTitle}
-          className="data-[state=checked]:bg-primary"
-        />
       </div>
     </div>
   );
