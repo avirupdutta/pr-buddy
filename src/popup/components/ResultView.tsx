@@ -125,7 +125,21 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
         <Tabs defaultValue="preview" className="flex flex-col gap-2 h-full">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Description</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Description</Label>
+              <Button
+                variant="ghost"
+                onClick={handleCopy}
+                disabled={isCopied || isGenerating}
+                className="h-8 w-8 p-0 rounded-sm"
+              >
+                {isCopied ? (
+                  <IconCheck className="w-4 h-4" />
+                ) : (
+                  <IconCopy className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
             <TabsList className="h-8">
               <TabsTrigger value="raw" className="text-xs">
                 Raw
@@ -149,8 +163,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           <TabsContent value="preview" className="mt-0 flex-1">
             <div
               ref={previewRef}
-              className="h-80 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto scrollbar-thin"
-              style={{ maxHeight: "320px" }}
+              className="h-60 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto scrollbar-thin"
+              style={{ maxHeight: "240px" }}
             >
               {generatedDescription ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
@@ -165,8 +179,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           </TabsContent>
         </Tabs>
         <p className="text-xs text-muted-foreground text-center">
-          Review the generated description above. You can copy it or auto-insert
-          it into the PR.
+          A.I can make mistakes, always review the generated content.
         </p>
       </div>
 
@@ -174,20 +187,20 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       <div className="sticky bottom-[0px] px-0 py-4 bg-background border-t border-transparent flex flex-col gap-3">
         <div className="flex gap-3">
           <Button
-            variant="outline"
-            onClick={handleCopy}
-            disabled={isCopied || isGenerating}
-            className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm"
+            variant="ghost"
+            onClick={handleRegenerate}
+            disabled={isGenerating}
+            className="flex-1 h-10 gap-2 text-sm font-medium rounded-lg border border-border"
           >
-            {isCopied ? (
+            {isRegenerating ? (
               <>
-                <IconCheck className="w-5 h-5" />
-                <span>Copied!</span>
+                <IconLoader2 className="w-4 h-4 animate-spin" />
+                <span>Regenerating...</span>
               </>
             ) : (
               <>
-                <IconCopy className="w-5 h-5" />
-                <span>Copy</span>
+                <IconRefresh className="w-4 h-4" />
+                <span>Regenerate</span>
               </>
             )}
           </Button>
@@ -210,25 +223,6 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             )}
           </Button>
         </div>
-
-        <Button
-          variant="ghost"
-          onClick={handleRegenerate}
-          disabled={isGenerating}
-          className="w-full h-10 gap-2 text-sm font-medium rounded-lg border border-border"
-        >
-          {isRegenerating ? (
-            <>
-              <IconLoader2 className="w-4 h-4 animate-spin" />
-              <span>Regenerating...</span>
-            </>
-          ) : (
-            <>
-              <IconRefresh className="w-4 h-4" />
-              <span>Regenerate</span>
-            </>
-          )}
-        </Button>
       </div>
     </div>
   );
