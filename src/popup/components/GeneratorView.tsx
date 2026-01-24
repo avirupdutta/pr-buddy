@@ -61,7 +61,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       {/* ================= */}
 
       {/* Footer */}
-      <div className="px-0 pt-2 bg-background border-t border-transparent sticky bottom-[0px] py-4">
+      <div className="px-0 pt-2 bg-background border-t border-transparent sticky bottom-0 py-4">
         <Button
           onClick={handleGenerate}
           disabled={isGenerating}

@@ -109,8 +109,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   };
 
   return (
-    <div className="px-6 pt-4 flex flex-col gap-4 min-h-full">
-      <div ref={mainRef} className="flex-1 space-y-4">
+    <div ref={mainRef} className="px-6 pt-4 flex flex-col gap-4 min-h-full">
+      <div className="flex-1 space-y-4">
         {(generateTitle || generatedTitle) && (
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium">Title</Label>
@@ -163,8 +163,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           <TabsContent value="preview" className="mt-0 flex-1">
             <div
               ref={previewRef}
-              className="h-60 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto scrollbar-thin"
-              style={{ maxHeight: "240px" }}
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto scrollbar-thin"
             >
               {generatedDescription ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
@@ -178,13 +177,10 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             </div>
           </TabsContent>
         </Tabs>
-        <p className="text-xs text-muted-foreground text-center">
-          A.I can make mistakes, always review the generated content.
-        </p>
       </div>
 
       {/* Footer */}
-      <div className="sticky bottom-[0px] px-0 py-4 bg-background border-t border-transparent flex flex-col gap-3">
+      <div className="sticky left-0 right-0 bottom-0 py-4 bg-background border-t border-transparent flex flex-col gap-4">
         <div className="flex gap-3">
           <Button
             variant="ghost"
@@ -208,7 +204,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           <Button
             onClick={handleInsert}
             disabled={isInserting || isGenerating}
-            className="flex-1 h-8 gap-2 text-xs font-semibold rounded-sm shadow-lg"
+            className="flex-1 h-10 gap-2 text-xs font-semibold rounded-lg border border-border shadow-lg"
           >
             {isInserting ? (
               <>
@@ -223,6 +219,9 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             )}
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground text-center">
+          A.I can make mistakes, always review the generated content.
+        </p>
       </div>
     </div>
   );

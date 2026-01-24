@@ -253,3 +253,9 @@
     background: transparent !important;
     background-color: transparent !important;
   }
+
+/* Fix for Radix ScrollArea display issue: override inline display: table */
+[data-radix-scroll-area-viewport] > div {
+  display: block !important;
+  height: 100%;
+}
