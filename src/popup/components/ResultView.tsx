@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import {
   IconCopy,
-  IconUpload,
   IconRefresh,
   IconCheck,
   IconLoader2,
+  IconCircleCheck,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
@@ -204,8 +204,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               </>
             ) : (
               <>
-                <IconUpload className="w-5 h-5" />
-                <span>Auto-Insert</span>
+                <IconCircleCheck className="w-5 h-5" />
+                <span>Apply</span>
               </>
             )}
           </Button>

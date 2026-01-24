@@ -16,6 +16,7 @@
   "dependencies": {
     "@base-ui/react": "^1.0.0",
     "@fontsource-variable/noto-sans": "^5.2.10",
+    "@iconify/react": "^6.0.2",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-tabs": "^1.1.13",
     "@tabler/icons-react": "^3.36.0",
