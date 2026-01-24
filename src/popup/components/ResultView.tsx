@@ -2,9 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import {
   IconCopy,
   IconRefresh,
-  IconCheck,
   IconLoader2,
-  IconCircleCheck,
+  IconCheck,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
@@ -236,7 +235,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               </>
             ) : (
               <>
-                <IconCircleCheck className="w-5 h-5" />
+                <IconCheck className="w-5 h-5" />
                 <span>Apply</span>
               </>
             )}
