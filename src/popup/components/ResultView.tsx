@@ -43,16 +43,36 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
   // Auto-scroll to bottom during generation
   useEffect(() => {
-    if (isGenerating) {
-      if (textareaRef.current) {
-        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
-      }
-      if (previewRef.current) {
-        previewRef.current.scrollTop = previewRef.current.scrollHeight;
-      }
-      if (mainRef.current) {
-        mainRef.current.scrollTop = mainRef.current.scrollHeight;
-      }
+    if (isGenerating && generatedDescription) {
+      const scroll = () => {
+        // Scroll the raw textarea
+        if (textareaRef.current) {
+          textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+        }
+
+        // Scroll the preview container if it has internal scroll
+        if (previewRef.current) {
+          previewRef.current.scrollTop = previewRef.current.scrollHeight;
+        }
+
+        // Scroll the main container to the bottom to see more content and the footer
+        if (mainRef.current) {
+          mainRef.current.scrollTop = mainRef.current.scrollHeight;
+        }
+
+        // Also scroll the Radix ScrollArea viewport if we are inside one
+        // This is crucial because the entire view might be inside a ScrollArea
+        const viewport = mainRef.current?.closest(
+          "[data-radix-scroll-area-viewport]",
+        );
+        if (viewport) {
+          viewport.scrollTop = viewport.scrollHeight;
+        }
+      };
+
+      // Use requestAnimationFrame to ensure DOM has updated before scrolling
+      const rafId = requestAnimationFrame(scroll);
+      return () => cancelAnimationFrame(rafId);
     }
   }, [generatedDescription, isGenerating]);
 
@@ -109,7 +129,10 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   };
 
   return (
-    <div ref={mainRef} className="px-6 pt-4 flex flex-col gap-4 min-h-full">
+    <div
+      ref={mainRef}
+      className="px-6 pt-4 flex flex-col gap-4 min-h-full overflow-y-auto"
+    >
       <div className="flex-1 space-y-4">
         {(generateTitle || generatedTitle) && (
           <div className="flex flex-col gap-2">
@@ -163,7 +186,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           <TabsContent value="preview" className="mt-0 flex-1">
             <div
               ref={previewRef}
-              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm overflow-y-auto scrollbar-thin"
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs overflow-y-auto scrollbar-thin"
             >
               {generatedDescription ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
