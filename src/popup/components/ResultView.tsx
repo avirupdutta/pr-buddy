@@ -147,31 +147,33 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             </div>
           )}
 
-          <Tabs defaultValue="preview" className="flex flex-col gap-2 h-full">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Description</Label>
-                <Button
-                  variant="ghost"
-                  onClick={handleCopy}
-                  disabled={isCopied || isGenerating}
-                  className="h-8 w-8 p-0 rounded-sm"
-                >
-                  {isCopied ? (
-                    <IconCheck className="w-4 h-4" />
-                  ) : (
-                    <IconCopy className="w-4 h-4" />
-                  )}
-                </Button>
+          <Tabs defaultValue="preview" className="flex flex-col h-full">
+            <div className="sticky top-0 bg-background z-10 py-2 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">Description</Label>
+                  <Button
+                    variant="ghost"
+                    onClick={handleCopy}
+                    disabled={isCopied || isGenerating}
+                    className="h-8 w-8 p-0 rounded-sm"
+                  >
+                    {isCopied ? (
+                      <IconCheck className="w-4 h-4" />
+                    ) : (
+                      <IconCopy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+                <TabsList className="h-8">
+                  <TabsTrigger value="raw" className="text-xs">
+                    Raw
+                  </TabsTrigger>
+                  <TabsTrigger value="preview" className="text-xs">
+                    Preview
+                  </TabsTrigger>
+                </TabsList>
               </div>
-              <TabsList className="h-8">
-                <TabsTrigger value="raw" className="text-xs">
-                  Raw
-                </TabsTrigger>
-                <TabsTrigger value="preview" className="text-xs">
-                  Preview
-                </TabsTrigger>
-              </TabsList>
             </div>
 
             <TabsContent value="raw" className="mt-0 flex-1">
@@ -179,7 +181,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                 ref={textareaRef}
                 value={generatedDescription}
                 onChange={(e) => setGeneratedDescription(e.target.value)}
-                className="resize-none h-60 w-full text-sm font-mono scrollbar-thin"
+                className="resize-none h-60 w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary"
                 placeholder="Your generated description will appear here..."
               />
             </TabsContent>
@@ -187,7 +189,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             <TabsContent value="preview" className="mt-0 flex-1">
               <div
                 ref={previewRef}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs overflow-y-auto scrollbar-thin"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs overflow-y-auto scrollbar-thin border-t-0 rounded-t-none"
               >
                 {generatedDescription ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
