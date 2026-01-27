@@ -12,6 +12,7 @@ import type {
 } from "@/types/chrome";
 import { decryptApiKey } from "./encryption";
 import { sendToastNotification } from "./notifications";
+import { createAISDKService, type AIRequestParams } from "./ai-sdk-service";
 
 /**
  * Check if we're running in a Chrome extension context
@@ -217,15 +218,18 @@ export const mockRuntime = {
           } catch (err) {
             const errorMessage =
               err instanceof Error ? err.message : "Unknown error";
-            
+
             // Send toast notification for OpenRouter API errors
-            if (errorMessage.includes("OpenRouter") || errorMessage.includes("API")) {
+            if (
+              errorMessage.includes("OpenRouter") ||
+              errorMessage.includes("API")
+            ) {
               sendToastNotification(
                 `OpenRouter API Error: ${errorMessage}`,
-                "error"
+                "error",
               );
             }
-            
+
             listeners.forEach((cb) =>
               cb({
                 type: "error",
@@ -261,6 +265,10 @@ async function handleDevGenerationStream(
   const devStorage = getDevStorage();
   const encryptedGithubToken = devStorage.githubToken as string;
   const encryptedOpenRouterKey = devStorage.openRouterKey as string;
+  const encryptedOpenaiKey = devStorage.openaiKey as string;
+  const encryptedAnthropicKey = devStorage.anthropicKey as string;
+  const encryptedGoogleKey = devStorage.googleKey as string;
+  const encryptedGroqKey = devStorage.groqKey as string;
 
   // Decrypt API keys
   const githubToken = encryptedGithubToken
@@ -269,16 +277,71 @@ async function handleDevGenerationStream(
   const openRouterKey = encryptedOpenRouterKey
     ? await decryptApiKey(encryptedOpenRouterKey)
     : null;
+  const openaiKey = encryptedOpenaiKey
+    ? await decryptApiKey(encryptedOpenaiKey)
+    : null;
+  const anthropicKey = encryptedAnthropicKey
+    ? await decryptApiKey(encryptedAnthropicKey)
+    : null;
+  const googleKey = encryptedGoogleKey
+    ? await decryptApiKey(encryptedGoogleKey)
+    : null;
+  const groqKey = encryptedGroqKey
+    ? await decryptApiKey(encryptedGroqKey)
+    : null;
 
   const templates = (devStorage.templates as PRTemplate[]) || DEFAULT_TEMPLATES;
   const aiModels = (devStorage.aiModels as AIModel[]) || DEFAULT_AI_MODELS;
 
-  if (!githubToken || !openRouterKey) {
-    throw new Error("Missing API Keys. Please configure them in Settings.");
+  if (!githubToken) {
+    throw new Error("Missing GitHub Token. Please configure it in Settings.");
   }
 
-  // Find active model
-  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  // Get selected model from settings or fallback to active model
+  let selectedModel: AIModel;
+  const selectedModelFromSettings = settings.selectedModel;
+  if (selectedModelFromSettings && selectedModelFromSettings.id) {
+    // Find the model in our model list to ensure it's valid
+    const foundModel = aiModels.find(
+      (m) => m.id === selectedModelFromSettings.id,
+    );
+    if (!foundModel) {
+      throw new Error(
+        `Selected model not found: ${selectedModelFromSettings.id}`,
+      );
+    }
+    selectedModel = foundModel;
+  } else {
+    // Fallback to active model (backward compatibility)
+    selectedModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  }
+
+  // Get the provider for the selected model
+  const provider = selectedModel.provider || "openrouter";
+
+  // Check if the required API key is available for the provider
+  const getProviderApiKey = (): string | null => {
+    switch (provider) {
+      case "openai":
+        return openaiKey;
+      case "anthropic":
+        return anthropicKey;
+      case "google":
+        return googleKey;
+      case "groq":
+        return groqKey;
+      case "openrouter":
+      default:
+        return openRouterKey;
+    }
+  };
+
+  const providerApiKey = getProviderApiKey();
+  if (!providerApiKey) {
+    throw new Error(
+      `Missing API key for ${provider} provider. Please configure it in Settings.`,
+    );
+  }
 
   // Find selected template
   const selectedTemplate =
@@ -318,7 +381,7 @@ async function handleDevGenerationStream(
     diff = diff.substring(0, 50000) + "\n...[Diff Truncated]...";
   }
 
-  // Generate with AI Streaming
+  // Generate with AI Streaming using AI SDK
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone || "professional"] ||
     TONE_DESCRIPTIONS.professional;
@@ -369,63 +432,36 @@ ${diff}
 
 Generate the TITLE and DESCRIPTION now in the requested format.`;
 
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openRouterKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/pr-buddy-extension",
-        "X-Title": "PR Buddy",
-      },
-      body: JSON.stringify({
-        model: activeModel.modelId,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: true,
-      }),
-    },
-  );
+  // Create AI SDK service instance
+  const aiService = createAISDKService({
+    openaiKey: openaiKey || "",
+    anthropicKey: anthropicKey || "",
+    googleKey: googleKey || "",
+    groqKey: groqKey || "",
+    openRouterKey: openRouterKey || "",
+  });
 
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(
-      "AI Generation failed: " + (err.error?.message || response.statusText),
-    );
-  }
+  const requestParams: AIRequestParams = {
+    model: selectedModel,
+    systemPrompt,
+    userPrompt,
+    stream: true,
+  };
 
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("Response body is null");
+  // Stream the response using AI SDK
+  let accumulatedContent = "";
+  for await (const chunk of aiService.generateTextStream(requestParams)) {
+    if (chunk.error) {
+      throw new Error(chunk.error);
+    }
 
-  const decoder = new TextDecoder();
-  let buffer = "";
+    if (chunk.description) {
+      // Calculate delta (new content since last chunk)
+      const delta = chunk.description.slice(accumulatedContent.length);
+      accumulatedContent = chunk.description;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed === "data: [DONE]") continue;
-
-      if (trimmed.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(trimmed.slice(6));
-          const content = data.choices?.[0]?.delta?.content;
-          if (content) {
-            postMessage({ type: "chunk", content });
-          }
-        } catch (e) {
-          console.error("Error parsing stream chunk", e);
-        }
+      if (delta) {
+        postMessage({ type: "chunk", content: delta });
       }
     }
   }
@@ -452,6 +488,10 @@ async function handleDevGeneration(
   const devStorage = getDevStorage();
   const encryptedGithubToken = devStorage.githubToken as string;
   const encryptedOpenRouterKey = devStorage.openRouterKey as string;
+  const encryptedOpenaiKey = devStorage.openaiKey as string;
+  const encryptedAnthropicKey = devStorage.anthropicKey as string;
+  const encryptedGoogleKey = devStorage.googleKey as string;
+  const encryptedGroqKey = devStorage.groqKey as string;
 
   // Decrypt API keys
   const githubToken = encryptedGithubToken
@@ -460,20 +500,75 @@ async function handleDevGeneration(
   const openRouterKey = encryptedOpenRouterKey
     ? await decryptApiKey(encryptedOpenRouterKey)
     : null;
+  const openaiKey = encryptedOpenaiKey
+    ? await decryptApiKey(encryptedOpenaiKey)
+    : null;
+  const anthropicKey = encryptedAnthropicKey
+    ? await decryptApiKey(encryptedAnthropicKey)
+    : null;
+  const googleKey = encryptedGoogleKey
+    ? await decryptApiKey(encryptedGoogleKey)
+    : null;
+  const groqKey = encryptedGroqKey
+    ? await decryptApiKey(encryptedGroqKey)
+    : null;
 
   // Get templates and models from storage or use defaults
   const templates = (devStorage.templates as PRTemplate[]) || DEFAULT_TEMPLATES;
   const aiModels = (devStorage.aiModels as AIModel[]) || DEFAULT_AI_MODELS;
 
-  if (!githubToken || !openRouterKey) {
-    throw new Error("Missing API Keys. Please configure them in Settings.");
+  if (!githubToken) {
+    throw new Error("Missing GitHub Token. Please configure it in Settings.");
   }
-
-  // Find active model
-  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
 
   // Parse settings
   const s = (settings as Partial<GeneratorSettings>) || {};
+
+  // Get selected model from settings or fallback to active model
+  let selectedModel: AIModel;
+  const selectedModelFromSettings = s.selectedModel;
+  if (selectedModelFromSettings && selectedModelFromSettings.id) {
+    // Find the model in our model list to ensure it's valid
+    const foundModel = aiModels.find(
+      (m) => m.id === selectedModelFromSettings.id,
+    );
+    if (!foundModel) {
+      throw new Error(
+        `Selected model not found: ${selectedModelFromSettings.id}`,
+      );
+    }
+    selectedModel = foundModel;
+  } else {
+    // Fallback to active model (backward compatibility)
+    selectedModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  }
+
+  // Get the provider for the selected model
+  const provider = selectedModel.provider || "openrouter";
+
+  // Check if the required API key is available for the provider
+  const getProviderApiKey = (): string | null => {
+    switch (provider) {
+      case "openai":
+        return openaiKey;
+      case "anthropic":
+        return anthropicKey;
+      case "google":
+        return googleKey;
+      case "groq":
+        return groqKey;
+      case "openrouter":
+      default:
+        return openRouterKey;
+    }
+  };
+
+  const providerApiKey = getProviderApiKey();
+  if (!providerApiKey) {
+    throw new Error(
+      `Missing API key for ${provider} provider. Please configure it in Settings.`,
+    );
+  }
 
   // Find selected template
   const selectedTemplate =
@@ -518,14 +613,20 @@ async function handleDevGeneration(
     diff = diff.substring(0, 50000) + "\n...[Diff Truncated]...";
   }
 
-  // Generate with AI (single API call with structured output)
-  const aiResult = await generateWithOpenRouter(
+  // Generate with AI using AI SDK
+  const aiResult = await generateWithAISDK(
     diff,
     metadata,
     s,
     selectedTemplate,
-    activeModel.modelId,
-    openRouterKey,
+    selectedModel,
+    {
+      openaiKey: openaiKey || "",
+      anthropicKey: anthropicKey || "",
+      googleKey: googleKey || "",
+      groqKey: groqKey || "",
+      openRouterKey: openRouterKey || "",
+    },
   );
 
   return {
@@ -574,16 +675,13 @@ async function handleDevUpdatePR(
     },
   );
 
-if (!response.ok) {
+  if (!response.ok) {
     const err = await response.json();
     const errorMessage = err.error?.message || response.statusText;
-    
+
     // Send specific toast notification for OpenRouter API failure
-    sendToastNotification(
-      `OpenRouter API Error: ${errorMessage}`,
-      "error"
-    );
-    
+    sendToastNotification(`OpenRouter API Error: ${errorMessage}`, "error");
+
     throw new Error("AI Generation failed: " + errorMessage);
   }
   return { success: true };
@@ -602,7 +700,7 @@ interface AIGenerationResult {
   description: string;
 }
 
-async function generateWithOpenRouter(
+async function generateWithAISDK(
   diff: string,
   metadata: {
     title: string;
@@ -614,8 +712,14 @@ async function generateWithOpenRouter(
   },
   settings: Partial<GeneratorSettings>,
   template: PRTemplate,
-  modelId: string,
-  apiKey: string,
+  model: AIModel,
+  apiKeys: {
+    openaiKey: string;
+    anthropicKey: string;
+    googleKey: string;
+    groqKey: string;
+    openRouterKey: string;
+  },
 ): Promise<AIGenerationResult> {
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone || "professional"] ||
@@ -671,55 +775,54 @@ ${diff}
 
 Generate the JSON response with title and description now.`;
 
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/pr-buddy-extension",
-        "X-Title": "PR Buddy",
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    },
-  );
+  // Create AI SDK service instance
+  const aiService = createAISDKService(apiKeys);
 
-  if (!response.ok) {
-    const err = await response.json();
-    const errorMessage = err.error?.message || response.statusText;
-    
-    // Send specific toast notification for OpenRouter API failure
-    sendToastNotification(
-      `OpenRouter API Error: ${errorMessage}`,
-      "error"
-    );
-    
-    throw new Error("AI Generation failed: " + errorMessage);
-  }
-
-  const data = await response.json();
-  const content = data.choices[0].message.content;
+  const requestParams: AIRequestParams = {
+    model,
+    systemPrompt,
+    userPrompt,
+    stream: false,
+  };
 
   try {
-    const parsed = JSON.parse(content);
-    return {
-      title: (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, ""),
-      description: parsed.description || "",
-    };
-  } catch {
-    // Fallback: if JSON parsing fails, treat content as description
-    return {
-      title: "",
-      description: content,
-    };
+    const result = await aiService.generateText(requestParams);
+
+    if (!result.success || !result.description) {
+      throw new Error("AI generation failed");
+    }
+
+    // Parse the response to extract title and description
+    // The AI SDK service returns text in TITLE: / DESCRIPTION: format
+    const text = result.description;
+    const titleMatch = text.match(/TITLE:\s*(.+?)(?=\n\nDESCRIPTION:|$)/s);
+    const descriptionMatch = text.match(/DESCRIPTION:\s*(.+?)$/s);
+
+    if (titleMatch && descriptionMatch) {
+      return {
+        title: titleMatch[1].trim(),
+        description: descriptionMatch[1].trim(),
+      };
+    }
+
+    // Fallback: try to parse as JSON
+    try {
+      const parsed = JSON.parse(text);
+      return {
+        title: (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, ""),
+        description: parsed.description || text,
+      };
+    } catch {
+      // If all parsing fails, return the raw text as description
+      return {
+        title: "",
+        description: text,
+      };
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    sendToastNotification(`AI SDK Error: ${errorMessage}`, "error");
+    throw new Error("AI Generation failed: " + errorMessage);
   }
 }
 
