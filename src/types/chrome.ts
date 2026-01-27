@@ -13,6 +13,7 @@ export interface AIModel {
   name: string;
   modelId: string;
   isActive: boolean;
+  provider?: string; // Optional for backward compatibility
 }
 
 // Legacy type - kept for backwards compatibility during migration
@@ -110,6 +111,12 @@ export interface StreamMessage {
 export interface StoredSettings {
   githubToken?: string;
   openRouterKey?: string;
+  // New AI SDK provider keys
+  openaiKey?: string;
+  anthropicKey?: string;
+  googleKey?: string;
+  groqKey?: string;
+  cerebrasKey?: string; // Future support when available
   devMode?: boolean;
   devPrUrl?: string;
   theme?: "dark" | "light" | "system";

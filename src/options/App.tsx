@@ -30,6 +30,13 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { PRTemplate, AIModel } from "@/types/chrome";
 
 // ============================================
@@ -98,13 +105,23 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
 // ============================================
 interface ModelEditorProps {
   model?: AIModel;
-  onSave: (data: { name: string; modelId: string }) => void;
+  onSave: (data: { name: string; modelId: string; provider?: string }) => void;
   onCancel: () => void;
 }
 
 function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
   const [name, setName] = useState(model?.name || "");
   const [modelId, setModelId] = useState(model?.modelId || "");
+  const [provider, setProvider] = useState(model?.provider || "openrouter");
+
+  const providerOptions = [
+    { value: "openrouter", label: "OpenRouter" },
+    { value: "openai", label: "OpenAI" },
+    { value: "anthropic", label: "Anthropic" },
+    { value: "google", label: "Google AI" },
+    { value: "groq", label: "Groq" },
+    { value: "cerebras", label: "Cerebras" },
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +129,11 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
       toast.error("Please fill in all fields");
       return;
     }
-    onSave({ name: name.trim(), modelId: modelId.trim() });
+    onSave({
+      name: name.trim(),
+      modelId: modelId.trim(),
+      provider: provider.trim() || undefined,
+    });
   };
 
   return (
@@ -131,6 +152,25 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
         />
       </div>
       <div className="flex flex-col gap-2">
+        <Label htmlFor="provider">Provider</Label>
+        <Select value={provider} onValueChange={setProvider}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a provider" />
+          </SelectTrigger>
+          <SelectContent>
+            {providerOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Choose the AI provider for this model. OpenRouter works with most
+          models.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
         <Label htmlFor="model-id">Model ID</Label>
         <Input
           id="model-id"
@@ -140,8 +180,11 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
           className="font-mono text-sm"
         />
         <p className="text-xs text-muted-foreground">
-          Enter the OpenRouter model ID (e.g., openai/gpt-4-turbo,
-          anthropic/claude-3-opus)
+          {provider === "openrouter"
+            ? "Enter OpenRouter model ID (e.g., openai/gpt-4-turbo, anthropic/claude-3-opus)."
+            : `Enter ${
+                providerOptions.find((p) => p.value === provider)?.label
+              } model ID (e.g., gpt-4-turbo, claude-3-5-sonnet-20241022).`}
         </p>
       </div>
       <div className="flex gap-2 justify-end">
@@ -165,7 +208,7 @@ function TemplatesTab() {
   const { templates, addTemplate, updateTemplate, deleteTemplate } =
     useSettingsStore();
   const [editingTemplate, setEditingTemplate] = useState<PRTemplate | null>(
-    null
+    null,
   );
   const [isAdding, setIsAdding] = useState(false);
 
@@ -176,7 +219,7 @@ function TemplatesTab() {
       setIsAdding(false);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to add template"
+        error instanceof Error ? error.message : "Failed to add template",
       );
     }
   };
@@ -189,7 +232,7 @@ function TemplatesTab() {
       setEditingTemplate(null);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update template"
+        error instanceof Error ? error.message : "Failed to update template",
       );
     }
   };
@@ -200,7 +243,7 @@ function TemplatesTab() {
       toast.success("Template deleted successfully");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete template"
+        error instanceof Error ? error.message : "Failed to delete template",
       );
     }
   };
@@ -298,19 +341,27 @@ function AIModelsTab() {
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  const handleAdd = async (data: { name: string; modelId: string }) => {
+  const handleAdd = async (data: {
+    name: string;
+    modelId: string;
+    provider?: string;
+  }) => {
     try {
       await addModel(data);
       toast.success("Model added successfully");
       setIsAdding(false);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to add model"
+        error instanceof Error ? error.message : "Failed to add model",
       );
     }
   };
 
-  const handleUpdate = async (data: { name: string; modelId: string }) => {
+  const handleUpdate = async (data: {
+    name: string;
+    modelId: string;
+    provider?: string;
+  }) => {
     if (!editingModel) return;
     try {
       await updateModel(editingModel.id, data);
@@ -318,7 +369,7 @@ function AIModelsTab() {
       setEditingModel(null);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update model"
+        error instanceof Error ? error.message : "Failed to update model",
       );
     }
   };
@@ -329,7 +380,7 @@ function AIModelsTab() {
       toast.success("Model deleted successfully");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete model"
+        error instanceof Error ? error.message : "Failed to delete model",
       );
     }
   };
@@ -340,7 +391,7 @@ function AIModelsTab() {
       toast.success("Active model updated");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to set active model"
+        error instanceof Error ? error.message : "Failed to set active model",
       );
     }
   };
@@ -454,12 +505,22 @@ function AIModelsTab() {
 interface SettingsFormProps {
   initialGithubToken: string;
   initialOpenRouterKey: string;
+  initialOpenAIKey: string;
+  initialAnthropicKey: string;
+  initialGoogleKey: string;
+  initialGroqKey: string;
+  initialCerebrasKey: string;
   initialDevMode: boolean;
   initialDevPrUrl: string;
   isSaving: boolean;
   onSave: (settings: {
     githubToken: string;
     openRouterKey: string;
+    openaiKey: string;
+    anthropicKey: string;
+    googleKey: string;
+    groqKey: string;
+    cerebrasKey: string;
     devMode: boolean;
     devPrUrl: string;
   }) => Promise<void>;
@@ -468,6 +529,11 @@ interface SettingsFormProps {
 function SettingsForm({
   initialGithubToken,
   initialOpenRouterKey,
+  initialOpenAIKey,
+  initialAnthropicKey,
+  initialGoogleKey,
+  initialGroqKey,
+  initialCerebrasKey,
   initialDevMode,
   initialDevPrUrl,
   isSaving,
@@ -476,6 +542,12 @@ function SettingsForm({
   const [localGithubToken, setLocalGithubToken] = useState(initialGithubToken);
   const [localOpenRouterKey, setLocalOpenRouterKey] =
     useState(initialOpenRouterKey);
+  const [localOpenAIKey, setLocalOpenAIKey] = useState(initialOpenAIKey);
+  const [localAnthropicKey, setLocalAnthropicKey] =
+    useState(initialAnthropicKey);
+  const [localGoogleKey, setLocalGoogleKey] = useState(initialGoogleKey);
+  const [localGroqKey, setLocalGroqKey] = useState(initialGroqKey);
+  const [localCerebrasKey, setLocalCerebrasKey] = useState(initialCerebrasKey);
   const [localDevMode, setLocalDevMode] = useState(initialDevMode);
   const [localDevPrUrl, setLocalDevPrUrl] = useState(initialDevPrUrl);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -484,6 +556,11 @@ function SettingsForm({
     await onSave({
       githubToken: localGithubToken,
       openRouterKey: localOpenRouterKey,
+      openaiKey: localOpenAIKey,
+      anthropicKey: localAnthropicKey,
+      googleKey: localGoogleKey,
+      groqKey: localGroqKey,
+      cerebrasKey: localCerebrasKey,
       devMode: localDevMode,
       devPrUrl: localDevPrUrl,
     });
@@ -586,6 +663,129 @@ function SettingsForm({
 
           <Separator />
 
+          {/* AI SDK Provider Keys */}
+          <div className="flex flex-col gap-4">
+            <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              AI Provider Keys (Optional)
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Configure additional AI providers for more model options.
+              OpenRouter will continue to work as the default provider.
+            </p>
+
+            {/* OpenAI Key */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">OpenAI API Key</Label>
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+                >
+                  Get Key
+                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              </div>
+              <ApiKeyInput
+                value={localOpenAIKey}
+                onChange={setLocalOpenAIKey}
+                placeholder="sk-************************************"
+                icon={<IconRobot className="w-5 h-5" />}
+              />
+            </div>
+
+            {/* Anthropic Key */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Anthropic API Key</Label>
+                <a
+                  href="https://console.anthropic.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+                >
+                  Get Key
+                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              </div>
+              <ApiKeyInput
+                value={localAnthropicKey}
+                onChange={setLocalAnthropicKey}
+                placeholder="sk-ant-************************************"
+                icon={<IconRobot className="w-5 h-5" />}
+              />
+            </div>
+
+            {/* Google Key */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Google AI API Key</Label>
+                <a
+                  href="https://makersuite.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+                >
+                  Get Key
+                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              </div>
+              <ApiKeyInput
+                value={localGoogleKey}
+                onChange={setLocalGoogleKey}
+                placeholder="AIza************************************"
+                icon={<IconRobot className="w-5 h-5" />}
+              />
+            </div>
+
+            {/* Groq Key */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Groq API Key</Label>
+                <a
+                  href="https://console.groq.com/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+                >
+                  Get Key
+                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              </div>
+              <ApiKeyInput
+                value={localGroqKey}
+                onChange={setLocalGroqKey}
+                placeholder="gsk_************************************"
+                icon={<IconRobot className="w-5 h-5" />}
+              />
+            </div>
+
+            {/* Cerebras Key */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Cerebras API Key</Label>
+                <a
+                  href="https://inference-docs.cerebras.ai/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+                >
+                  Get Key
+                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              </div>
+              <ApiKeyInput
+                value={localCerebrasKey}
+                onChange={setLocalCerebrasKey}
+                placeholder="csk-************************************"
+                icon={<IconRobot className="w-5 h-5" />}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Theme Selection */}
           <div className="flex flex-col gap-3">
             <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -683,6 +883,11 @@ export function OptionsApp() {
   const {
     githubToken,
     openRouterKey,
+    openaiKey,
+    anthropicKey,
+    googleKey,
+    groqKey,
+    cerebrasKey,
     devMode,
     devPrUrl,
     isLoading,
@@ -722,7 +927,7 @@ export function OptionsApp() {
                 className="w-fit -ml-2 gap-1 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   window.dispatchEvent(
-                    new CustomEvent("dev-navigate", { detail: { path: "/" } })
+                    new CustomEvent("dev-navigate", { detail: { path: "/" } }),
                   );
                 }}
               >
@@ -750,6 +955,11 @@ export function OptionsApp() {
               <SettingsForm
                 initialGithubToken={githubToken || ""}
                 initialOpenRouterKey={openRouterKey || ""}
+                initialOpenAIKey={openaiKey || ""}
+                initialAnthropicKey={anthropicKey || ""}
+                initialGoogleKey={googleKey || ""}
+                initialGroqKey={groqKey || ""}
+                initialCerebrasKey={cerebrasKey || ""}
                 initialDevMode={devMode || false}
                 initialDevPrUrl={devPrUrl || ""}
                 isSaving={isSaving}

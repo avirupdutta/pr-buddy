@@ -96,12 +96,14 @@ export const DEFAULT_AI_MODELS: AIModel[] = [
     id: "mimo-v2-flash",
     name: "Xiaomi MiMo v2 Flash (Free)",
     modelId: "xiaomi/mimo-v2-flash:free",
+    provider: "openrouter",
     isActive: true,
   },
   {
     id: "devstral-2512",
     name: "Mistral: Devstral 2 2512 (Free)",
     modelId: "mistralai/devstral-2512:free",
+    provider: "openrouter",
     isActive: false,
   },
 ];
@@ -109,6 +111,12 @@ export const DEFAULT_AI_MODELS: AIModel[] = [
 interface SettingsState {
   githubToken: string | null;
   openRouterKey: string | null;
+  // New AI SDK provider keys
+  openaiKey: string | null;
+  anthropicKey: string | null;
+  googleKey: string | null;
+  groqKey: string | null;
+  cerebrasKey: string | null;
   devMode: boolean;
   devPrUrl: string | null;
   theme: "dark" | "light" | "system";
@@ -123,6 +131,11 @@ interface SettingsState {
   save: (settings: {
     githubToken?: string;
     openRouterKey?: string;
+    openaiKey?: string;
+    anthropicKey?: string;
+    googleKey?: string;
+    groqKey?: string;
+    cerebrasKey?: string;
     devMode?: boolean;
     devPrUrl?: string;
     theme?: "dark" | "light" | "system";
@@ -130,6 +143,11 @@ interface SettingsState {
   setTheme: (theme: "dark" | "light" | "system") => void;
   setGithubToken: (token: string) => void;
   setOpenRouterKey: (key: string) => void;
+  setOpenAIKey: (key: string) => void;
+  setAnthropicKey: (key: string) => void;
+  setGoogleKey: (key: string) => void;
+  setGroqKey: (key: string) => void;
+  setCerebrasKey: (key: string) => void;
   setDevMode: (enabled: boolean) => void;
   setDevPrUrl: (url: string) => void;
   hasValidKeys: () => boolean;
@@ -163,6 +181,11 @@ const generateId = () =>
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   githubToken: null,
   openRouterKey: null,
+  openaiKey: null,
+  anthropicKey: null,
+  googleKey: null,
+  groqKey: null,
+  cerebrasKey: null,
   devMode: false,
   devPrUrl: null,
   theme: "system",
@@ -178,6 +201,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const result = await getStorage([
         "githubToken",
         "openRouterKey",
+        "openaiKey",
+        "anthropicKey", 
+        "googleKey",
+        "groqKey",
+        "cerebrasKey",
         "devMode",
         "devPrUrl",
         "theme",
@@ -192,10 +220,30 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const decryptedOpenRouterKey = result.openRouterKey
         ? await decryptApiKey(result.openRouterKey)
         : null;
+      const decryptedOpenAIKey = result.openaiKey
+        ? await decryptApiKey(result.openaiKey)
+        : null;
+      const decryptedAnthropicKey = result.anthropicKey
+        ? await decryptApiKey(result.anthropicKey)
+        : null;
+      const decryptedGoogleKey = result.googleKey
+        ? await decryptApiKey(result.googleKey)
+        : null;
+      const decryptedGroqKey = result.groqKey
+        ? await decryptApiKey(result.groqKey)
+        : null;
+      const decryptedCerebrasKey = result.cerebrasKey
+        ? await decryptApiKey(result.cerebrasKey)
+        : null;
 
       set({
         githubToken: decryptedGithubToken,
         openRouterKey: decryptedOpenRouterKey,
+        openaiKey: decryptedOpenAIKey,
+        anthropicKey: decryptedAnthropicKey,
+        googleKey: decryptedGoogleKey,
+        groqKey: decryptedGroqKey,
+        cerebrasKey: decryptedCerebrasKey,
         devMode: result.devMode || false,
         devPrUrl: result.devPrUrl || null,
         theme: result.theme || "system",
@@ -230,6 +278,21 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       if (settings.openRouterKey !== undefined) {
         updates.openRouterKey = await encryptApiKey(settings.openRouterKey);
       }
+      if (settings.openaiKey !== undefined) {
+        updates.openaiKey = await encryptApiKey(settings.openaiKey);
+      }
+      if (settings.anthropicKey !== undefined) {
+        updates.anthropicKey = await encryptApiKey(settings.anthropicKey);
+      }
+      if (settings.googleKey !== undefined) {
+        updates.googleKey = await encryptApiKey(settings.googleKey);
+      }
+      if (settings.groqKey !== undefined) {
+        updates.groqKey = await encryptApiKey(settings.groqKey);
+      }
+      if (settings.cerebrasKey !== undefined) {
+        updates.cerebrasKey = await encryptApiKey(settings.cerebrasKey);
+      }
       if (settings.devMode !== undefined) {
         updates.devMode = settings.devMode;
       }
@@ -256,6 +319,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setGithubToken: (token) => set({ githubToken: token }),
   setOpenRouterKey: (key) => set({ openRouterKey: key }),
+  setOpenAIKey: (key) => set({ openaiKey: key }),
+  setAnthropicKey: (key) => set({ anthropicKey: key }),
+  setGoogleKey: (key) => set({ googleKey: key }),
+  setGroqKey: (key) => set({ groqKey: key }),
+  setCerebrasKey: (key) => set({ cerebrasKey: key }),
   setDevMode: (enabled) => set({ devMode: enabled }),
   setDevPrUrl: (url) => set({ devPrUrl: url }),
   setTheme: (theme) => {
@@ -264,8 +332,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   hasValidKeys: () => {
-    const { githubToken, openRouterKey } = get();
-    return Boolean(githubToken && openRouterKey);
+    const { githubToken, openRouterKey, openaiKey, anthropicKey, googleKey, groqKey, cerebrasKey } = get();
+    return Boolean(githubToken && (openRouterKey || openaiKey || anthropicKey || googleKey || groqKey || cerebrasKey));
   },
 
   // Template CRUD
@@ -301,6 +369,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const newModel: AIModel = {
       id: generateId(),
       ...model,
+      provider: model.provider || 'openrouter', // Default to OpenRouter for backward compatibility
       isActive: false, // New models are not active by default
     };
     const aiModels = [...get().aiModels, newModel];
@@ -310,7 +379,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   updateModel: async (id, updates) => {
     const aiModels = get().aiModels.map((m) =>
-      m.id === id ? { ...m, ...updates } : m
+      m.id === id ? { ...m, ...updates, provider: updates.provider || m.provider || 'openrouter' } : m
     );
     set({ aiModels });
     await setStorage({ aiModels });
