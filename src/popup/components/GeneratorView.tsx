@@ -1,4 +1,4 @@
-import { IconSparkles, IconLoader2 } from "@tabler/icons-react";
+import { IconSparkles, IconLoader2, IconSettings } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
 import { useGeneratorStore } from "@/stores/generator-store";
@@ -6,9 +6,9 @@ import { TemplateSelector } from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
 import { ContextInput } from "./ContextInput";
 import { toast } from "sonner";
-import { openOptionsPage } from "@/services/chrome-messaging";
-import packageJson from "../../../package.json";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { openOptionsPage } from "@/services/chrome-messaging";
+import ModelSelector from "./ModelSelector";
 
 interface GeneratorViewProps {
   currentUrl: string;
@@ -85,16 +85,15 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
             </>
           )}
         </Button>
-
-        <p className="text-center text-xs text-muted-foreground mt-3">
-          v{packageJson.version} • Powered by Codebuddy •{" "}
+        <div className="flex items-center justify-between mt-3">
+          <ModelSelector />
           <button
             onClick={openOptionsPage}
-            className="underline hover:text-foreground transition-colors text-primary cursor-pointer"
+            className="underline hover:text-foreground transition-colors cursor-pointer"
           >
-            Settings
+            <IconSettings className="w-5 h-5" />
           </button>
-        </p>
+        </div>
       </div>
     </div>
   );

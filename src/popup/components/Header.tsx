@@ -4,6 +4,8 @@ import { useGeneratorStore } from "@/stores/generator-store";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Icon } from "@iconify/react";
 
+import packageJson from "../../../package.json";
+
 export function Header() {
   const { view, reset } = useGeneratorStore();
 
@@ -14,6 +16,9 @@ export function Header() {
         {/* <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary">
         </div> */}
         <h1 className="text-md font-bold leading-tight">PR Buddy</h1>
+        <p className="text-center text-xs text-muted-foreground">
+          v{packageJson.version}
+        </p>
       </div>
 
       <div className="flex items-center gap-2">
