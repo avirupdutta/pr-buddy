@@ -71,11 +71,21 @@ async function handleGenerationStream(
   const result = (await chrome.storage.local.get([
     "githubToken",
     "openRouterKey",
+    "cerebrasKey",
+    "openaiKey",
+    "anthropicKey",
+    "googleKey",
+    "groqKey",
     "templates",
     "aiModels",
   ])) as {
     githubToken?: string;
     openRouterKey?: string;
+    cerebrasKey?: string;
+    openaiKey?: string;
+    anthropicKey?: string;
+    googleKey?: string;
+    groqKey?: string;
     templates?: PRTemplate[];
     aiModels?: AIModel[];
   };
@@ -87,6 +97,9 @@ async function handleGenerationStream(
   const openRouterKey = result.openRouterKey
     ? await decryptApiKey(result.openRouterKey)
     : null;
+  const cerebrasKey = result.cerebrasKey
+    ? await decryptApiKey(result.cerebrasKey)
+    : null;
 
   const templates =
     result.templates && result.templates.length > 0
@@ -97,7 +110,7 @@ async function handleGenerationStream(
       ? result.aiModels
       : DEFAULT_AI_MODELS;
 
-  if (!githubToken || !openRouterKey) {
+  if (!githubToken || (!openRouterKey && !cerebrasKey)) {
     throw new Error("Missing API Keys. Please configure them in Settings.");
   }
 
@@ -156,11 +169,21 @@ async function handleGeneration(
   const result = (await chrome.storage.local.get([
     "githubToken",
     "openRouterKey",
+    "cerebrasKey",
+    "openaiKey",
+    "anthropicKey",
+    "googleKey",
+    "groqKey",
     "templates",
     "aiModels",
   ])) as {
     githubToken?: string;
     openRouterKey?: string;
+    cerebrasKey?: string;
+    openaiKey?: string;
+    anthropicKey?: string;
+    googleKey?: string;
+    groqKey?: string;
     templates?: PRTemplate[];
     aiModels?: AIModel[];
   };
@@ -171,6 +194,9 @@ async function handleGeneration(
     : null;
   const openRouterKey = result.openRouterKey
     ? await decryptApiKey(result.openRouterKey)
+    : null;
+  const cerebrasKey = result.cerebrasKey
+    ? await decryptApiKey(result.cerebrasKey)
     : null;
 
   const templates =
@@ -188,6 +214,47 @@ async function handleGeneration(
 
   // Find active model
   const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+
+  // Get the provider for the selected model
+  const provider = activeModel.provider || "openrouter";
+
+  // Decrypt additional API keys
+  const openaiKey = result.openaiKey
+    ? await decryptApiKey(result.openaiKey)
+    : null;
+  const anthropicKey = result.anthropicKey
+    ? await decryptApiKey(result.anthropicKey)
+    : null;
+  const googleKey = result.googleKey
+    ? await decryptApiKey(result.googleKey)
+    : null;
+  const groqKey = result.groqKey ? await decryptApiKey(result.groqKey) : null;
+
+  // Get the correct API key for the provider
+  const getProviderApiKey = (): string | null => {
+    switch (provider) {
+      case "openai":
+        return openaiKey;
+      case "anthropic":
+        return anthropicKey;
+      case "google":
+        return googleKey;
+      case "groq":
+        return groqKey;
+      case "cerebras":
+        return cerebrasKey;
+      case "openrouter":
+      default:
+        return openRouterKey;
+    }
+  };
+
+  const providerApiKey = getProviderApiKey();
+  if (!providerApiKey) {
+    throw new Error(
+      `Missing API key for ${provider} provider. Please configure it in Settings.`,
+    );
+  }
 
   // Find selected template
   const selectedTemplate =
@@ -211,7 +278,7 @@ async function handleGeneration(
     settings,
     selectedTemplate,
     activeModel.modelId,
-    openRouterKey,
+    providerApiKey,
   );
 
   return {

@@ -3,6 +3,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
+import { createCerebras } from "@ai-sdk/cerebras";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
 // Provider configuration interface
@@ -17,6 +18,7 @@ export type AIProviderType =
   | "anthropic"
   | "google"
   | "groq"
+  | "cerebras"
   | "openrouter";
 
 // Provider-specific model mappings for reference
@@ -33,6 +35,7 @@ export const PROVIDER_MODEL_MAPPINGS = {
     "mixtral-8x7b-32768",
     "llama-3.1-70b-versatile",
   ],
+  cerebras: ["zai-glm-4.7"] as const, // Users will add models manually at runtime
   openrouter: [
     "openai/gpt-4o",
     "anthropic/claude-3.5-sonnet",
@@ -51,6 +54,7 @@ export function createAIProviderRegistry(
     | ReturnType<typeof createAnthropic>
     | ReturnType<typeof createGoogleGenerativeAI>
     | ReturnType<typeof createGroq>
+    | ReturnType<typeof createCerebras>
     | ReturnType<typeof createOpenRouter>
   > = {};
 
@@ -82,6 +86,13 @@ export function createAIProviderRegistry(
     });
   }
 
+  // Configure Cerebras
+  if (configs.cerebras?.apiKey) {
+    providers.cerebras = createCerebras({
+      apiKey: configs.cerebras.apiKey,
+    });
+  }
+
   // Configure OpenRouter
   if (configs.openrouter?.apiKey) {
     providers.openrouter = createOpenRouter({
@@ -102,10 +113,15 @@ export function extractProviderFromModel(modelString: string): AIProviderType {
     return "google";
   if (
     modelString.includes("groq/") ||
-    modelString.startsWith("llama") ||
-    modelString.startsWith("mixtral")
+    (modelString.startsWith("llama") && modelString.includes("versatile"))
   )
     return "groq";
+  if (
+    modelString.includes("cerebras/") ||
+    modelString.includes("llama-3.3") ||
+    modelString.includes("llama3.1")
+  )
+    return "cerebras";
   if (modelString.includes("/") || modelString.includes("openrouter"))
     return "openrouter";
 
@@ -120,7 +136,7 @@ export function normalizeModelString(
 ): `${string}:${string}` {
   // Remove provider prefixes if they exist
   const cleanModel = modelString.replace(
-    /^(openai|anthropic|google|groq|openrouter)\/|:/,
+    /^(openai|anthropic|google|groq|cerebras|openrouter)\/|:/,
     "",
   );
 
@@ -140,8 +156,8 @@ export function validateProviderModel(
     return true;
   }
 
-  // For OpenRouter, allow custom models (they use provider/model format)
-  if (provider === "openrouter") {
+  // For OpenRouter and Cerebras, allow custom models (they use provider/model format or runtime additions)
+  if (provider === "openrouter" || provider === "cerebras") {
     return true;
   }
 

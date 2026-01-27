@@ -269,6 +269,7 @@ async function handleDevGenerationStream(
   const encryptedAnthropicKey = devStorage.anthropicKey as string;
   const encryptedGoogleKey = devStorage.googleKey as string;
   const encryptedGroqKey = devStorage.groqKey as string;
+  const encryptedCerebrasKey = devStorage.cerebrasKey as string;
 
   // Decrypt API keys
   const githubToken = encryptedGithubToken
@@ -287,7 +288,8 @@ async function handleDevGenerationStream(
     ? await decryptApiKey(encryptedGoogleKey)
     : null;
   const groqKey = encryptedGroqKey
-    ? await decryptApiKey(encryptedGroqKey)
+  const cerebrasKey = encryptedCerebrasKey
+    ? await decryptApiKey(encryptedCerebrasKey)
     : null;
 
   const templates = (devStorage.templates as PRTemplate[]) || DEFAULT_TEMPLATES;
@@ -330,6 +332,8 @@ async function handleDevGenerationStream(
         return googleKey;
       case "groq":
         return groqKey;
+      case "cerebras":
+        return cerebrasKey;
       case "openrouter":
       default:
         return openRouterKey;
@@ -438,6 +442,7 @@ Generate the TITLE and DESCRIPTION now in the requested format.`;
     anthropicKey: anthropicKey || "",
     googleKey: googleKey || "",
     groqKey: groqKey || "",
+    cerebrasKey: cerebrasKey || "",
     openRouterKey: openRouterKey || "",
   });
 
@@ -489,6 +494,7 @@ async function handleDevGeneration(
   const encryptedGithubToken = devStorage.githubToken as string;
   const encryptedOpenRouterKey = devStorage.openRouterKey as string;
   const encryptedOpenaiKey = devStorage.openaiKey as string;
+  const encryptedCerebrasKey = devStorage.cerebrasKey as string;
   const encryptedAnthropicKey = devStorage.anthropicKey as string;
   const encryptedGoogleKey = devStorage.googleKey as string;
   const encryptedGroqKey = devStorage.groqKey as string;
@@ -511,6 +517,9 @@ async function handleDevGeneration(
     : null;
   const groqKey = encryptedGroqKey
     ? await decryptApiKey(encryptedGroqKey)
+    : null;
+  const cerebrasKey = encryptedCerebrasKey
+    ? await decryptApiKey(encryptedCerebrasKey)
     : null;
 
   // Get templates and models from storage or use defaults
@@ -557,6 +566,8 @@ async function handleDevGeneration(
         return googleKey;
       case "groq":
         return groqKey;
+      case "cerebras":
+        return cerebrasKey;
       case "openrouter":
       default:
         return openRouterKey;
@@ -625,6 +636,7 @@ async function handleDevGeneration(
       anthropicKey: anthropicKey || "",
       googleKey: googleKey || "",
       groqKey: groqKey || "",
+      cerebrasKey: cerebrasKey || "",
       openRouterKey: openRouterKey || "",
     },
   );
@@ -718,6 +730,7 @@ async function generateWithAISDK(
     anthropicKey: string;
     googleKey: string;
     groqKey: string;
+    cerebrasKey: string;
     openRouterKey: string;
   },
 ): Promise<AIGenerationResult> {

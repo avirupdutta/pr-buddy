@@ -41,6 +41,9 @@ export class AISDKService {
           ? { apiKey: this.apiKeys.googleKey }
           : null,
         groq: this.apiKeys.groqKey ? { apiKey: this.apiKeys.groqKey } : null,
+        cerebras: this.apiKeys.cerebrasKey
+          ? { apiKey: this.apiKeys.cerebrasKey }
+          : null,
         openrouter: this.apiKeys.openRouterKey
           ? { apiKey: this.apiKeys.openRouterKey }
           : null,
@@ -167,6 +170,7 @@ export class AISDKService {
     if (this.apiKeys.anthropicKey) providers.push("anthropic");
     if (this.apiKeys.googleKey) providers.push("google");
     if (this.apiKeys.groqKey) providers.push("groq");
+    if (this.apiKeys.cerebrasKey) providers.push("cerebras");
     if (this.apiKeys.openRouterKey) providers.push("openrouter");
     return providers;
   }
