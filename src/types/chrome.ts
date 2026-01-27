@@ -37,6 +37,11 @@ export interface GeneratorSettings {
   tone: ToneType;
   includeTickets: boolean;
   generateTitle?: boolean;
+  selectedModel?: {
+    id: string;
+    modelId: string;
+    provider: string;
+  };
 }
 
 export interface PRMetadata {

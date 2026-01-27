@@ -1,11 +1,6 @@
 import { streamText, generateText } from "ai";
-import {
-  createAIProviderRegistry,
-  normalizeModelString,
-  extractProviderFromModel,
-} from "./ai-provider-registry";
+import { createAIProviderRegistry } from "./ai-provider-registry";
 import type { AIModel, GenerateResponse } from "@/types/chrome";
-import type { AIProviderType } from "./ai-provider-registry";
 
 // Request parameters interface (matching existing implementation)
 export interface AIRequestParams {
@@ -55,9 +50,9 @@ export class AISDKService {
   }
 
   private getModelIdentifier(model: AIModel): `${string}:${string}` {
-    const provider: AIProviderType = (model.provider ||
-      extractProviderFromModel(model.modelId)) as AIProviderType;
-    return normalizeModelString(model.modelId, provider);
+    // For direct provider calls, use provider:modelId format
+    const provider = model.provider || "openrouter";
+    return `${provider}:${model.modelId}` as `${string}:${string}`;
   }
 
   async generateText(params: AIRequestParams): Promise<GenerateResponse> {

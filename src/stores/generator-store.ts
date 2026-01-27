@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { ToneType, PRDetails, GeneratorSettings } from "@/types/chrome";
 import { getStorage, setStorage } from "@/services/chrome-storage";
 import { streamDescription } from "@/services/chrome-messaging";
+import { useSettingsStore } from "./settings-store";
 
 type ViewType = "generator" | "result";
 
@@ -114,12 +115,22 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
 
     try {
       const { template, tone, context, includeTickets, generateTitle } = get();
+      
+      // Get the selected model from settings store
+      const settingsStore = useSettingsStore.getState();
+      const activeModel = settingsStore.getActiveModel();
+      
       const settings: GeneratorSettings = {
         templateId: template,
         tone,
         context,
         includeTickets,
         generateTitle,
+        selectedModel: activeModel ? {
+          id: activeModel.id,
+          modelId: activeModel.modelId,
+          provider: activeModel.provider || 'openrouter',
+        } : undefined,
       };
 
       // Streaming state

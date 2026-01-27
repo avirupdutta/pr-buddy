@@ -15,6 +15,9 @@ import type {
 import { decryptApiKey } from "@/services/encryption";
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 import { sendToastNotification } from "@/services/notifications";
+import { aiServiceAdapter } from "@/services/ai-service-adapter";
+
+// Helper functions for AI service adapter integration
 
 // Listen for long-lived connections (streaming)
 chrome.runtime.onConnect.addListener((port) => {
@@ -64,7 +67,7 @@ async function handleGenerationStream(
   settings: GeneratorSettings,
   port: chrome.runtime.Port,
 ): Promise<void> {
-  // 1. Get Credentials, Templates, and Models
+  // 1. Get Credentials and Templates
   const result = (await chrome.storage.local.get([
     "githubToken",
     "openRouterKey",
@@ -98,8 +101,24 @@ async function handleGenerationStream(
     throw new Error("Missing API Keys. Please configure them in Settings.");
   }
 
-  // Find active model
-  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  // Get selected model from settings or fallback to active model
+  let selectedModel: AIModel;
+  const selectedModelFromSettings = settings.selectedModel;
+  if (selectedModelFromSettings && selectedModelFromSettings.id) {
+    // Find the model in our model list to ensure it's valid
+    const foundModel = aiModels.find(
+      (m) => m.id === selectedModelFromSettings.id,
+    );
+    if (!foundModel) {
+      throw new Error(
+        `Selected model not found: ${selectedModelFromSettings.id}`,
+      );
+    }
+    selectedModel = foundModel;
+  } else {
+    // Fallback to active model (backward compatibility)
+    selectedModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  }
 
   // Find selected template
   const selectedTemplate =
@@ -116,14 +135,13 @@ async function handleGenerationStream(
   // 3. Fetch PR Data
   const { diff, metadata } = await fetchPRData(prDetails, githubToken);
 
-  // 4. Generate with AI (streaming)
-  await generateWithAIStream(
+  // 4. Generate with AI (streaming) using the AI service adapter
+  await generateWithAIStreaming(
     diff,
     metadata,
     settings,
     selectedTemplate,
-    activeModel.modelId,
-    openRouterKey,
+    selectedModel,
     port,
   );
 
@@ -361,13 +379,12 @@ ${context}`
 }`;
 }
 
-async function generateWithAIStream(
+async function generateWithAIStreaming(
   diff: string,
   metadata: PRMetadata,
   settings: GeneratorSettings,
   template: PRTemplate,
-  modelId: string,
-  apiKey: string,
+  model: AIModel,
   port: chrome.runtime.Port,
 ): Promise<void> {
   const toneDescription =
@@ -400,101 +417,46 @@ ${diff}
 
 Generate the TITLE and DESCRIPTION now in the requested format.`;
 
+  // Use the AI service adapter for multi-provider support
   try {
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://github.com/pr-buddy-extension",
-          "X-Title": "PR Buddy",
-        },
-        body: JSON.stringify({
-          model: modelId,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          stream: true, // Enable streaming
-        }),
-      },
-    );
+    const stream = aiServiceAdapter.generateTextStream({
+      model,
+      systemPrompt,
+      userPrompt,
+      stream: true,
+    });
 
-    if (!response.ok) {
-      const err = await response.json();
-      const errorMessage = err.error?.message || response.statusText;
-      
-      // Send specific toast notification for OpenRouter API failure
-      sendToastNotification(
-        `OpenRouter API Error: ${errorMessage}`,
-        "error"
-      );
-      
-      throw new Error("AI Generation failed: " + errorMessage);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("Response body is null");
-
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      // Process lines in buffer
-      const lines = buffer.split("\n");
-      // Keep the last incomplete line in buffer
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed === "data: [DONE]") continue;
-
-        if (trimmed.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(trimmed.slice(6));
-            const content = data.choices?.[0]?.delta?.content;
-            if (content) {
-              port.postMessage({ type: "chunk", content });
-            }
-          } catch (e) {
-            console.error("Error parsing stream chunk", e);
-          }
-        }
+    for await (const chunk of stream) {
+      if (chunk.type === "error" && chunk.error) {
+        throw new Error(chunk.error);
+      }
+      if (chunk.type === "chunk" && chunk.content) {
+        port.postMessage({ type: "chunk", content: chunk.content });
+      }
+      if (chunk.type === "complete") {
+        port.postMessage({
+          type: "complete",
+          data: chunk.data || {
+            success: true,
+            description: "",
+            title: "",
+            prDetails: {
+              owner: metadata.base.ref.split(":")[0] || "unknown",
+              repo: "unknown",
+              number: "0",
+            },
+          },
+        });
       }
     }
-
-    // Final success message
-    port.postMessage({
-      type: "complete",
-      data: {
-        success: true,
-        description: "", // Client will have assembled it
-        title: "", // Client will have assembled it
-        prDetails: {
-          owner: metadata.base.ref.split(":")[0] || "unknown", // Fallback, not critical for result
-          repo: "unknown",
-          number: "0",
-        },
-      },
-    });
   } catch (error) {
-    console.error("Error in generateWithAIStream", error);
-    
-    // Send toast notification for streaming errors
+    console.error("Error in generateWithAIStreaming", error);
+
+    // Send toast notification for errors
     if (error instanceof Error) {
-      sendToastNotification(
-        `OpenRouter API Error: ${error.message}`,
-        "error"
-      );
+      sendToastNotification(`AI Generation Error: ${error.message}`, "error");
     }
-    
+
     throw error;
   }
 }
@@ -584,13 +546,10 @@ Generate the JSON response with title and description now.`;
   if (!response.ok) {
     const err = await response.json();
     const errorMessage = err.error?.message || response.statusText;
-    
+
     // Send specific toast notification for OpenRouter API failure
-    sendToastNotification(
-      `OpenRouter API Error: ${errorMessage}`,
-      "error"
-    );
-    
+    sendToastNotification(`OpenRouter API Error: ${errorMessage}`, "error");
+
     throw new Error("AI Generation failed: " + errorMessage);
   }
 
