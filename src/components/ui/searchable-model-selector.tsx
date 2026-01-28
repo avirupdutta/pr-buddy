@@ -23,6 +23,7 @@ interface ModelOption {
   isCustom: boolean;
   provider: string;
   providerName: string;
+  uniqueId: string; // Composite key: provider + model.id to handle duplicate IDs across providers
 }
 
 export const SearchableModelSelector: React.FC<
@@ -58,6 +59,7 @@ export const SearchableModelSelector: React.FC<
             isCustom: false,
             provider: providerId,
             providerName: providerData.name,
+            uniqueId: `${providerId}:${model.id}`, // Composite key for unique identification
           });
         });
       },
@@ -72,6 +74,7 @@ export const SearchableModelSelector: React.FC<
       isCustom: true,
       provider: model.provider || "openrouter",
       providerName: "Custom",
+      uniqueId: `custom:${model.id}`, // Custom models use 'custom' prefix for unique identification
     }));
   }, [customModels]);
 
@@ -127,6 +130,8 @@ export const SearchableModelSelector: React.FC<
   const selectedOption = useMemo(() => {
     return allModelOptions.find((option) => option.model.id === value);
   }, [allModelOptions, value]);
+
+
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -249,9 +254,9 @@ export const SearchableModelSelector: React.FC<
                   {/* Model Options */}
                   {options.map((option) => (
                     <div
-                      key={option.model.id}
+                      key={option.uniqueId}
                       className={`px-3 py-2 flex items-center gap-2 cursor-pointer hover:bg-accent transition-colors ${
-                        option.model.id === value ? "bg-accent" : ""
+                        option.uniqueId === selectedOption?.uniqueId ? "bg-accent" : ""
                       }`}
                       onClick={() => handleSelect(option)}
                     >
@@ -262,13 +267,13 @@ export const SearchableModelSelector: React.FC<
                       <span
                         className={cn(
                           "text-sm flex-1 text-muted-foreground",
-                          option.model.id === value &&
+                          option.uniqueId === selectedOption?.uniqueId &&
                             "text-foreground font-semibold",
                         )}
                       >
                         {option.model.name}
                       </span>
-                      {option.model.id === value && (
+                      {option.uniqueId === selectedOption?.uniqueId && (
                         <IconCheck className="w-4 h-4 text-green-500" />
                       )}
                     </div>
