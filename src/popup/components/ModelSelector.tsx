@@ -1,37 +1,23 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useSettingsStore } from "@/stores/settings-store";
-import { ProviderLogo } from "@/components/provider-logos";
-import type { AIProviderType } from "@/services/ai-provider-registry";
+import { SearchableModelSelector } from "@/components/ui/searchable-model-selector";
+import { Label } from "@/components/ui/label";
 
 const ModelSelector = () => {
   const { aiModels, getActiveModel, setActiveModel } = useSettingsStore();
   const activeModel = getActiveModel();
+
   return (
     <div className="flex flex-col gap-2">
-      <Select 
-        value={activeModel?.id || ""} 
+      <Label className="text-sm font-medium">Model</Label>
+      <SearchableModelSelector
+        models={[]} // Predefined models are handled internally by the component
+        customModels={aiModels}
+        value={activeModel?.id || ""}
         onValueChange={(v) => setActiveModel(v)}
-      >
-        <SelectTrigger className="h-12 text-sm w-full">
-          <SelectValue placeholder="Select a model" />
-        </SelectTrigger>
-        <SelectContent position="popper">
-          {aiModels.map((model) => (
-            <SelectItem key={model.id} value={model.id}>
-              <div className="flex items-center gap-2">
-                <ProviderLogo provider={(model.provider || 'openrouter') as AIProviderType} size={16} />
-                <span>{model.name}</span>
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="Select a model"
+        className="w-full"
+        popoverPosition="top"
+      />
     </div>
   );
 };

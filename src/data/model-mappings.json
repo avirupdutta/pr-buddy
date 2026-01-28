@@ -1,0 +1,148 @@
+{
+  "providers": {
+    "openrouter": {
+      "name": "OpenRouter",
+      "models": [
+        {
+          "id": "mimo-v2-flash",
+          "name": "Xiaomi MiMo v2 Flash",
+          "modelId": "xiaomi/mimo-v2-flash:free",
+          "description": "Free tier model"
+        },
+        {
+          "id": "devstral-2512",
+          "name": "Mistral: Devstral 2 2512",
+          "modelId": "mistralai/devstral-2512:free",
+          "description": "Free tier model"
+        },
+        {
+          "id": "gpt-4o-mini",
+          "name": "GPT-4o Mini",
+          "modelId": "openai/gpt-4o-mini",
+          "description": "OpenAI's efficient small model"
+        },
+        {
+          "id": "claude-3.5-haiku",
+          "name": "Claude 3.5 Haiku",
+          "modelId": "anthropic/claude-3.5-haiku",
+          "description": "Anthropic's fast and compact model"
+        },
+        {
+          "id": "gemini-flash",
+          "name": "Gemini Flash",
+          "modelId": "google/gemini-flash-1.5",
+          "description": "Google's fast multimodal model"
+        }
+      ]
+    },
+    "openai": {
+      "name": "OpenAI",
+      "models": [
+        {
+          "id": "gpt-4o",
+          "name": "GPT-4o",
+          "modelId": "gpt-4o",
+          "description": "OpenAI's flagship multimodal model"
+        },
+        {
+          "id": "gpt-4o-mini",
+          "name": "GPT-4o Mini",
+          "modelId": "gpt-4o-mini",
+          "description": "OpenAI's efficient small model"
+        },
+        {
+          "id": "gpt-4-turbo",
+          "name": "GPT-4 Turbo",
+          "modelId": "gpt-4-turbo",
+          "description": "OpenAI's advanced reasoning model"
+        },
+        {
+          "id": "gpt-3.5-turbo",
+          "name": "GPT-3.5 Turbo",
+          "modelId": "gpt-3.5-turbo",
+          "description": "OpenAI's classic chat model"
+        }
+      ]
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "models": [
+        {
+          "id": "claude-3.5-sonnet",
+          "name": "Claude 3.5 Sonnet",
+          "modelId": "claude-3-5-sonnet-20241022",
+          "description": "Anthropic's most capable model"
+        },
+        {
+          "id": "claude-3.5-haiku",
+          "name": "Claude 3.5 Haiku",
+          "modelId": "claude-3-5-haiku-20241022",
+          "description": "Anthropic's fast and compact model"
+        },
+        {
+          "id": "claude-3-opus",
+          "name": "Claude 3 Opus",
+          "modelId": "claude-3-opus-20240229",
+          "description": "Anthropic's most powerful model"
+        }
+      ]
+    },
+    "google": {
+      "name": "Google",
+      "models": [
+        {
+          "id": "gemini-pro",
+          "name": "Gemini Pro",
+          "modelId": "gemini-1.5-pro",
+          "description": "Google's advanced multimodal model"
+        },
+        {
+          "id": "gemini-flash",
+          "name": "Gemini Flash",
+          "modelId": "gemini-1.5-flash",
+          "description": "Google's fast multimodal model"
+        }
+      ]
+    },
+    "groq": {
+      "name": "Groq",
+      "models": [
+        {
+          "id": "llama-3.1-70b",
+          "name": "Llama 3.1 70B",
+          "modelId": "llama-3.1-70b-versatile",
+          "description": "Meta's large language model on Groq"
+        },
+        {
+          "id": "llama-3.1-8b",
+          "name": "Llama 3.1 8B",
+          "modelId": "llama-3.1-8b-instant",
+          "description": "Meta's efficient model on Groq"
+        },
+        {
+          "id": "mixtral-8x7b",
+          "name": "Mixtral 8x7B",
+          "modelId": "mixtral-8x7b-32768",
+          "description": "Mistral's mixture of experts model"
+        }
+      ]
+    },
+    "cerebras": {
+      "name": "Cerebras",
+      "models": [
+        {
+          "id": "llama-3.1-70b",
+          "name": "Llama 3.1 70B",
+          "modelId": "llama3.1-70b",
+          "description": "Meta's large model on Cerebras"
+        },
+        {
+          "id": "llama-3.1-8b",
+          "name": "Llama 3.1 8B",
+          "modelId": "llama3.1-8b",
+          "description": "Meta's efficient model on Cerebras"
+        }
+      ]
+    }
+  }
+}
