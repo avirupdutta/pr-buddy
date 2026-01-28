@@ -70,11 +70,15 @@ export function ResultView({ currentUrl }: ResultViewProps) {
         }
       };
 
-      // Use requestAnimationFrame to ensure DOM has updated before scrolling
-      const rafId = requestAnimationFrame(scroll);
-      return () => cancelAnimationFrame(rafId);
+      // Use multiple requestAnimationFrame calls to ensure DOM has fully updated
+      // This handles layout changes when title field toggles on/off
+      const rafId1 = requestAnimationFrame(() => {
+        const rafId2 = requestAnimationFrame(scroll);
+        return () => cancelAnimationFrame(rafId2);
+      });
+      return () => cancelAnimationFrame(rafId1);
     }
-  }, [generatedDescription, isGenerating]);
+  }, [generatedDescription, isGenerating, generateTitle]);
 
   useEffect(() => {
     if (!isGenerating && generatedDescription) {
