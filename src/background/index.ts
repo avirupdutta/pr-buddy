@@ -45,6 +45,30 @@ function findPredefinedModel(id: string): AIModel | null {
   return null;
 }
 
+// Helper function to infer provider from modelId
+function inferProviderFromModelId(modelId: string): string {
+  if (modelId.includes("openai/") || modelId.startsWith("gpt-")) {
+    return "openai";
+  }
+  if (modelId.includes("anthropic/") || modelId.startsWith("claude-")) {
+    return "anthropic";
+  }
+  if (modelId.includes("google/") || modelId.startsWith("gemini-")) {
+    return "google";
+  }
+  if (modelId.includes("groq/") || (modelId.startsWith("llama") && modelId.includes("versatile"))) {
+    return "groq";
+  }
+  if (modelId.includes("cerebras/")) {
+    return "cerebras";
+  }
+  // Default to openrouter for models with provider prefix or unknown format
+  if (modelId.includes("/")) {
+    return modelId.split("/")[0];
+  }
+  return "openrouter";
+}
+
 // Helper functions for AI service adapter integration
 
 // Listen for long-lived connections (streaming)
@@ -158,14 +182,54 @@ async function handleGenerationStream(
       if (predefinedModel) {
         selectedModel = predefinedModel;
       } else {
-        throw new Error(
-          `Selected model not found: ${selectedModelFromSettings.id}`,
-        );
+        // Last resort: try to construct a model from the settings data
+        // This handles cases where the model ID might not be in predefined list
+        // but we have the modelId and provider from the generator store
+        if (selectedModelFromSettings.modelId && selectedModelFromSettings.provider) {
+          selectedModel = {
+            id: selectedModelFromSettings.id,
+            name: selectedModelFromSettings.id, // Use ID as name fallback
+            modelId: selectedModelFromSettings.modelId,
+            provider: selectedModelFromSettings.provider,
+            isActive: true,
+          };
+        } else {
+          throw new Error(
+            `Selected model not found: ${selectedModelFromSettings.id}`,
+          );
+        }
       }
     }
   } else {
     // Fallback to active model (backward compatibility)
-    selectedModel = aiModels.find((m) => m.isActive) || aiModels[0];
+    // First check custom models for an active one
+    const activeCustomModel = aiModels.find((m) => m.isActive);
+    if (activeCustomModel) {
+      selectedModel = activeCustomModel;
+    } else {
+      // If no custom model is active, check for active predefined model
+      const storageResult = await chrome.storage.local.get(['activePredefinedModelId']);
+      const activePredefinedId = storageResult.activePredefinedModelId as string | undefined;
+      if (activePredefinedId) {
+        const predefinedModel = findPredefinedModel(activePredefinedId);
+        if (predefinedModel) {
+          selectedModel = predefinedModel;
+        } else {
+          selectedModel = aiModels[0];
+        }
+      } else {
+        selectedModel = aiModels[0];
+      }
+    }
+  }
+
+  // Validate that the selected model has a provider
+  if (!selectedModel.provider) {
+    // Try to infer provider from modelId or use openrouter as default
+    selectedModel = {
+      ...selectedModel,
+      provider: inferProviderFromModelId(selectedModel.modelId),
+    };
   }
 
   // Find selected template

@@ -120,17 +120,25 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
       const settingsStore = useSettingsStore.getState();
       const activeModel = settingsStore.getActiveModel();
       
+      // Ensure we have a valid model with provider
+      let selectedModel = activeModel;
+      if (!selectedModel) {
+        // Fallback to first default model if no active model found
+        const { DEFAULT_AI_MODELS } = await import("@/stores/settings-store");
+        selectedModel = DEFAULT_AI_MODELS[0];
+      }
+      
       const settings: GeneratorSettings = {
         templateId: template,
         tone,
         context,
         includeTickets,
         generateTitle,
-        selectedModel: activeModel ? {
-          id: activeModel.id,
-          modelId: activeModel.modelId,
-          provider: activeModel.provider || 'openrouter',
-        } : undefined,
+        selectedModel: {
+          id: selectedModel.id,
+          modelId: selectedModel.modelId,
+          provider: selectedModel.provider || 'openrouter',
+        },
       };
 
       // Streaming state

@@ -493,6 +493,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
     }
 
+    // If no active model found, return the first default model
+    if (state.aiModels.length > 0) {
+      return state.aiModels[0];
+    }
+
     return undefined;
   },
 

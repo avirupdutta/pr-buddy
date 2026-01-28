@@ -57,6 +57,22 @@ export class AISDKService {
   private getModelIdentifier(model: AIModel): `${string}:${string}` {
     // For direct provider calls, use provider:modelId format
     const provider = model.provider || "openrouter";
+    
+    // Handle OpenRouter models that already have provider prefix in modelId (e.g., "openai/gpt-4o-mini")
+    // We need to use the full modelId as-is for OpenRouter
+    if (provider === "openrouter" && model.modelId.includes("/")) {
+      return `${provider}:${model.modelId}` as `${string}:${string}`;
+    }
+    
+    // For other providers, check if modelId already has a provider prefix that needs to be stripped
+    if (model.modelId.includes("/")) {
+      const parts = model.modelId.split("/");
+      if (parts.length === 2) {
+        // Use the part after the slash for non-OpenRouter providers
+        return `${provider}:${parts[1]}` as `${string}:${string}`;
+      }
+    }
+    
     return `${provider}:${model.modelId}` as `${string}:${string}`;
   }
 

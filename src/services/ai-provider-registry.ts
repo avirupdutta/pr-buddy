@@ -6,6 +6,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { createCerebras } from "@ai-sdk/cerebras";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { ProviderCapabilities } from "../types/structured-output";
+import modelMappings from "@/data/model-mappings.json";
 
 // Provider configuration interface
 export interface AIProviderConfig {
@@ -22,28 +23,29 @@ export type AIProviderType =
   | "cerebras"
   | "openrouter";
 
-// Provider-specific model mappings for reference
-export const PROVIDER_MODEL_MAPPINGS = {
-  openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
-  anthropic: [
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-haiku-20241022",
-    "claude-3-opus-20240229",
-  ],
-  google: ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"],
-  groq: [
-    "llama-3.3-70b-versatile",
-    "mixtral-8x7b-32768",
-    "llama-3.1-70b-versatile",
-  ],
-  cerebras: ["zai-glm-4.7"] as const, // Users will add models manually at runtime
-  openrouter: [
-    "openai/gpt-4o",
-    "anthropic/claude-3.5-sonnet",
-    "google/gemini-pro",
-    "meta-llama/llama-3.1-70b-instruct",
-  ],
-} as const;
+// Generate PROVIDER_MODEL_MAPPINGS dynamically from model-mappings.json
+function generateProviderModelMappings(): Record<AIProviderType, string[]> {
+  const mappings: Record<AIProviderType, string[]> = {
+    openai: [],
+    anthropic: [],
+    google: [],
+    groq: [],
+    cerebras: [],
+    openrouter: [],
+  };
+
+  for (const [providerId, providerData] of Object.entries(modelMappings.providers)) {
+    const provider = providerId as AIProviderType;
+    if (provider in mappings) {
+      mappings[provider] = providerData.models.map((m) => m.modelId);
+    }
+  }
+
+  return mappings;
+}
+
+// Provider-specific model mappings from model-mappings.json
+export const PROVIDER_MODEL_MAPPINGS = generateProviderModelMappings();
 
 // Structured output capabilities per provider
 export const PROVIDER_STRUCTURED_OUTPUT_CAPABILITIES: Record<

@@ -306,6 +306,8 @@ async function handleDevGenerationStream(
     ? await decryptApiKey(encryptedGoogleKey)
     : null;
   const groqKey = encryptedGroqKey
+    ? await decryptApiKey(encryptedGroqKey)
+    : null;
   const cerebrasKey = encryptedCerebrasKey
     ? await decryptApiKey(encryptedCerebrasKey)
     : null;
@@ -321,19 +323,54 @@ async function handleDevGenerationStream(
   let selectedModel: AIModel;
   const selectedModelFromSettings = settings.selectedModel;
   if (selectedModelFromSettings && selectedModelFromSettings.id) {
-    // Find the model in our model list to ensure it's valid
+    // First, try to find the model in the custom aiModels list
     const foundModel = aiModels.find(
       (m) => m.id === selectedModelFromSettings.id,
     );
-    if (!foundModel) {
-      throw new Error(
-        `Selected model not found: ${selectedModelFromSettings.id}`,
-      );
+    if (foundModel) {
+      selectedModel = foundModel;
+    } else {
+      // If not found in custom models, check predefined models
+      const predefinedModel = findPredefinedModel(selectedModelFromSettings.id);
+      if (predefinedModel) {
+        selectedModel = predefinedModel;
+      } else {
+        // Last resort: try to construct a model from the settings data
+        if (selectedModelFromSettings.modelId && selectedModelFromSettings.provider) {
+          selectedModel = {
+            id: selectedModelFromSettings.id,
+            name: selectedModelFromSettings.id,
+            modelId: selectedModelFromSettings.modelId,
+            provider: selectedModelFromSettings.provider,
+            isActive: true,
+          };
+        } else {
+          throw new Error(
+            `Selected model not found: ${selectedModelFromSettings.id}`,
+          );
+        }
+      }
     }
-    selectedModel = foundModel;
   } else {
     // Fallback to active model (backward compatibility)
-    selectedModel = aiModels.find((m) => m.isActive) || aiModels[0];
+    // First check custom models for an active one
+    const activeCustomModel = aiModels.find((m) => m.isActive);
+    if (activeCustomModel) {
+      selectedModel = activeCustomModel;
+    } else {
+      // If no custom model is active, check for active predefined model
+      const activePredefinedId = devStorage.activePredefinedModelId as string | undefined;
+      if (activePredefinedId) {
+        const predefinedModel = findPredefinedModel(activePredefinedId);
+        if (predefinedModel) {
+          selectedModel = predefinedModel;
+        } else {
+          selectedModel = aiModels[0];
+        }
+      } else {
+        selectedModel = aiModels[0];
+      }
+    }
   }
 
   // Get the provider for the selected model
