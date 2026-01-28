@@ -43,6 +43,7 @@ export const SearchableModelSelector: React.FC<
   const [scrollPosition, setScrollPosition] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Convert predefined models from JSON to ModelOption format
   const predefinedModelOptions: ModelOption[] = useMemo(() => {
@@ -133,11 +134,9 @@ export const SearchableModelSelector: React.FC<
     return allModelOptions.find(
       (option) =>
         option.model.id === value &&
-        (!activeProvider || option.provider === activeProvider)
+        (!activeProvider || option.provider === activeProvider),
     );
   }, [allModelOptions, value, activeProvider]);
-
-
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -177,9 +176,23 @@ export const SearchableModelSelector: React.FC<
     }
   }, [isOpen, scrollPosition]);
 
-  // Handle scroll position change
+  // Handle scroll position change with debounce
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    setScrollPosition(e.currentTarget.scrollTop);
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+      setScrollPosition(e.currentTarget.scrollTop);
+    }, 100);
+  }, []);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
   }, []);
 
   const handleSelect = (option: ModelOption) => {
@@ -262,7 +275,9 @@ export const SearchableModelSelector: React.FC<
                     <div
                       key={option.uniqueId}
                       className={`px-3 py-2 flex items-center gap-2 cursor-pointer hover:bg-accent transition-colors ${
-                        option.uniqueId === selectedOption?.uniqueId ? "bg-accent" : ""
+                        option.uniqueId === selectedOption?.uniqueId
+                          ? "bg-accent"
+                          : ""
                       }`}
                       onClick={() => handleSelect(option)}
                     >
