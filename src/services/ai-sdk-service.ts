@@ -1,6 +1,8 @@
-import { streamText, generateText } from "ai";
-import { createAIProviderRegistry } from "./ai-provider-registry";
+import { streamText, generateText, Output } from "ai";
+import { createAIProviderRegistry, extractProviderFromModel, getProviderStructuredOutputCapabilities } from "./ai-provider-registry";
 import type { AIModel, GenerateResponse } from "@/types/chrome";
+import type { PRResponse, StructuredOutputResult, StructuredOutputError, StructuredStreamEvent } from "@/types/structured-output";
+import { PRResponseSchema } from "@/types/structured-output";
 
 // Request parameters interface (matching existing implementation)
 export interface AIRequestParams {
@@ -65,7 +67,7 @@ export class AISDKService {
       const modelId = this.getModelIdentifier(params.model);
 
       const { text } = await generateText({
-        model: registry.languageModel(modelId),
+        model: registry.languageModel(modelId as `${string}:${string}`),
         messages: [
           { role: "system", content: params.systemPrompt },
           { role: "user", content: params.userPrompt },
@@ -173,6 +175,214 @@ export class AISDKService {
     if (this.apiKeys.cerebrasKey) providers.push("cerebras");
     if (this.apiKeys.openRouterKey) providers.push("openrouter");
     return providers;
+  }
+
+  // Generate structured output for PR responses
+  async generateStructuredText(params: AIRequestParams): Promise<StructuredOutputResult | StructuredOutputError> {
+    const registry = this.initializeRegistry();
+    const provider = extractProviderFromModel(params.model.modelId);
+    const capabilities = getProviderStructuredOutputCapabilities(provider);
+    const modelId = this.getModelIdentifier(params.model);
+
+    try {
+      if (capabilities.supportsNativeStructuredOutput) {
+        // Use native structured output
+        const result = await generateText({
+          model: registry.languageModel(modelId),
+          output: Output.object({
+            schema: PRResponseSchema,
+          }),
+          messages: [
+            { role: "system", content: params.systemPrompt },
+            { role: "user", content: params.userPrompt },
+          ],
+        });
+
+        return {
+          success: true,
+          data: result.output as PRResponse,
+          provider,
+          model: params.model.modelId,
+        };
+      }
+      
+      // Fallback to JSON parsing for providers that don't support native structured output
+      if (capabilities.fallbackToJSONParsing) {
+        return await this.generateWithJSONFallback(params, provider, modelId);
+      }
+    } catch (error) {
+      // Check if it's a NoObjectGeneratedError and try fallback
+      if (error instanceof Error && error.name === 'NoObjectGeneratedError') {
+        return await this.generateWithJSONFallback(params, provider, modelId);
+      }
+      
+      return {
+        success: false,
+        error: `AI SDK Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        provider,
+        model: params.model.modelId,
+      };
+    }
+
+    // Default fallback
+    return {
+      success: false,
+      error: "Provider does not support structured output",
+      provider,
+      model: params.model.modelId,
+    };
+  }
+
+  // JSON fallback implementation for providers without native structured output
+  private async generateWithJSONFallback(
+    params: AIRequestParams,
+    provider: string,
+    modelId: string
+  ): Promise<StructuredOutputResult | StructuredOutputError> {
+    const registry = this.initializeRegistry();
+    
+    try {
+      const { text } = await generateText({
+        model: registry.languageModel(modelId as `${string}:${string}`),
+        messages: [
+          { 
+            role: "system", 
+            content: `${params.systemPrompt}\n\nIMPORTANT: You must respond with valid JSON in this exact format:\n{\n  "title": "A concise PR title",\n  "description": "The full PR description in Markdown format"\n}` 
+          },
+          { role: "user", content: params.userPrompt },
+        ],
+      });
+
+      // Try to parse JSON from the response
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          const validated = PRResponseSchema.parse(parsed);
+          
+          return {
+            success: true,
+            data: validated,
+            provider,
+            model: params.model.modelId,
+          };
+        }
+      } catch {
+        // If JSON parsing fails, try to extract title and description from text
+        const titleMatch = text.match(/TITLE: (.+?)(?=\n\nDESCRIPTION:|$)/s);
+        const descriptionMatch = text.match(/DESCRIPTION: (.+?)$/s);
+        
+        if (descriptionMatch) {
+          const result = {
+            title: titleMatch ? titleMatch[1].trim() : undefined,
+            description: descriptionMatch[1].trim(),
+          };
+          
+          const validated = PRResponseSchema.parse(result);
+          
+          return {
+            success: true,
+            data: validated,
+            provider,
+            model: params.model.modelId,
+          };
+        }
+      }
+
+      // If all parsing fails, treat entire text as description
+      const fallbackResult = {
+        description: text.trim(),
+      };
+      
+      const validated = PRResponseSchema.parse(fallbackResult);
+      
+      return {
+        success: true,
+        data: validated,
+        provider,
+        model: params.model.modelId,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `JSON fallback failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        provider,
+        model: params.model.modelId,
+      };
+    }
+  }
+
+  // Generate structured output with streaming
+  async *generateStructuredTextStream(
+    params: AIRequestParams,
+  ): AsyncGenerator<StructuredStreamEvent> {
+    const registry = this.initializeRegistry();
+    const provider = extractProviderFromModel(params.model.modelId);
+    const capabilities = getProviderStructuredOutputCapabilities(provider);
+    const modelId = this.getModelIdentifier(params.model);
+
+    try {
+      if (capabilities.supportsStreamingStructuredOutput) {
+        // Use streaming structured output
+        const result = await streamText({
+          model: registry.languageModel(modelId as `${string}:${string}`),
+          output: Output.object({
+            schema: PRResponseSchema,
+          }),
+          messages: [
+            { role: "system", content: params.systemPrompt },
+            { role: "user", content: params.userPrompt },
+          ],
+        });
+
+        let accumulatedData: Partial<PRResponse> = {};
+
+        for await (const partialObject of result.partialOutputStream) {
+          // Accumulate the partial data
+          accumulatedData = { ...accumulatedData, ...partialObject };
+          
+          yield {
+            type: "partial",
+            data: {
+              ...accumulatedData,
+              isComplete: false,
+            },
+          };
+        }
+
+        yield {
+          type: "complete",
+        };
+      } else {
+        // Fallback to regular text streaming
+        const { textStream } = await streamText({
+          model: registry.languageModel(modelId as `${string}:${string}`),
+          messages: [
+            { role: "system", content: params.systemPrompt },
+            { role: "user", content: params.userPrompt },
+          ],
+        });
+
+        for await (const chunk of textStream) {
+          yield {
+            type: "partial",
+            data: {
+              description: chunk,
+              isComplete: false,
+            },
+          };
+        }
+
+        yield {
+          type: "complete",
+        };
+      }
+    } catch (error) {
+      yield {
+        type: "error",
+        error: `AI SDK Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      };
+    }
   }
 }
 

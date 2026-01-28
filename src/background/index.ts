@@ -12,10 +12,20 @@ import type {
   PRTemplate,
   AIModel,
 } from "@/types/chrome";
+
 import { decryptApiKey } from "@/services/encryption";
+import { getDecryptedAPIKeys } from "@/services/api-keys";
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 import { sendToastNotification } from "@/services/notifications";
 import { aiServiceAdapter } from "@/services/ai-service-adapter";
+import { createAISDKService } from "@/services/ai-sdk-service";
+
+// Get structured output setting from storage
+async function getUseStructuredOutput(): Promise<boolean> {
+  const result = await chrome.storage.local.get(['useStructuredOutput']);
+  // Default to true for new installations
+  return result.useStructuredOutput !== false;
+}
 
 // Helper functions for AI service adapter integration
 
@@ -149,14 +159,26 @@ async function handleGenerationStream(
   const { diff, metadata } = await fetchPRData(prDetails, githubToken);
 
   // 4. Generate with AI (streaming) using the AI service adapter
-  await generateWithAIStreaming(
-    diff,
-    metadata,
-    settings,
-    selectedTemplate,
-    selectedModel,
-    port,
-  );
+  const useStructuredOutput = await getUseStructuredOutput();
+  if (useStructuredOutput) {
+    await generateWithAIStructuredStreaming(
+      diff,
+      metadata,
+      settings,
+      selectedTemplate,
+      selectedModel,
+      port,
+    );
+  } else {
+    await generateWithAIStreaming(
+      diff,
+      metadata,
+      settings,
+      selectedTemplate,
+      selectedModel,
+      port,
+    );
+  }
 
   // Note: generateWithAIStream handles sending the 'complete' message
 }
@@ -272,14 +294,26 @@ async function handleGeneration(
   const { diff, metadata } = await fetchPRData(prDetails, githubToken);
 
   // 4. Generate with AI (single API call with structured output)
-  const aiResult = await generateWithAI(
-    diff,
-    metadata,
-    settings,
-    selectedTemplate,
-    activeModel.modelId,
-    providerApiKey,
-  );
+  const useStructuredOutput = await getUseStructuredOutput();
+  let aiResult: { title: string; description: string };
+  if (useStructuredOutput) {
+    aiResult = await generateWithAIStructured(
+      diff,
+      metadata,
+      settings,
+      selectedTemplate,
+      activeModel,
+    );
+  } else {
+    aiResult = await generateWithAI(
+      diff,
+      metadata,
+      settings,
+      selectedTemplate,
+      activeModel.modelId,
+      providerApiKey,
+    );
+  }
 
   return {
     success: true,
@@ -650,5 +684,208 @@ Generate the JSON response with title and description now.`;
       title: "",
       description: content,
     };
+  }
+}
+
+async function generateWithAIStructuredStreaming(
+  diff: string,
+  metadata: PRMetadata,
+  settings: GeneratorSettings,
+  template: PRTemplate,
+  model: AIModel,
+  port: chrome.runtime.Port,
+): Promise<void> {
+  const toneDescription =
+    TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
+
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${settings.generateTitle ? 'title and description' : 'description'} based on the provided code diff and context.
+
+${settings.generateTitle ? 
+  'You must generate both a title and description.' : 
+  'You must generate a description.'
+}
+
+WRITING STYLE: ${toneDescription}
+
+TEMPLATE STRUCTURE TO FOLLOW:
+${template.structure}
+
+GUIDELINES:
+- Be specific about what changed
+- Reference file names when relevant
+- Keep it readable and scannable
+- Don't include the diff in your response
+- Don't make up information not present in the diff
+${settings.context ? 
+  `USER INSTRUCTIONS (apply to ${settings.generateTitle ? 'both title and description' : 'description'}):\n${settings.context}` : 
+  ""
+}`;
+
+  const userPrompt = `
+Current PR Title: ${metadata.title}
+Branch: ${metadata.head.ref} -> ${metadata.base.ref}
+${settings.includeTickets ? 
+  `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.` : 
+  ""
+}
+
+File Changes Summary:
+- ${metadata.changed_files || "N/A"} files changed
+- +${metadata.additions || 0} additions, -${metadata.deletions || 0} deletions
+
+Diff:
+\`\`\`diff
+${diff}
+\`\`\`
+
+Generate the ${settings.generateTitle ? 'title and description' : 'description'} now.`;
+
+  try {
+    // Get API keys for AI SDK service
+    const decryptedKeys = await getDecryptedAPIKeys();
+    const aiService = createAISDKService(decryptedKeys);
+    const stream = aiService.generateStructuredTextStream({
+      model,
+      systemPrompt,
+      userPrompt,
+      stream: true,
+    });
+
+let lastSentContent = "";
+    
+    for await (const event of stream) {
+      if (event.type === "error") {
+        port.postMessage({ type: "error", error: event.error });
+        throw new Error(event.error);
+      }
+      
+      if (event.type === "partial" && event.data) {
+        // Convert structured output to existing format
+        // Only include the separator if we have both title and description
+        const hasTitle = !!event.data.title;
+        const hasDescription = !!event.data.description;
+        
+        let content = "";
+        if (hasTitle) {
+          content += `TITLE: ${event.data.title}`;
+        }
+        if (hasTitle && hasDescription) {
+          content += "\n\n<<<SEPARATOR>>>\n\nDESCRIPTION: " + event.data.description;
+        } else if (hasDescription) {
+          content += event.data.description;
+        }
+
+        // Only send if content is new and not empty
+        if (content && content !== lastSentContent) {
+          const newContent = content.replace(lastSentContent, "");
+          if (newContent) {
+            port.postMessage({ type: "chunk", content: newContent });
+          }
+          lastSentContent = content;
+        }
+      }
+      
+      if (event.type === "complete") {
+        port.postMessage({
+          type: "complete",
+          data: {
+            success: true,
+            description: "",
+            title: "",
+            prDetails: {
+              owner: metadata.base.ref.split(":")[0] || "unknown",
+              repo: "unknown",
+              number: "0",
+            },
+          },
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error in generateWithAIStructuredStreaming", error);
+
+    // Send toast notification for errors
+    if (error instanceof Error) {
+      sendToastNotification(`AI Generation Error: ${error.message}`, "error");
+    }
+
+    throw error;
+  }
+}
+
+async function generateWithAIStructured(
+  diff: string,
+  metadata: PRMetadata,
+  settings: GeneratorSettings,
+  template: PRTemplate,
+  model: AIModel,
+): Promise<{ title: string; description: string }> {
+  const toneDescription =
+    TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
+
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${settings.generateTitle ? 'title and description' : 'description'} based on the provided code diff and context.
+
+${settings.generateTitle ? 
+  'You must generate both a title and description.' : 
+  'You must generate a description.'
+}
+
+WRITING STYLE: ${toneDescription}
+
+TEMPLATE STRUCTURE TO FOLLOW:
+${template.structure}
+
+GUIDELINES:
+- Be specific about what changed
+- Reference file names when relevant
+- Keep it readable and scannable
+- Don't include the diff in your response
+- Don't make up information not present in the diff
+${settings.context ? 
+  `USER INSTRUCTIONS (apply to ${settings.generateTitle ? 'both title and description' : 'description'}):\n${settings.context}` : 
+  ""
+}`;
+
+  const userPrompt = `
+Current PR Title: ${metadata.title}
+Branch: ${metadata.head.ref} -> ${metadata.base.ref}
+${settings.includeTickets ? 
+  `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.` : 
+  ""
+}
+
+File Changes Summary:
+- ${metadata.changed_files || "N/A"} files changed
+- +${metadata.additions || 0} additions, -${metadata.deletions || 0} deletions
+
+Diff:
+\`\`\`diff
+${diff}
+\`\`\`
+
+Generate the ${settings.generateTitle ? 'title and description' : 'description'} now.`;
+
+  try {
+    // Get API keys for AI SDK service
+    const decryptedKeys = await getDecryptedAPIKeys();
+    const aiService = createAISDKService(decryptedKeys);
+    const result = await aiService.generateStructuredText({
+      model,
+      systemPrompt,
+      userPrompt,
+      stream: false,
+    });
+
+    if (result.success) {
+      return {
+        title: result.data.title || "",
+        description: result.data.description,
+      };
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error("Error in generateWithAIStructured", error);
+    throw error;
   }
 }

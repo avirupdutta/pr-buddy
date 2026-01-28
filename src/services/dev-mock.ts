@@ -392,10 +392,7 @@ async function handleDevGenerationStream(
 
   const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description.
 
-IMPORTANT: You must stream the response in this EXACT format:
-TITLE: <Your concise title here>
-<<<SEPARATOR>>>
-DESCRIPTION: <Your markdown description here>
+You must respond with a structured object containing a title and description.
 
 TITLE GUIDELINES:
 - Use the imperative mood
@@ -434,7 +431,7 @@ Diff:
 ${diff}
 \`\`\`
 
-Generate the TITLE and DESCRIPTION now in the requested format.`;
+Generate the title and description now.`;
 
   // Create AI SDK service instance
   const aiService = createAISDKService({
@@ -453,20 +450,36 @@ Generate the TITLE and DESCRIPTION now in the requested format.`;
     stream: true,
   };
 
-  // Stream the response using AI SDK
-  let accumulatedContent = "";
-  for await (const chunk of aiService.generateTextStream(requestParams)) {
-    if (chunk.error) {
-      throw new Error(chunk.error);
+  // Stream the response using AI SDK with structured output
+  let lastSentContent = "";
+  for await (const event of aiService.generateStructuredTextStream(requestParams)) {
+    if (event.type === "error") {
+      throw new Error(event.error);
     }
+    
+    if (event.type === "partial" && event.data) {
+      // Convert structured output to existing format
+      // Only include the separator if we have both title and description
+      const hasTitle = !!event.data.title;
+      const hasDescription = !!event.data.description;
+      
+      let content = "";
+      if (hasTitle) {
+        content += `TITLE: ${event.data.title}`;
+      }
+      if (hasTitle && hasDescription) {
+        content += "\n\n<<<SEPARATOR>>>\n\nDESCRIPTION: " + event.data.description;
+      } else if (hasDescription) {
+        content += event.data.description;
+      }
 
-    if (chunk.description) {
-      // Calculate delta (new content since last chunk)
-      const delta = chunk.description.slice(accumulatedContent.length);
-      accumulatedContent = chunk.description;
-
-      if (delta) {
-        postMessage({ type: "chunk", content: delta });
+      // Only send if content is new and not empty
+      if (content && content !== lastSentContent) {
+        const newContent = content.replace(lastSentContent, "");
+        if (newContent) {
+          postMessage({ type: "chunk", content: newContent });
+        }
+        lastSentContent = content;
       }
     }
   }
@@ -740,11 +753,7 @@ async function generateWithAISDK(
 
   const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description based on the provided code diffs and context.
 
-You MUST respond with valid JSON in this exact format:
-{
-  "title": "A concise PR title",
-  "description": "The full PR description in Markdown format"
-}
+You must respond with a structured object containing a title and description.
 
 TITLE GUIDELINES:
 - Use the imperative mood (e.g., "Add feature" not "Added feature")
@@ -786,7 +795,7 @@ Diff:
 ${diff}
 \`\`\`
 
-Generate the JSON response with title and description now.`;
+Generate the title and description now.`;
 
   // Create AI SDK service instance
   const aiService = createAISDKService(apiKeys);
@@ -799,39 +808,20 @@ Generate the JSON response with title and description now.`;
   };
 
   try {
-    const result = await aiService.generateText(requestParams);
+    const result = await aiService.generateStructuredText(requestParams);
 
-    if (!result.success || !result.description) {
-      throw new Error("AI generation failed");
+    if (!result.success) {
+      throw new Error(result.error);
     }
 
-    // Parse the response to extract title and description
-    // The AI SDK service returns text in TITLE: / DESCRIPTION: format
-    const text = result.description;
-    const titleMatch = text.match(/TITLE:\s*(.+?)(?=\n\nDESCRIPTION:|$)/s);
-    const descriptionMatch = text.match(/DESCRIPTION:\s*(.+?)$/s);
+    // Extract title and description from structured output result
+    const title = result.data.title || "";
+    const description = result.data.description;
 
-    if (titleMatch && descriptionMatch) {
-      return {
-        title: titleMatch[1].trim(),
-        description: descriptionMatch[1].trim(),
-      };
-    }
-
-    // Fallback: try to parse as JSON
-    try {
-      const parsed = JSON.parse(text);
-      return {
-        title: (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, ""),
-        description: parsed.description || text,
-      };
-    } catch {
-      // If all parsing fails, return the raw text as description
-      return {
-        title: "",
-        description: text,
-      };
-    }
+    return {
+      title,
+      description,
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     sendToastNotification(`AI SDK Error: ${errorMessage}`, "error");
