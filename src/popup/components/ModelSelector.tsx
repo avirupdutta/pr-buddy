@@ -6,6 +6,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSettingsStore } from "@/stores/settings-store";
+import { ProviderLogo } from "@/components/provider-logos";
+import type { AIProviderType } from "@/services/ai-provider-registry";
 
 const ModelSelector = () => {
   const { aiModels, getActiveModel, setActiveModel } = useSettingsStore();
@@ -22,7 +24,10 @@ const ModelSelector = () => {
         <SelectContent position="popper">
           {aiModels.map((model) => (
             <SelectItem key={model.id} value={model.id}>
-              {model.name}
+              <div className="flex items-center gap-2">
+                <ProviderLogo provider={(model.provider || 'openrouter') as AIProviderType} size={16} />
+                <span>{model.name}</span>
+              </div>
             </SelectItem>
           ))}
         </SelectContent>

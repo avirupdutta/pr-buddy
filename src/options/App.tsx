@@ -37,7 +37,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProviderLogo } from "@/components/provider-logos";
 import type { PRTemplate, AIModel } from "@/types/chrome";
+import type { AIProviderType } from "@/services/ai-provider-registry";
 
 // ============================================
 // Template Editor Component
@@ -155,12 +157,20 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
         <Label htmlFor="provider">Provider</Label>
         <Select value={provider} onValueChange={setProvider}>
           <SelectTrigger>
-            <SelectValue placeholder="Select a provider" />
+            <SelectValue>
+              <div className="flex items-center gap-2">
+                <ProviderLogo provider={provider as AIProviderType} size={16} />
+                <span>{providerOptions.find(p => p.value === provider)?.label || 'Select a provider'}</span>
+              </div>
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {providerOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                <div className="flex items-center gap-2">
+                  <ProviderLogo provider={option.value as AIProviderType} size={16} />
+                  <span>{option.label}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
@@ -443,6 +453,7 @@ function AIModelsTab() {
           >
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
+                <ProviderLogo provider={(model.provider || 'openrouter') as AIProviderType} size={18} />
                 <span className="font-medium">{model.name}</span>
                 {model.isActive && (
                   <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
@@ -450,9 +461,15 @@ function AIModelsTab() {
                   </span>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground font-mono">
-                {model.modelId}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground font-mono">
+                  {model.modelId}
+                </span>
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground capitalize">
+                  {model.provider || 'openrouter'}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-1">
               {!model.isActive && (
