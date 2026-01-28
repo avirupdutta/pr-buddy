@@ -418,10 +418,9 @@ function buildStreamingSystemPrompt(
   template: PRTemplate,
   toneDescription: string,
   context: string,
+  generateTitle: boolean,
 ): string {
-  return `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description.
-
-IMPORTANT: You must stream the response in this EXACT format:
+  const titleSection = generateTitle ? `IMPORTANT: You must stream the response in this EXACT format:
 TITLE: <Your concise title here>
 <<<SEPARATOR>>>
 DESCRIPTION: <Your markdown description here>
@@ -431,7 +430,14 @@ TITLE GUIDELINES:
 - Max 60 chars
 - Focus on main change
 
-DESCRIPTION GUIDELINES:
+DESCRIPTION GUIDELINES:` : `IMPORTANT: You must stream the response in this EXACT format:
+DESCRIPTION: <Your markdown description here>
+
+GUIDELINES:`;
+
+  return `You are an expert software engineer assistant. Your task is to generate a Pull Request ${generateTitle ? 'title and description' : 'description'}.
+
+${titleSection}
 - Writing Style: ${toneDescription}
 - Use this structure:
 ${template.structure}
@@ -461,6 +467,7 @@ async function generateWithAIStreaming(
     template,
     toneDescription,
     settings.context,
+    settings.generateTitle ?? false,
   );
 
   const userPrompt = `
@@ -539,21 +546,28 @@ async function generateWithAI(
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
 
-  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description based on the provided code diffs and context.
-
-You MUST respond with valid JSON in this exact format:
-{
+  const shouldGenerateTitle = settings.generateTitle ?? false;
+  const jsonFormat = shouldGenerateTitle ? `{
   "title": "A concise PR title",
   "description": "The full PR description in Markdown format"
-}
+}` : `{
+  "description": "The full PR description in Markdown format"
+}`;
 
-TITLE GUIDELINES:
+  const titleGuidelines = shouldGenerateTitle ? `TITLE GUIDELINES:
 - Use the imperative mood (e.g., "Add feature" not "Added feature")
 - Max 60 characters is ideal, but up to 80 is acceptable
 - Focus on the main change
 - No quotes or markdown formatting
 
-DESCRIPTION GUIDELINES:
+DESCRIPTION GUIDELINES:` : "GUIDELINES:";
+
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${shouldGenerateTitle ? 'title and description' : 'description'} based on the provided code diffs and context.
+
+You MUST respond with valid JSON in this exact format:
+${jsonFormat}
+
+${titleGuidelines}
 - Writing Style: ${toneDescription}
 - Use this template structure:
 ${template.structure}
@@ -565,7 +579,7 @@ ${template.structure}
 
 ${
   settings.context
-    ? `USER INSTRUCTIONS (apply to both title and description):\n${settings.context}`
+    ? `USER INSTRUCTIONS (apply to ${shouldGenerateTitle ? 'both title and description' : 'description'}):\n${settings.context}`
     : ""
 }`;
 
@@ -625,8 +639,9 @@ Generate the JSON response with title and description now.`;
 
   try {
     const parsed = JSON.parse(content);
+    const shouldGenerateTitle = settings.generateTitle ?? false;
     return {
-      title: (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, ""),
+      title: shouldGenerateTitle ? (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, "") : "",
       description: parsed.description || "",
     };
   } catch {

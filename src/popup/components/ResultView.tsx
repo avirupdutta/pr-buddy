@@ -107,7 +107,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       await updatePRDescription(
         currentUrl,
         generatedDescription,
-        generatedTitle,
+        generateTitle ? generatedTitle : undefined,
       );
       toast.success("PR updated!");
       reset();
@@ -135,7 +135,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     >
       <ScrollArea classNames={{ root: "flex-1 min-h-0" }}>
         <div className="px-6 pt-4 space-y-4 pb-4">
-          {(generateTitle || generatedTitle) && (
+          {generateTitle && (
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Title</Label>
               <Input

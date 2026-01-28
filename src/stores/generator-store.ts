@@ -151,21 +151,32 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
 
             fullContent += chunk;
 
-            // Basic parsing
+            // Basic parsing - consider generateTitle setting
             const separatorIndex = fullContent.indexOf(separator);
 
             if (separatorIndex === -1) {
-              // Still in title section
+              // Still in title section or only description
               const titleMatch = fullContent.match(/TITLE:\s*(.*)/s);
-              if (titleMatch) {
+              if (titleMatch && generateTitle) {
                  set({ generatedTitle: titleMatch[1].trim() });
+              } else {
+                // No title found or title generation disabled, this is description-only response
+                const descMatch = fullContent.match(/DESCRIPTION:\s*(.*)/s);
+                if (descMatch) {
+                  set({ generatedDescription: descMatch[1].trim() });
+                } else {
+                  // If no DESCRIPTION: prefix found, treat entire content as description
+                  // This handles cases where AI streams description without the prefix
+                  // or when title generation is disabled and there's no separator
+                  set({ generatedDescription: fullContent.trim() });
+                }
               }
             } else {
-              // We have separator
+              // We have separator - this should only happen when generateTitle is true
               // 1. Update Title (final)
               const beforeSeparator = fullContent.substring(0, separatorIndex);
               const titleMatch = beforeSeparator.match(/TITLE:\s*(.*)/s);
-              if (titleMatch) {
+              if (titleMatch && generateTitle) {
                  set({ generatedTitle: titleMatch[1].trim() });
               }
 
