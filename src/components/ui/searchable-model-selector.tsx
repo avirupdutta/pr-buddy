@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProviderLogo } from "@/components/provider-logos";
 import type { AIModel } from "@/types/chrome";
 import type { AIProviderType } from "@/services/ai-provider-registry";
@@ -36,7 +37,9 @@ export const SearchableModelSelector: React.FC<
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [scrollPosition, setScrollPosition] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Convert predefined models from JSON to ModelOption format
   const predefinedModelOptions: ModelOption[] = useMemo(() => {
@@ -132,6 +135,10 @@ export const SearchableModelSelector: React.FC<
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
+        // Save scroll position before closing
+        if (scrollAreaRef.current) {
+          setScrollPosition(scrollAreaRef.current.scrollTop);
+        }
         setIsOpen(false);
       }
     };
@@ -144,6 +151,25 @@ export const SearchableModelSelector: React.FC<
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
+
+  // Restore scroll position when dropdown opens
+  React.useEffect(() => {
+    if (isOpen && scrollAreaRef.current) {
+      // Use multiple requestAnimationFrame calls to ensure the DOM is fully ready
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollTop = scrollPosition;
+          }
+        });
+      });
+    }
+  }, [isOpen, scrollPosition]);
+
+  // Handle scroll position change
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollPosition(e.currentTarget.scrollTop);
+  }, []);
 
   const handleSelect = (option: ModelOption) => {
     onValueChange(option.model.id);
@@ -196,7 +222,11 @@ export const SearchableModelSelector: React.FC<
           </div>
 
           {/* Options */}
-          <div className="max-h-48 overflow-y-auto">
+          <ScrollArea
+            viewportRef={scrollAreaRef}
+            onScroll={handleScroll}
+            classNames={{ root: "h-48" }}
+          >
             {groupedOptions.length === 0 ? (
               <div className="p-3 text-sm text-muted-foreground text-center">
                 No models found
@@ -246,7 +276,7 @@ export const SearchableModelSelector: React.FC<
                 </div>
               ))
             )}
-          </div>
+          </ScrollArea>
         </div>
       )}
     </div>

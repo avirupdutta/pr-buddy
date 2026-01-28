@@ -12,9 +12,13 @@ interface ScrollAreaProps
     thumb?: string;
     corner?: string;
   };
+  viewportRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-function ScrollArea({ classNames, children, ...props }: ScrollAreaProps) {
+function ScrollArea({ classNames, children, viewportRef, ...props }: ScrollAreaProps) {
+  const internalViewportRef = React.useRef<HTMLDivElement>(null);
+  const viewportElement = viewportRef || internalViewportRef;
+
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -22,6 +26,7 @@ function ScrollArea({ classNames, children, ...props }: ScrollAreaProps) {
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
+        ref={viewportElement as React.RefObject<HTMLDivElement>}
         data-slot="scroll-area-viewport"
         className={cn(
           "focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1",
