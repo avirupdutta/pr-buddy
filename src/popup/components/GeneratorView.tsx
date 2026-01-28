@@ -1,4 +1,4 @@
-import { IconSparkles, IconLoader2, IconSettings } from "@tabler/icons-react";
+import { IconSparkles, IconSettings } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
 import { useGeneratorStore } from "@/stores/generator-store";
@@ -76,7 +76,6 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
               >
                 Generating...
               </span>
-              <IconLoader2 className="w-5 h-5 animate-spin" />
             </>
           ) : (
             <>

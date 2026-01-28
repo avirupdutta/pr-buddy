@@ -4,34 +4,10 @@
       "name": "OpenRouter",
       "models": [
         {
-          "id": "mimo-v2-flash",
-          "name": "Xiaomi MiMo v2 Flash",
-          "modelId": "xiaomi/mimo-v2-flash:free",
+          "id": "nvidia/nemotron-3-nano-30b-a3b:free",
+          "name": "Nemotron 3 Nano 30B A3B (free)",
+          "modelId": "nvidia/nemotron-3-nano-30b-a3b:free",
           "description": "Free tier model"
-        },
-        {
-          "id": "devstral-2512",
-          "name": "Mistral: Devstral 2 2512",
-          "modelId": "mistralai/devstral-2512:free",
-          "description": "Free tier model"
-        },
-        {
-          "id": "gpt-4o-mini",
-          "name": "GPT-4o Mini",
-          "modelId": "openai/gpt-4o-mini",
-          "description": "OpenAI's efficient small model"
-        },
-        {
-          "id": "claude-3.5-haiku",
-          "name": "Claude 3.5 Haiku",
-          "modelId": "anthropic/claude-3.5-haiku",
-          "description": "Anthropic's fast and compact model"
-        },
-        {
-          "id": "gemini-flash",
-          "name": "Gemini Flash",
-          "modelId": "google/gemini-flash-1.5",
-          "description": "Google's fast multimodal model"
         }
       ]
     },
