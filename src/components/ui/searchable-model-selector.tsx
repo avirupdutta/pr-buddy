@@ -6,7 +6,7 @@ import type { AIModel } from "@/types/chrome";
 import type { AIProviderType } from "@/services/ai-provider-registry";
 import modelMappings from "@/data/model-mappings.json";
 import { cn } from "@/lib/utils";
-import { IconCheck, IconSelector } from "@tabler/icons-react";
+import { IconCheck, IconSelector, IconLock } from "@tabler/icons-react";
 
 interface SearchableModelSelectorProps {
   models: AIModel[];
@@ -17,6 +17,7 @@ interface SearchableModelSelectorProps {
   className?: string;
   popoverPosition?: "top" | "bottom";
   customModels?: AIModel[]; // User-added custom models to display in "Custom" section
+  providerKeyStatus?: Record<AIProviderType, boolean>; // Map of provider to API key status
 }
 
 interface ModelOption {
@@ -37,6 +38,7 @@ export const SearchableModelSelector: React.FC<
   className = "",
   popoverPosition = "bottom",
   customModels = [],
+  providerKeyStatus = {} as Record<AIProviderType, boolean>,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,9 +127,28 @@ export const SearchableModelSelector: React.FC<
       // Sort "Custom" to the end
       if (a === "Custom") return 1;
       if (b === "Custom") return -1;
+
+      // Get provider IDs for comparison
+      const getProviderId = (providerName: string): string => {
+        const entry = Object.entries(modelMappings.providers).find(
+          ([, data]) => data.name === providerName,
+        );
+        return entry ? entry[0] : providerName;
+      };
+
+      const providerA = getProviderId(a);
+      const providerB = getProviderId(b);
+
+      // Sort providers with API keys first
+      const hasKeyA = providerKeyStatus[providerA as AIProviderType] ?? false;
+      const hasKeyB = providerKeyStatus[providerB as AIProviderType] ?? false;
+
+      if (hasKeyA && !hasKeyB) return -1;
+      if (!hasKeyA && hasKeyB) return 1;
+
       return a.localeCompare(b);
     });
-  }, [filteredOptions]);
+  }, [filteredOptions, providerKeyStatus]);
 
   // Get current selected option - match by both ID and provider
   const selectedOption = useMemo(() => {
@@ -256,51 +277,82 @@ export const SearchableModelSelector: React.FC<
                 No models found
               </div>
             ) : (
-              groupedOptions.map(([providerName, options]) => (
-                <div
-                  key={providerName}
-                  className="border-b border-border last:border-b-0"
-                >
-                  {/* Provider Header */}
-                  <div
-                    className={
-                      "px-3 py-1.5 bg-muted capitalize text-xs font-medium text-muted-foreground sticky top-0"
-                    }
-                  >
-                    {providerName}
-                  </div>
+              groupedOptions.map(([providerName, options]) => {
+                // Get provider ID from provider name
+                const providerEntry = Object.entries(
+                  modelMappings.providers,
+                ).find(([, data]) => data.name === providerName);
+                const providerId = providerEntry
+                  ? providerEntry[0]
+                  : providerName;
+                const hasApiKey =
+                  providerKeyStatus[providerId as AIProviderType] ?? false;
+                const isLocked = providerName !== "Custom" && !hasApiKey;
 
-                  {/* Model Options */}
-                  {options.map((option) => (
+                return (
+                  <div
+                    key={providerName}
+                    className="border-b border-border last:border-b-0"
+                  >
+                    {/* Provider Header */}
                     <div
-                      key={option.uniqueId}
-                      className={`px-3 py-2 flex items-center gap-2 cursor-pointer hover:bg-accent transition-colors ${
-                        option.uniqueId === selectedOption?.uniqueId
-                          ? "bg-accent"
-                          : ""
-                      }`}
-                      onClick={() => handleSelect(option)}
+                      className={
+                        "px-3 py-1.5 bg-muted capitalize text-xs font-medium text-muted-foreground sticky top-0 flex items-center justify-between"
+                      }
                     >
-                      <ProviderLogo
-                        provider={option.provider as AIProviderType}
-                        size={16}
-                      />
-                      <span
-                        className={cn(
-                          "text-sm flex-1 text-muted-foreground",
-                          option.uniqueId === selectedOption?.uniqueId &&
-                            "text-foreground font-semibold",
-                        )}
-                      >
-                        {option.model.name}
-                      </span>
-                      {option.uniqueId === selectedOption?.uniqueId && (
-                        <IconCheck className="w-4 h-4 text-green-500" />
+                      <span>{providerName}</span>
+                      {isLocked && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-destructive/20 text-destructive rounded-full">
+                          API key required
+                        </span>
                       )}
                     </div>
-                  ))}
-                </div>
-              ))
+
+                    {/* Model Options */}
+                    {options.map((option) => (
+                      <div
+                        key={option.uniqueId}
+                        className={cn(
+                          "px-3 py-2 flex items-center gap-2 transition-colors",
+                          isLocked
+                            ? "cursor-not-allowed"
+                            : "cursor-pointer hover:bg-accent",
+                          option.uniqueId === selectedOption?.uniqueId &&
+                            !isLocked
+                            ? "bg-accent"
+                            : "",
+                        )}
+                        onClick={() => !isLocked && handleSelect(option)}
+                      >
+                        <ProviderLogo
+                          provider={option.provider as AIProviderType}
+                          size={16}
+                        />
+                        <span
+                          className={cn(
+                            "text-sm flex-1",
+                            isLocked
+                              ? "text-muted-foreground/50"
+                              : "text-muted-foreground",
+                            option.uniqueId === selectedOption?.uniqueId &&
+                              !isLocked &&
+                              "text-foreground font-semibold",
+                          )}
+                        >
+                          {option.model.name}
+                        </span>
+                        {option.uniqueId === selectedOption?.uniqueId &&
+                          !isLocked && (
+                            <IconCheck className="w-4 h-4 text-green-500" />
+                          )}
+                        {isLocked && (
+                          <IconLock className="w-3.5 h-3.5 text-muted-foreground/40" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
             )}
           </ScrollArea>
         </div>
