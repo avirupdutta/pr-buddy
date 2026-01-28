@@ -2,7 +2,11 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { SearchableModelSelector } from "@/components/ui/searchable-model-selector";
 import type { AIProviderType } from "@/services/ai-provider-registry";
 
-const ModelSelector = () => {
+interface ModelSelectorProps {
+  disabled?: boolean;
+}
+
+const ModelSelector = ({ disabled = false }: ModelSelectorProps) => {
   const { aiModels, getActiveModel, setActiveModel, openRouterKey, openaiKey, anthropicKey, googleKey, groqKey, cerebrasKey } = useSettingsStore();
   const activeModel = getActiveModel();
 
@@ -28,6 +32,7 @@ const ModelSelector = () => {
         className="w-full"
         popoverPosition="top"
         providerKeyStatus={providerKeyStatus}
+        disabled={disabled}
       />
     </div>
   );

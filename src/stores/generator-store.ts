@@ -27,6 +27,10 @@ interface GeneratorState {
   isUpdating: boolean;
   error: string | null;
 
+  // Track generation history for UI flow
+  hasGeneratedOnce: boolean; // True after first successful generation
+  hasRegenerated: boolean; // True after user clicks regenerate at least once
+
   // Actions
   setTemplate: (template: string) => void;
   setTone: (tone: ToneType) => void;
@@ -37,6 +41,7 @@ interface GeneratorState {
   setGeneratedTitle: (title: string) => void;
   setView: (view: ViewType) => void;
   setIsRegenerating: (regenerating: boolean) => void;
+  setHasRegenerated: (hasRegenerated: boolean) => void;
   generate: (url: string, isRegeneration?: boolean) => Promise<void>;
   reset: () => void;
   loadPreferences: () => Promise<void>;
@@ -56,6 +61,8 @@ const DEFAULT_STATE = {
   isRegenerating: false,
   isUpdating: false,
   error: null,
+  hasGeneratedOnce: false,
+  hasRegenerated: false,
 };
 
 export const useGeneratorStore = create<GeneratorState>((set, get) => ({
@@ -103,14 +110,19 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
     set({ isRegenerating });
   },
 
+  setHasRegenerated: (hasRegenerated) => {
+    set({ hasRegenerated });
+  },
+
   generate: async (url, isRegeneration = false) => {
-    // Reset state but keep focus on generator view until streaming starts
+    // Reset state and immediately switch to result view
     set({
       isGenerating: true,
       isRegenerating: isRegeneration,
       error: null,
       generatedDescription: "",
       generatedTitle: "",
+      view: "result",
     });
 
     try {
@@ -144,18 +156,13 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
       // Streaming state
       let fullContent = "";
       const separator = "<<<SEPARATOR>>>";
-      let hasSwitchedToResult = false;
 
       await new Promise<void>((resolve, reject) => {
         streamDescription(
           url,
           settings,
           (chunk) => {
-            // Switch to result view on first chunk
-            if (!hasSwitchedToResult) {
-              set({ view: "result" });
-              hasSwitchedToResult = true;
-            }
+            // View is already switched to result when generate() is called
 
             fullContent += chunk;
 
@@ -195,7 +202,12 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
             }
           },
           (data) => {
-            set({ isGenerating: false, isRegenerating: false, prDetails: data.prDetails });
+            set({ 
+              isGenerating: false, 
+              isRegenerating: false, 
+              prDetails: data.prDetails,
+              hasGeneratedOnce: true,
+            });
             resolve();
           },
           (error) => {

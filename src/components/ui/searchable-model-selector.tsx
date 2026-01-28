@@ -18,6 +18,7 @@ interface SearchableModelSelectorProps {
   popoverPosition?: "top" | "bottom";
   customModels?: AIModel[]; // User-added custom models to display in "Custom" section
   providerKeyStatus?: Record<AIProviderType, boolean>; // Map of provider to API key status
+  disabled?: boolean; // Disable the selector during generation
 }
 
 interface ModelOption {
@@ -39,6 +40,7 @@ export const SearchableModelSelector: React.FC<
   popoverPosition = "bottom",
   customModels = [],
   providerKeyStatus = {} as Record<AIProviderType, boolean>,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -226,8 +228,13 @@ export const SearchableModelSelector: React.FC<
     <div ref={dropdownRef} className={`relative ${className}`}>
       {/* Trigger */}
       <div
-        className="border-input data-placeholder:text-muted-foreground bg-input/20 dark:bg-input/30 dark:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 gap-1.5 rounded-md border px-2 py-1.5 text-xs/relaxed transition-colors focus-visible:ring-2 aria-invalid:ring-2 flex h-7 w-full items-center justify-between whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer hover:bg-input/40"
-        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "border-input data-placeholder:text-muted-foreground bg-input/20 dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 gap-1.5 rounded-md border px-2 py-1.5 text-xs/relaxed transition-colors focus-visible:ring-2 aria-invalid:ring-2 flex h-7 w-full items-center justify-between whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          disabled
+            ? "cursor-not-allowed opacity-50"
+            : "cursor-pointer hover:bg-input/40 dark:hover:bg-input/50"
+        )}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         {selectedOption ? (
           <>

@@ -4,6 +4,7 @@ import {
   IconRefresh,
   IconLoader2,
   IconCheck,
+  IconSettings,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
@@ -13,12 +14,32 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ReactMarkdown from "react-markdown";
 import { useGeneratorStore } from "@/stores/generator-store";
-import { updatePRDescription } from "@/services/chrome-messaging";
+import {
+  updatePRDescription,
+  openOptionsPage,
+} from "@/services/chrome-messaging";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ModelSelector from "./ModelSelector";
 
 interface ResultViewProps {
   currentUrl: string;
+}
+
+// Shared footer component for ModelSelector + Settings to avoid duplication
+function ModelSelectorFooter({ disabled = false }: { disabled?: boolean }) {
+  return (
+    <div className="flex items-center justify-between mt-3">
+      <ModelSelector disabled={disabled} />
+      <button
+        onClick={openOptionsPage}
+        disabled={disabled}
+        className="underline hover:text-foreground transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <IconSettings className="w-5 h-5" />
+      </button>
+    </div>
+  );
 }
 
 export function ResultView({ currentUrl }: ResultViewProps) {
@@ -32,14 +53,29 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     isGenerating,
     isRegenerating,
     reset,
+    hasGeneratedOnce,
+    hasRegenerated,
+    setHasRegenerated,
   } = useGeneratorStore();
 
   const [isCopied, setIsCopied] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
+  const [showResultFooter, setShowResultFooter] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
+
+  // Handle fade-in transition for result footer after first generation completes
+  useEffect(() => {
+    if (hasGeneratedOnce && !isGenerating && !showResultFooter) {
+      // Small delay to ensure the transition is noticeable
+      const timer = setTimeout(() => {
+        setShowResultFooter(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [hasGeneratedOnce, isGenerating, showResultFooter]);
 
   // Auto-scroll to bottom during generation
   useEffect(() => {
@@ -125,12 +161,20 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
   const handleRegenerate = async () => {
     if (!currentUrl) return;
+    // Mark that user has clicked regenerate
+    if (!hasRegenerated) {
+      setHasRegenerated(true);
+    }
     try {
       await generate(currentUrl, true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Regeneration failed");
     }
   };
+
+  // Show the generating footer (with disabled model selector and generating button)
+  // whenever isGenerating is true - this applies to both first generation and regenerations
+  const showGeneratingFooter = isGenerating;  // Always show during any generation including streaming
 
   return (
     <div
@@ -207,52 +251,83 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               </div>
             </TabsContent>
           </Tabs>
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            A.I can make mistakes, always review the generated content.
+          </p>
         </div>
       </ScrollArea>
 
       {/* Footer */}
       <div className="shrink-0 px-6 py-4 bg-background border-t border-border/50 flex flex-col gap-4">
-        <div className="flex gap-3">
-          <Button
-            variant="ghost"
-            onClick={handleRegenerate}
-            disabled={isGenerating}
-            className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border"
+        {/* During generation (first time or when no content yet), show GeneratorView-style footer */}
+        {showGeneratingFooter ? (
+          <>
+            <Button
+              disabled={true}
+              className="w-full h-10 gap-2 text-base font-bold rounded-lg shadow-lg transition-all duration-300 shimmer-metallic"
+              size="lg"
+            >
+              <span
+                className="animate-in fade-in slide-in-from-bottom-1 duration-300"
+                key="generating"
+              >
+                Generating...
+              </span>
+            </Button>
+            <ModelSelectorFooter disabled={true} />
+          </>
+        ) : (
+          /* After first generation completes, show ResultView footer with fade-in */
+          <div
+            className={`flex flex-col gap-4 transition-all duration-500 ${
+              showResultFooter
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-4"
+            }`}
           >
-            {isRegenerating ? (
-              <>
-                <IconLoader2 className="w-4 h-4 animate-spin" />
-                <span>Regenerating...</span>
-              </>
-            ) : (
-              <>
-                <IconRefresh className="w-4 h-4" />
-                <span>Regenerate</span>
-              </>
-            )}
-          </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="ghost"
+                onClick={handleRegenerate}
+                disabled={isGenerating}
+                className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border"
+              >
+                {isRegenerating ? (
+                  <>
+                    <IconLoader2 className="w-4 h-4 animate-spin" />
+                    <span>Regenerating...</span>
+                  </>
+                ) : (
+                  <>
+                    <IconRefresh className="w-4 h-4" />
+                    <span>Regenerate</span>
+                  </>
+                )}
+              </Button>
 
-          <Button
-            onClick={handleInsert}
-            disabled={isInserting || isGenerating}
-            className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border shadow-lg"
-          >
-            {isInserting ? (
-              <>
-                <IconLoader2 className="w-5 h-5 animate-spin" />
-                <span>Updating...</span>
-              </>
-            ) : (
-              <>
-                <IconCheck className="w-5 h-5" />
-                <span>Apply</span>
-              </>
-            )}
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground text-center">
-          A.I can make mistakes, always review the generated content.
-        </p>
+              <Button
+                onClick={handleInsert}
+                disabled={isInserting || isGenerating}
+                className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border shadow-lg"
+              >
+                {isInserting ? (
+                  <>
+                    <IconLoader2 className="w-5 h-5 animate-spin" />
+                    <span>Applying...</span>
+                  </>
+                ) : (
+                  <>
+                    <IconCheck className="w-5 h-5" />
+                    <span>Apply</span>
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Show ModelSelector + Settings permanently in ResultView */}
+            <ModelSelectorFooter disabled={isGenerating} />
+          </div>
+        )}
       </div>
     </div>
   );

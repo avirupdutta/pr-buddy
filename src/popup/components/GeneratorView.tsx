@@ -59,7 +59,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       </ScrollArea>
 
       {/* Footer */}
-      <div className="px-6 py-4 bg-background border-t border-border/50 shrink-0">
+      <div className="px-6 py-4 bg-background border-t border-border/50 shrink-0 space-y-3">
         <Button
           onClick={handleGenerate}
           disabled={isGenerating}
@@ -84,7 +84,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
             </>
           )}
         </Button>
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center justify-between">
           <ModelSelector />
           <button
             onClick={openOptionsPage}
