@@ -91,23 +91,7 @@ Verification steps.`,
   },
 ];
 
-// Default AI model
-export const DEFAULT_AI_MODELS: AIModel[] = [
-  {
-    id: "mimo-v2-flash",
-    name: "Xiaomi MiMo v2 Flash (Free)",
-    modelId: "xiaomi/mimo-v2-flash:free",
-    provider: "openrouter",
-    isActive: true,
-  },
-  {
-    id: "devstral-2512",
-    name: "Mistral: Devstral 2 2512 (Free)",
-    modelId: "mistralai/devstral-2512:free",
-    provider: "openrouter",
-    isActive: false,
-  },
-];
+export const DEFAULT_AI_MODELS: AIModel[] = [];
 
 interface SettingsState {
   githubToken: string | null;
@@ -264,7 +248,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
             ? result.aiModels
             : DEFAULT_AI_MODELS,
         activePredefinedModelId: result.activePredefinedModelId || null,
-        activePredefinedModelProvider: result.activePredefinedModelProvider || null,
+        activePredefinedModelProvider:
+          result.activePredefinedModelProvider || null,
         isLoading: false,
       });
     } catch (error) {
@@ -444,7 +429,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     // Check if the model exists in current aiModels (custom models)
     // For custom models, we match by both ID and provider to support duplicates
     const modelExists = currentModels.some(
-      (m) => m.id === id && (!provider || m.provider === provider)
+      (m) => m.id === id && (!provider || m.provider === provider),
     );
 
     if (!modelExists) {
