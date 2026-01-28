@@ -11,7 +11,8 @@ const ModelSelector = () => {
         models={[]} // Predefined models are handled internally by the component
         customModels={aiModels}
         value={activeModel?.id || ""}
-        onValueChange={(v) => setActiveModel(v)}
+        activeProvider={activeModel?.provider}
+        onValueChange={(id: string, provider?: string) => setActiveModel(id, provider)}
         placeholder="Select a model"
         className="w-full"
         popoverPosition="top"

@@ -11,7 +11,8 @@ import { IconCheck, IconSelector } from "@tabler/icons-react";
 interface SearchableModelSelectorProps {
   models: AIModel[];
   value: string;
-  onValueChange: (value: string) => void;
+  activeProvider?: string; // Provider of the currently selected model
+  onValueChange: (value: string, provider?: string) => void;
   placeholder?: string;
   className?: string;
   popoverPosition?: "top" | "bottom";
@@ -30,6 +31,7 @@ export const SearchableModelSelector: React.FC<
   SearchableModelSelectorProps
 > = ({
   value,
+  activeProvider,
   onValueChange,
   placeholder = "Select a model",
   className = "",
@@ -126,10 +128,14 @@ export const SearchableModelSelector: React.FC<
     });
   }, [filteredOptions]);
 
-  // Get current selected option
+  // Get current selected option - match by both ID and provider
   const selectedOption = useMemo(() => {
-    return allModelOptions.find((option) => option.model.id === value);
-  }, [allModelOptions, value]);
+    return allModelOptions.find(
+      (option) =>
+        option.model.id === value &&
+        (!activeProvider || option.provider === activeProvider)
+    );
+  }, [allModelOptions, value, activeProvider]);
 
 
 
@@ -177,7 +183,7 @@ export const SearchableModelSelector: React.FC<
   }, []);
 
   const handleSelect = (option: ModelOption) => {
-    onValueChange(option.model.id);
+    onValueChange(option.model.id, option.provider);
     setIsOpen(false);
     setSearchQuery("");
   };

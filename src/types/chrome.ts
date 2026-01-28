@@ -128,6 +128,7 @@ export interface StoredSettings {
   templates?: PRTemplate[];
   aiModels?: AIModel[];
   activePredefinedModelId?: string; // ID of active predefined model (not in aiModels)
+  activePredefinedModelProvider?: string; // Provider of active predefined model
   encryptionSalt?: string; // Salt for API key encryption
 }
 

@@ -124,6 +124,7 @@ interface SettingsState {
   templates: PRTemplate[];
   aiModels: AIModel[];
   activePredefinedModelId: string | null; // Stores ID of active predefined model (not in aiModels)
+  activePredefinedModelProvider: string | null; // Stores provider of active predefined model
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -169,7 +170,7 @@ interface SettingsState {
     updates: Partial<Omit<AIModel, "id" | "isActive">>,
   ) => Promise<void>;
   deleteModel: (id: string) => Promise<void>;
-  setActiveModel: (id: string) => Promise<void>;
+  setActiveModel: (id: string, provider?: string) => Promise<void>;
 
   // Getters
   getActiveModel: () => AIModel | undefined;
@@ -195,6 +196,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   templates: DEFAULT_TEMPLATES,
   aiModels: DEFAULT_AI_MODELS,
   activePredefinedModelId: null,
+  activePredefinedModelProvider: null,
   isLoading: true,
   isSaving: false,
   error: null,
@@ -216,6 +218,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         "templates",
         "aiModels",
         "activePredefinedModelId",
+        "activePredefinedModelProvider",
       ]);
 
       // Decrypt API keys
@@ -261,6 +264,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
             ? result.aiModels
             : DEFAULT_AI_MODELS,
         activePredefinedModelId: result.activePredefinedModelId || null,
+        activePredefinedModelProvider: result.activePredefinedModelProvider || null,
         isLoading: false,
       });
     } catch (error) {
@@ -434,27 +438,47 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     await setStorage({ aiModels });
   },
 
-  setActiveModel: async (id) => {
+  setActiveModel: async (id, provider) => {
     const currentModels = get().aiModels;
 
     // Check if the model exists in current aiModels (custom models)
-    const modelExists = currentModels.some((m) => m.id === id);
+    // For custom models, we match by both ID and provider to support duplicates
+    const modelExists = currentModels.some(
+      (m) => m.id === id && (!provider || m.provider === provider)
+    );
 
     if (!modelExists) {
       // This is a predefined model from model-mappings.json
-      // Don't add it to aiModels, just store its ID as activePredefinedModelId
+      // Don't add it to aiModels, just store its ID and provider
       // and set all custom models to inactive
       const aiModels = currentModels.map((m) => ({ ...m, isActive: false }));
-      set({ aiModels, activePredefinedModelId: id });
-      await setStorage({ aiModels, activePredefinedModelId: id });
+      set({
+        aiModels,
+        activePredefinedModelId: id,
+        activePredefinedModelProvider: provider || null,
+      });
+      await setStorage({
+        aiModels,
+        activePredefinedModelId: id,
+        activePredefinedModelProvider: provider,
+      });
     } else {
       // Model exists in custom models, set it as active and clear predefined model ID
+      // Match by both ID and provider to handle duplicate IDs with different providers
       const aiModels = currentModels.map((m) => ({
         ...m,
-        isActive: m.id === id,
+        isActive: m.id === id && (!provider || m.provider === provider),
       }));
-      set({ aiModels, activePredefinedModelId: null });
-      await setStorage({ aiModels, activePredefinedModelId: undefined });
+      set({
+        aiModels,
+        activePredefinedModelId: null,
+        activePredefinedModelProvider: null,
+      });
+      await setStorage({
+        aiModels,
+        activePredefinedModelId: undefined,
+        activePredefinedModelProvider: undefined,
+      });
     }
   },
 
@@ -470,11 +494,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     // If no custom model is active, check if there's an activePredefinedModelId
     // and look it up in the predefined models
     const activePredefinedId = state.activePredefinedModelId;
+    const activePredefinedProvider = state.activePredefinedModelProvider;
+
     if (activePredefinedId) {
       // Use the imported model mappings to get the predefined model details
-      for (const [providerId, providerData] of Object.entries(
-        modelMappings.providers,
-      )) {
+      // If we have a stored provider, prioritize that provider's models
+      const providers = Object.entries(modelMappings.providers);
+
+      // Sort providers to prioritize the stored provider if available
+      const sortedProviders = activePredefinedProvider
+        ? providers.sort(([a], [b]) => {
+            if (a === activePredefinedProvider) return -1;
+            if (b === activePredefinedProvider) return 1;
+            return 0;
+          })
+        : providers;
+
+      for (const [providerId, providerData] of sortedProviders) {
         const foundModel = (
           providerData as {
             name: string;
