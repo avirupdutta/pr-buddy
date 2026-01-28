@@ -13,6 +13,24 @@ import type {
 import { decryptApiKey } from "./encryption";
 import { sendToastNotification } from "./notifications";
 import { createAISDKService, type AIRequestParams } from "./ai-sdk-service";
+import modelMappings from "@/data/model-mappings.json";
+
+// Helper function to find a predefined model by ID
+function findPredefinedModel(id: string): AIModel | null {
+  for (const [providerId, providerData] of Object.entries(modelMappings.providers)) {
+    const foundModel = providerData.models.find((m) => m.id === id);
+    if (foundModel) {
+      return {
+        id: foundModel.id,
+        name: foundModel.name,
+        modelId: foundModel.modelId,
+        provider: providerId,
+        isActive: true,
+      };
+    }
+  }
+  return null;
+}
 
 /**
  * Check if we're running in a Chrome extension context
@@ -550,16 +568,23 @@ async function handleDevGeneration(
   let selectedModel: AIModel;
   const selectedModelFromSettings = s.selectedModel;
   if (selectedModelFromSettings && selectedModelFromSettings.id) {
-    // Find the model in our model list to ensure it's valid
+    // First, try to find the model in the custom aiModels list
     const foundModel = aiModels.find(
       (m) => m.id === selectedModelFromSettings.id,
     );
-    if (!foundModel) {
-      throw new Error(
-        `Selected model not found: ${selectedModelFromSettings.id}`,
-      );
+    if (foundModel) {
+      selectedModel = foundModel;
+    } else {
+      // If not found in custom models, check predefined models
+      const predefinedModel = findPredefinedModel(selectedModelFromSettings.id);
+      if (predefinedModel) {
+        selectedModel = predefinedModel;
+      } else {
+        throw new Error(
+          `Selected model not found: ${selectedModelFromSettings.id}`,
+        );
+      }
     }
-    selectedModel = foundModel;
   } else {
     // Fallback to active model (backward compatibility)
     selectedModel = aiModels.find((m) => m.isActive) || aiModels[0];

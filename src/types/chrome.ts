@@ -127,6 +127,7 @@ export interface StoredSettings {
   theme?: "dark" | "light" | "system";
   templates?: PRTemplate[];
   aiModels?: AIModel[];
+  activePredefinedModelId?: string; // ID of active predefined model (not in aiModels)
   encryptionSalt?: string; // Salt for API key encryption
 }
 

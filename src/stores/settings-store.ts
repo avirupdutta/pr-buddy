@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { getStorage, setStorage } from "@/services/chrome-storage";
 import { encryptApiKey, decryptApiKey } from "@/services/encryption";
 import type { PRTemplate, AIModel } from "@/types/chrome";
+import modelMappings from "@/data/model-mappings.json";
 
 // Default templates based on current hardcoded values
 export const DEFAULT_TEMPLATES: PRTemplate[] = [
@@ -122,6 +123,7 @@ interface SettingsState {
   theme: "dark" | "light" | "system";
   templates: PRTemplate[];
   aiModels: AIModel[];
+  activePredefinedModelId: string | null; // Stores ID of active predefined model (not in aiModels)
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -156,7 +158,7 @@ interface SettingsState {
   addTemplate: (template: Omit<PRTemplate, "id">) => Promise<void>;
   updateTemplate: (
     id: string,
-    updates: Partial<Omit<PRTemplate, "id">>
+    updates: Partial<Omit<PRTemplate, "id">>,
   ) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
 
@@ -164,7 +166,7 @@ interface SettingsState {
   addModel: (model: Omit<AIModel, "id" | "isActive">) => Promise<void>;
   updateModel: (
     id: string,
-    updates: Partial<Omit<AIModel, "id" | "isActive">>
+    updates: Partial<Omit<AIModel, "id" | "isActive">>,
   ) => Promise<void>;
   deleteModel: (id: string) => Promise<void>;
   setActiveModel: (id: string) => Promise<void>;
@@ -172,6 +174,7 @@ interface SettingsState {
   // Getters
   getActiveModel: () => AIModel | undefined;
   getTemplateById: (id: string) => PRTemplate | undefined;
+  isPredefinedModel: (id: string) => boolean;
 }
 
 // Generate unique ID
@@ -191,6 +194,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   theme: "system",
   templates: DEFAULT_TEMPLATES,
   aiModels: DEFAULT_AI_MODELS,
+  activePredefinedModelId: null,
   isLoading: true,
   isSaving: false,
   error: null,
@@ -202,7 +206,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         "githubToken",
         "openRouterKey",
         "openaiKey",
-        "anthropicKey", 
+        "anthropicKey",
         "googleKey",
         "groqKey",
         "cerebrasKey",
@@ -211,6 +215,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         "theme",
         "templates",
         "aiModels",
+        "activePredefinedModelId",
       ]);
 
       // Decrypt API keys
@@ -255,6 +260,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           result.aiModels && result.aiModels.length > 0
             ? result.aiModels
             : DEFAULT_AI_MODELS,
+        activePredefinedModelId: result.activePredefinedModelId || null,
         isLoading: false,
       });
     } catch (error) {
@@ -332,8 +338,24 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   hasValidKeys: () => {
-    const { githubToken, openRouterKey, openaiKey, anthropicKey, googleKey, groqKey, cerebrasKey } = get();
-    return Boolean(githubToken && (openRouterKey || openaiKey || anthropicKey || googleKey || groqKey || cerebrasKey));
+    const {
+      githubToken,
+      openRouterKey,
+      openaiKey,
+      anthropicKey,
+      googleKey,
+      groqKey,
+      cerebrasKey,
+    } = get();
+    return Boolean(
+      githubToken &&
+        (openRouterKey ||
+          openaiKey ||
+          anthropicKey ||
+          googleKey ||
+          groqKey ||
+          cerebrasKey),
+    );
   },
 
   // Template CRUD
@@ -349,7 +371,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   updateTemplate: async (id, updates) => {
     const templates = get().templates.map((t) =>
-      t.id === id ? { ...t, ...updates } : t
+      t.id === id ? { ...t, ...updates } : t,
     );
     set({ templates });
     await setStorage({ templates });
@@ -369,7 +391,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const newModel: AIModel = {
       id: generateId(),
       ...model,
-      provider: model.provider || 'openrouter', // Default to OpenRouter for backward compatibility
+      provider: model.provider || "openrouter", // Default to OpenRouter for backward compatibility
       isActive: false, // New models are not active by default
     };
     const aiModels = [...get().aiModels, newModel];
@@ -379,7 +401,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   updateModel: async (id, updates) => {
     const aiModels = get().aiModels.map((m) =>
-      m.id === id ? { ...m, ...updates, provider: updates.provider || m.provider || 'openrouter' } : m
+      m.id === id
+        ? {
+            ...m,
+            ...updates,
+            provider: updates.provider || m.provider || "openrouter",
+          }
+        : m,
     );
     set({ aiModels });
     await setStorage({ aiModels });
@@ -398,7 +426,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     // If we're deleting the active model, make the first remaining one active
     if (modelToDelete?.isActive && aiModels.length > 0) {
       aiModels = aiModels.map((m, index) =>
-        index === 0 ? { ...m, isActive: true } : m
+        index === 0 ? { ...m, isActive: true } : m,
       );
     }
 
@@ -407,17 +435,81 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   setActiveModel: async (id) => {
-    const aiModels = get().aiModels.map((m) => ({
-      ...m,
-      isActive: m.id === id,
-    }));
-    set({ aiModels });
-    await setStorage({ aiModels });
+    const currentModels = get().aiModels;
+
+    // Check if the model exists in current aiModels (custom models)
+    const modelExists = currentModels.some((m) => m.id === id);
+
+    if (!modelExists) {
+      // This is a predefined model from model-mappings.json
+      // Don't add it to aiModels, just store its ID as activePredefinedModelId
+      // and set all custom models to inactive
+      const aiModels = currentModels.map((m) => ({ ...m, isActive: false }));
+      set({ aiModels, activePredefinedModelId: id });
+      await setStorage({ aiModels, activePredefinedModelId: id });
+    } else {
+      // Model exists in custom models, set it as active and clear predefined model ID
+      const aiModels = currentModels.map((m) => ({
+        ...m,
+        isActive: m.id === id,
+      }));
+      set({ aiModels, activePredefinedModelId: null });
+      await setStorage({ aiModels, activePredefinedModelId: undefined });
+    }
   },
 
   // Getters
   getActiveModel: () => {
-    return get().aiModels.find((m) => m.isActive);
+    const state = get();
+    const customActiveModel = state.aiModels.find((m) => m.isActive);
+
+    if (customActiveModel) {
+      return customActiveModel;
+    }
+
+    // If no custom model is active, check if there's an activePredefinedModelId
+    // and look it up in the predefined models
+    const activePredefinedId = state.activePredefinedModelId;
+    if (activePredefinedId) {
+      // Use the imported model mappings to get the predefined model details
+      for (const [providerId, providerData] of Object.entries(
+        modelMappings.providers,
+      )) {
+        const foundModel = (
+          providerData as {
+            name: string;
+            models: Array<{ id: string; name: string; modelId: string }>;
+          }
+        ).models.find((m) => m.id === activePredefinedId);
+        if (foundModel) {
+          return {
+            id: foundModel.id,
+            name: foundModel.name,
+            modelId: foundModel.modelId,
+            provider: providerId,
+            isActive: true,
+          };
+        }
+      }
+    }
+
+    return undefined;
+  },
+
+  // Check if a model ID is a predefined model
+  isPredefinedModel: (id: string) => {
+    for (const providerData of Object.values(modelMappings.providers)) {
+      const foundModel = (
+        providerData as {
+          name: string;
+          models: Array<{ id: string; name: string; modelId: string }>;
+        }
+      ).models.find((m) => m.id === id);
+      if (foundModel) {
+        return true;
+      }
+    }
+    return false;
   },
 
   getTemplateById: (id) => {

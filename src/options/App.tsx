@@ -160,7 +160,10 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
             <SelectValue>
               <div className="flex items-center gap-2">
                 <ProviderLogo provider={provider as AIProviderType} size={16} />
-                <span>{providerOptions.find(p => p.value === provider)?.label || 'Select a provider'}</span>
+                <span>
+                  {providerOptions.find((p) => p.value === provider)?.label ||
+                    "Select a provider"}
+                </span>
               </div>
             </SelectValue>
           </SelectTrigger>
@@ -168,7 +171,10 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
             {providerOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 <div className="flex items-center gap-2">
-                  <ProviderLogo provider={option.value as AIProviderType} size={16} />
+                  <ProviderLogo
+                    provider={option.value as AIProviderType}
+                    size={16}
+                  />
                   <span>{option.label}</span>
                 </div>
               </SelectItem>
@@ -346,10 +352,18 @@ function TemplatesTab() {
 // AI Models Tab Component
 // ============================================
 function AIModelsTab() {
-  const { aiModels, addModel, updateModel, deleteModel, setActiveModel } =
-    useSettingsStore();
+  const {
+    aiModels,
+    addModel,
+    updateModel,
+    deleteModel,
+    setActiveModel,
+    getActiveModel,
+  } = useSettingsStore();
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+
+  const activeModel = getActiveModel();
 
   const handleAdd = async (data: {
     name: string;
@@ -446,16 +460,19 @@ function AIModelsTab() {
           <div
             key={model.id}
             className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
-              model.isActive
+              activeModel?.id === model.id
                 ? "bg-primary/10 border-primary/50"
                 : "bg-card hover:bg-accent/50"
             }`}
           >
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <ProviderLogo provider={(model.provider || 'openrouter') as AIProviderType} size={18} />
+                <ProviderLogo
+                  provider={(model.provider || "openrouter") as AIProviderType}
+                  size={18}
+                />
                 <span className="font-medium">{model.name}</span>
-                {model.isActive && (
+                {activeModel?.id === model.id && (
                   <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                     Active
                   </span>
@@ -467,12 +484,12 @@ function AIModelsTab() {
                 </span>
                 <span className="text-xs text-muted-foreground">•</span>
                 <span className="text-xs text-muted-foreground capitalize">
-                  {model.provider || 'openrouter'}
+                  {model.provider || "openrouter"}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              {!model.isActive && (
+              {activeModel?.id !== model.id && (
                 <Button
                   variant="ghost"
                   size="icon"

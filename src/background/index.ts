@@ -19,12 +19,30 @@ import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 import { sendToastNotification } from "@/services/notifications";
 import { aiServiceAdapter } from "@/services/ai-service-adapter";
 import { createAISDKService } from "@/services/ai-sdk-service";
+import modelMappings from "@/data/model-mappings.json";
 
 // Get structured output setting from storage
 async function getUseStructuredOutput(): Promise<boolean> {
   const result = await chrome.storage.local.get(['useStructuredOutput']);
   // Default to true for new installations
   return result.useStructuredOutput !== false;
+}
+
+// Helper function to find a predefined model by ID
+function findPredefinedModel(id: string): AIModel | null {
+  for (const [providerId, providerData] of Object.entries(modelMappings.providers)) {
+    const foundModel = providerData.models.find((m) => m.id === id);
+    if (foundModel) {
+      return {
+        id: foundModel.id,
+        name: foundModel.name,
+        modelId: foundModel.modelId,
+        provider: providerId,
+        isActive: true,
+      };
+    }
+  }
+  return null;
 }
 
 // Helper functions for AI service adapter integration
@@ -128,16 +146,23 @@ async function handleGenerationStream(
   let selectedModel: AIModel;
   const selectedModelFromSettings = settings.selectedModel;
   if (selectedModelFromSettings && selectedModelFromSettings.id) {
-    // Find the model in our model list to ensure it's valid
+    // First, try to find the model in the custom aiModels list
     const foundModel = aiModels.find(
       (m) => m.id === selectedModelFromSettings.id,
     );
-    if (!foundModel) {
-      throw new Error(
-        `Selected model not found: ${selectedModelFromSettings.id}`,
-      );
+    if (foundModel) {
+      selectedModel = foundModel;
+    } else {
+      // If not found in custom models, check predefined models
+      const predefinedModel = findPredefinedModel(selectedModelFromSettings.id);
+      if (predefinedModel) {
+        selectedModel = predefinedModel;
+      } else {
+        throw new Error(
+          `Selected model not found: ${selectedModelFromSettings.id}`,
+        );
+      }
     }
-    selectedModel = foundModel;
   } else {
     // Fallback to active model (backward compatibility)
     selectedModel = aiModels.find((m) => m.isActive) || aiModels[0];
