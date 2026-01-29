@@ -29,7 +29,7 @@ interface ResultViewProps {
 // Shared footer component for ModelSelector + Settings to avoid duplication
 function ModelSelectorFooter({ disabled = false }: { disabled?: boolean }) {
   return (
-    <div className="flex items-center justify-between mt-3">
+    <div className="flex items-center justify-between">
       <ModelSelector disabled={disabled} />
       <button
         onClick={openOptionsPage}
@@ -174,7 +174,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
   // Show the generating footer (with disabled model selector and generating button)
   // whenever isGenerating is true - this applies to both first generation and regenerations
-  const showGeneratingFooter = isGenerating;  // Always show during any generation including streaming
+  const showGeneratingFooter = isGenerating; // Always show during any generation including streaming
 
   return (
     <div
@@ -258,23 +258,22 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       </ScrollArea>
 
       {/* Footer */}
-      <div className="shrink-0 px-6 py-4 bg-background border-t border-border/50 flex flex-col gap-4">
+      <div className="shrink-0 px-6 py-4 bg-background border-t border-border/50 flex flex-col gap-3">
         {/* During generation (first time or when no content yet), show GeneratorView-style footer */}
         {showGeneratingFooter ? (
           <>
             <Button
               disabled={true}
-              className="w-full h-10 gap-2 text-base font-bold rounded-lg shadow-lg transition-all duration-300 shimmer-metallic"
+              className={`w-full h-10 gap-2 text-base font-bold rounded-lg shadow-lg transition-all duration-300`}
               size="lg"
             >
               <span
-                className="animate-in fade-in slide-in-from-bottom-1 duration-300"
+                className={`animate-in fade-in slide-in-from-bottom-1 duration-300 shimmer-metallic`}
                 key="generating"
               >
                 Generating...
               </span>
             </Button>
-            <ModelSelectorFooter disabled={true} />
           </>
         ) : (
           /* After first generation completes, show ResultView footer with fade-in */
@@ -323,11 +322,9 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                 )}
               </Button>
             </div>
-
-            {/* Show ModelSelector + Settings permanently in ResultView */}
-            <ModelSelectorFooter disabled={isGenerating} />
           </div>
         )}
+        <ModelSelectorFooter disabled={isGenerating} />
       </div>
     </div>
   );
