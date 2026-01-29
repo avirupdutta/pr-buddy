@@ -7,7 +7,13 @@
           "id": "deepseek/deepseek-r1",
           "name": "DeepSeek: R1",
           "modelId": "deepseek/deepseek-r1",
-          "description": "DeepSeek's advanced reasoning model with strong performance on complex tasks"
+          "description": "DeepSeek's advanced reasoning model with strong performance on complex tasks",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 131072
         },
         {
           "id": "qwen/qwen3-235b-a22b",
@@ -25,7 +31,13 @@
           "id": "anthropic/claude-3-haiku",
           "name": "Anthropic: Claude 3 Haiku",
           "modelId": "anthropic/claude-3-haiku",
-          "description": "Anthropic's fastest and most compact model for near-instant responsiveness"
+          "description": "Anthropic's fastest and most compact model for near-instant responsiveness",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 200000
         },
         {
           "id": "openai/gpt-4o",
@@ -55,7 +67,13 @@
           "id": "meta-llama/llama-3.3-70b-instruct",
           "name": "Meta: Llama 3.3 70B Instruct",
           "modelId": "meta-llama/llama-3.3-70b-instruct",
-          "description": "Meta's latest 70B instruction-tuned model with improved reasoning"
+          "description": "Meta's latest 70B instruction-tuned model with improved reasoning",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 131072
         },
         {
           "id": "meta-llama/llama-3.1-405b-instruct",
@@ -85,13 +103,133 @@
           "id": "liquid/lfm-2.5-1.2b-thinking:free",
           "name": "LiquidAI: LFM2.5-1.2B-Thinking (free)",
           "modelId": "liquid/lfm-2.5-1.2b-thinking:free",
-          "description": "Lightweight reasoning-focused model optimized for agentic tasks"
+          "description": "Lightweight reasoning-focused model optimized for agentic tasks",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 131072
         },
         {
           "id": "arcee-ai/trinity-large-preview:free",
           "name": "Arcee AI: Trinity Large Preview (free)",
           "modelId": "arcee-ai/trinity-large-preview:free",
-          "description": "Frontier-scale open-weight model for creative writing and agentic performance"
+          "description": "Frontier-scale open-weight model for creative writing and agentic performance",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 131072
+        },
+        {
+          "id": "meta-llama/llama-3.1-8b-instruct",
+          "name": "Meta: Llama 3.1 8B Instruct (Free)",
+          "modelId": "meta-llama/llama-3.1-8b-instruct",
+          "description": "Meta's instruction-tuned Llama 3.1 8B model for efficient inference",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 131072
+        },
+        {
+          "id": "mistralai/mistral-7b-instruct",
+          "name": "Mistral: 7B Instruct (Free)",
+          "modelId": "mistralai/mistral-7b-instruct",
+          "description": "Mistral's efficient 7B instruction-tuned model",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 32768
+        },
+        {
+          "id": "microsoft/phi-4",
+          "name": "Microsoft: Phi-4 (Free)",
+          "modelId": "microsoft/phi-4",
+          "description": "Microsoft's Phi-4 reasoning model with strong instruction following",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 16384
+        },
+        {
+          "id": "google/gemma-3-4b-it",
+          "name": "Google: Gemma 3 4B Instruct (Free)",
+          "modelId": "google/gemma-3-4b-it",
+          "description": "Google's Gemma 3 4B instruction-tuned model",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 32768
+        },
+        {
+          "id": "qwen/qwen-2.5-7b-instruct",
+          "name": "Qwen: 2.5 7B Instruct (Free)",
+          "modelId": "qwen/qwen-2.5-7b-instruct",
+          "description": "Alibaba's Qwen 2.5 7B instruction-tuned model",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 32768
+        },
+        {
+          "id": "xiaomi/mimo-v2-flash:free",
+          "name": "Xiaomi: MiMo v2 Flash (Free)",
+          "modelId": "xiaomi/mimo-v2-flash:free",
+          "description": "Xiaomi's MiMo v2 Flash model optimized for speed",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 131072
+        },
+        {
+          "id": "mistralai/devstral-2512:free",
+          "name": "Mistral: Devstral 2512 (Free)",
+          "modelId": "mistralai/devstral-2512:free",
+          "description": "Mistral's Devstral developer-focused model",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 131072
+        },
+        {
+          "id": "cohere/command-r",
+          "name": "Cohere: Command R (Free)",
+          "modelId": "cohere/command-r",
+          "description": "Cohere's Command R model for enterprise tasks",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 128000
+        },
+        {
+          "id": "bigcode/starcoder2-15b",
+          "name": "BigCode: StarCoder2 15B (Free)",
+          "modelId": "bigcode/starcoder2-15b",
+          "description": "BigCode's StarCoder2 for code generation",
+          "isFree": true,
+          "pricing": {
+            "prompt": "0.00",
+            "completion": "0.00"
+          },
+          "contextLength": 16384
         }
       ]
     },
