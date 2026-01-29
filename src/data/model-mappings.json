@@ -4,10 +4,94 @@
       "name": "OpenRouter",
       "models": [
         {
-          "id": "nvidia/nemotron-3-nano-30b-a3b:free",
-          "name": "Nemotron 3 Nano 30B A3B (free)",
-          "modelId": "nvidia/nemotron-3-nano-30b-a3b:free",
-          "description": "Free tier model"
+          "id": "deepseek/deepseek-r1",
+          "name": "DeepSeek: R1",
+          "modelId": "deepseek/deepseek-r1",
+          "description": "DeepSeek's advanced reasoning model with strong performance on complex tasks"
+        },
+        {
+          "id": "qwen/qwen3-235b-a22b",
+          "name": "Qwen: Qwen3 235B A22B",
+          "modelId": "qwen/qwen3-235b-a22b",
+          "description": "Alibaba's flagship 235B parameter model with strong reasoning capabilities"
+        },
+        {
+          "id": "anthropic/claude-3.5-sonnet",
+          "name": "Anthropic: Claude 3.5 Sonnet",
+          "modelId": "anthropic/claude-3-5-sonnet-20241022",
+          "description": "Anthropic's most capable model for complex reasoning and analysis"
+        },
+        {
+          "id": "anthropic/claude-3-haiku",
+          "name": "Anthropic: Claude 3 Haiku",
+          "modelId": "anthropic/claude-3-haiku",
+          "description": "Anthropic's fastest and most compact model for near-instant responsiveness"
+        },
+        {
+          "id": "openai/gpt-4o",
+          "name": "OpenAI: GPT-4o",
+          "modelId": "openai/gpt-4o",
+          "description": "OpenAI's latest flagship multimodal model with enhanced performance"
+        },
+        {
+          "id": "openai/gpt-4o-mini",
+          "name": "OpenAI: GPT-4o Mini",
+          "modelId": "openai/gpt-4o-mini",
+          "description": "OpenAI's cost-efficient small model with strong capabilities"
+        },
+        {
+          "id": "google/gemini-2.0-flash-001",
+          "name": "Google: Gemini 2.0 Flash",
+          "modelId": "google/gemini-2.0-flash-001",
+          "description": "Google's fast and efficient multimodal model with enhanced reasoning"
+        },
+        {
+          "id": "google/gemini-2.5-pro",
+          "name": "Google: Gemini 2.5 Pro",
+          "modelId": "google/gemini-2.5-pro",
+          "description": "Google's advanced reasoning model with 2M context window"
+        },
+        {
+          "id": "meta-llama/llama-3.3-70b-instruct",
+          "name": "Meta: Llama 3.3 70B Instruct",
+          "modelId": "meta-llama/llama-3.3-70b-instruct",
+          "description": "Meta's latest 70B instruction-tuned model with improved reasoning"
+        },
+        {
+          "id": "meta-llama/llama-3.1-405b-instruct",
+          "name": "Meta: Llama 3.1 405B Instruct",
+          "modelId": "meta-llama/llama-3.1-405b-instruct",
+          "description": "Meta's largest open-weight model with frontier capabilities"
+        },
+        {
+          "id": "mistralai/mistral-large",
+          "name": "Mistral Large",
+          "modelId": "mistralai/mistral-large",
+          "description": "Mistral AI's flagship model for reasoning, code, and JSON tasks"
+        },
+        {
+          "id": "mistralai/mixtral-8x22b-instruct",
+          "name": "Mistral: Mixtral 8x22B Instruct",
+          "modelId": "mistralai/mixtral-8x22b-instruct",
+          "description": "Mistral's mixture of experts model with 39B active parameters"
+        },
+        {
+          "id": "moonshotai/kimi-k2.5",
+          "name": "MoonshotAI: Kimi K2.5",
+          "modelId": "moonshotai/kimi-k2.5",
+          "description": "Moonshot AI's native multimodal model with strong visual coding capability"
+        },
+        {
+          "id": "liquid/lfm-2.5-1.2b-thinking:free",
+          "name": "LiquidAI: LFM2.5-1.2B-Thinking (free)",
+          "modelId": "liquid/lfm-2.5-1.2b-thinking:free",
+          "description": "Lightweight reasoning-focused model optimized for agentic tasks"
+        },
+        {
+          "id": "arcee-ai/trinity-large-preview:free",
+          "name": "Arcee AI: Trinity Large Preview (free)",
+          "modelId": "arcee-ai/trinity-large-preview:free",
+          "description": "Frontier-scale open-weight model for creative writing and agentic performance"
         }
       ]
     },
