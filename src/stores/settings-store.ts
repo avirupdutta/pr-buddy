@@ -104,6 +104,12 @@ export const DEFAULT_AI_MODELS: AIModel[] = [
     modelId: "mistralai/devstral-2512:free",
     isActive: false,
   },
+  {
+    id: "deepseek-chat",
+    name: "DeepSeek Chat (Free)",
+    modelId: "deepseek/deepseek-chat:free",
+    isActive: false,
+  },
 ];
 
 interface SettingsState {
