@@ -11,7 +11,7 @@ export function Header() {
 
   return (
     <header className="flex items-center justify-between border-b border-border px-6 py-4 bg-background sticky top-0 z-10">
-      <div className="flex items-center gap-3 text-foreground">
+      <div className="flex items-end gap-3 text-foreground">
         <Icon icon="streamline-plump:ai-edit-robot-solid" className="w-5 h-5" />
         {/* <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary">
         </div> */}

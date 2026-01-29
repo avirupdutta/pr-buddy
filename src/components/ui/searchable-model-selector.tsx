@@ -127,8 +127,8 @@ export const SearchableModelSelector: React.FC<
 
     return Array.from(groups.entries()).sort(([a], [b]) => {
       // Sort "Custom" to the end
-      if (a === "Custom") return 1;
-      if (b === "Custom") return -1;
+      if (a === "Custom") return -1;
+      if (b === "Custom") return 1;
 
       // Get provider IDs for comparison
       const getProviderId = (providerName: string): string => {
@@ -232,23 +232,23 @@ export const SearchableModelSelector: React.FC<
           "border-input data-placeholder:text-muted-foreground bg-input/20 dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 gap-1.5 rounded-md border px-2 py-1.5 text-xs/relaxed transition-colors focus-visible:ring-2 aria-invalid:ring-2 flex h-7 w-full items-center justify-between whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50",
           disabled
             ? "cursor-not-allowed opacity-50"
-            : "cursor-pointer hover:bg-input/40 dark:hover:bg-input/50"
+            : "cursor-pointer hover:bg-input/40 dark:hover:bg-input/50",
         )}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         {selectedOption ? (
-          <>
+          <div className="flex items-center gap-3">
             <ProviderLogo
               provider={selectedOption.provider as AIProviderType}
               size={14}
             />
             <span className="text-sm flex-1">{selectedOption.model.name}</span>
             {selectedOption.isCustom && (
-              <span className="text-[10px] px-1.5 py-0 font-medium ml-2 bg-blue-500/20 text-blue-400 rounded-full">
+              <span className="text-[10px] px-1.5 py-0 font-medium bg-blue-500/20 text-blue-400 rounded-full">
                 Custom
               </span>
             )}
-          </>
+          </div>
         ) : (
           <span className="text-sm text-muted-foreground">{placeholder}</span>
         )}
