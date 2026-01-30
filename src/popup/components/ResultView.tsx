@@ -267,7 +267,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                   ref={textareaRef}
                   value={generatedDescription}
                   onChange={(e) => setGeneratedDescription(e.target.value)}
-                  className="resize-none h-60 w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary focus-visible:border-ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="resize-none h-[280px] w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary focus-visible:border-ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                   placeholder="Your generated description will appear here..."
                 />
               )}
