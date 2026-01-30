@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   IconPuzzle,
   IconKey,
-  IconRobot,
   IconDeviceFloppy,
   IconCheck,
   IconExternalLink,
@@ -16,6 +15,14 @@ import {
   IconCircleCheck,
   IconX,
 } from "@tabler/icons-react";
+import {
+  OpenAILogo,
+  AnthropicLogo,
+  GoogleLogo,
+  GroqLogo,
+  CerebrasLogo,
+  OpenRouterLogo,
+} from "@/components/provider-logos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -424,7 +431,6 @@ function AIModelsTab() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-medium">AI Models</h3>
           <p className="text-sm text-muted-foreground">
             Manage AI models for generating descriptions
           </p>
@@ -622,7 +628,7 @@ function SettingsForm({
           </TabsTrigger>
           <TabsTrigger value="ai-models" className="gap-2">
             <IconCpu className="w-4 h-4" />
-            AI Models
+            Custom Models
           </TabsTrigger>
           {isDev && (
             <TabsTrigger value="developer" className="gap-2">
@@ -652,7 +658,7 @@ function SettingsForm({
             <ApiKeyInput
               value={localGithubToken}
               onChange={setLocalGithubToken}
-              placeholder="ghp_************************************"
+              placeholder="Enter API Key..."
               icon={<IconKey className="w-5 h-5" />}
             />
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -665,13 +671,11 @@ function SettingsForm({
             </p>
           </div>
 
-          <Separator />
-
           {/* OpenRouter Key */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                OpenRouter API Key
+                OpenRouter
               </Label>
               <a
                 href="https://openrouter.ai/keys"
@@ -686,8 +690,8 @@ function SettingsForm({
             <ApiKeyInput
               value={localOpenRouterKey}
               onChange={setLocalOpenRouterKey}
-              placeholder="sk-or-************************************"
-              icon={<IconRobot className="w-5 h-5" />}
+              placeholder="Enter API Key..."
+              icon={<OpenRouterLogo size={20} />}
             />
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="text-primary">ℹ</span>
@@ -710,7 +714,7 @@ function SettingsForm({
             {/* OpenAI Key */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">OpenAI API Key</Label>
+                <Label className="text-sm font-medium">OpenAI</Label>
                 <a
                   href="https://platform.openai.com/api-keys"
                   target="_blank"
@@ -724,15 +728,15 @@ function SettingsForm({
               <ApiKeyInput
                 value={localOpenAIKey}
                 onChange={setLocalOpenAIKey}
-                placeholder="sk-************************************"
-                icon={<IconRobot className="w-5 h-5" />}
+                placeholder="Enter API Key..."
+                icon={<OpenAILogo size={20} />}
               />
             </div>
 
             {/* Anthropic Key */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Anthropic API Key</Label>
+                <Label className="text-sm font-medium">Anthropic</Label>
                 <a
                   href="https://console.anthropic.com/"
                   target="_blank"
@@ -746,15 +750,15 @@ function SettingsForm({
               <ApiKeyInput
                 value={localAnthropicKey}
                 onChange={setLocalAnthropicKey}
-                placeholder="sk-ant-************************************"
-                icon={<IconRobot className="w-5 h-5" />}
+                placeholder="Enter API Key..."
+                icon={<AnthropicLogo size={20} />}
               />
             </div>
 
             {/* Google Key */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Google AI API Key</Label>
+                <Label className="text-sm font-medium">Google AI</Label>
                 <a
                   href="https://makersuite.google.com/app/apikey"
                   target="_blank"
@@ -768,15 +772,15 @@ function SettingsForm({
               <ApiKeyInput
                 value={localGoogleKey}
                 onChange={setLocalGoogleKey}
-                placeholder="AIza************************************"
-                icon={<IconRobot className="w-5 h-5" />}
+                placeholder="Enter API Key..."
+                icon={<GoogleLogo size={20} />}
               />
             </div>
 
             {/* Groq Key */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Groq API Key</Label>
+                <Label className="text-sm font-medium">Groq</Label>
                 <a
                   href="https://console.groq.com/keys"
                   target="_blank"
@@ -790,15 +794,15 @@ function SettingsForm({
               <ApiKeyInput
                 value={localGroqKey}
                 onChange={setLocalGroqKey}
-                placeholder="gsk_************************************"
-                icon={<IconRobot className="w-5 h-5" />}
+                placeholder="Enter API Key..."
+                icon={<GroqLogo size={20} />}
               />
             </div>
 
             {/* Cerebras Key */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Cerebras API Key</Label>
+                <Label className="text-sm font-medium">Cerebras</Label>
                 <a
                   href="https://inference-docs.cerebras.ai/"
                   target="_blank"
@@ -812,8 +816,8 @@ function SettingsForm({
               <ApiKeyInput
                 value={localCerebrasKey}
                 onChange={setLocalCerebrasKey}
-                placeholder="csk-************************************"
-                icon={<IconRobot className="w-5 h-5" />}
+                placeholder="Enter API Key..."
+                icon={<CerebrasLogo size={20} />}
               />
             </div>
           </div>
