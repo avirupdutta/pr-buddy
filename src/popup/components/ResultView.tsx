@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SkeletonMarkdown } from "@/components/ui/skeleton";
 import ReactMarkdown from "react-markdown";
 import { useGeneratorStore } from "@/stores/generator-store";
 import {
@@ -233,7 +234,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                         </TabsTrigger>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>Raw</p>
+                        <p className="text-xs">Raw</p>
                       </TooltipContent>
                     </Tooltip>
                     <Tooltip>
@@ -246,7 +247,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                         </TabsTrigger>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>Preview</p>
+                        <p className="text-xs">Preview</p>
                       </TooltipContent>
                     </Tooltip>
                   </TabsList>
@@ -255,21 +256,29 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             </div>
 
             <TabsContent value="raw" className="mt-0 flex-1">
-              <Textarea
-                ref={textareaRef}
-                value={generatedDescription}
-                onChange={(e) => setGeneratedDescription(e.target.value)}
-                className="resize-none h-60 w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary focus-visible:border-ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                placeholder="Your generated description will appear here..."
-              />
+              {isGenerating && !generatedDescription ? (
+                <div className="h-60 w-full rounded-md border border-input bg-transparent px-3 py-4 text-xs overflow-y-auto scrollbar-thin border-t-0 rounded-t-none">
+                  <SkeletonMarkdown />
+                </div>
+              ) : (
+                <Textarea
+                  ref={textareaRef}
+                  value={generatedDescription}
+                  onChange={(e) => setGeneratedDescription(e.target.value)}
+                  className="resize-none h-60 w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary focus-visible:border-ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  placeholder="Your generated description will appear here..."
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="preview" className="mt-0 flex-1">
               <div
                 ref={previewRef}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs overflow-y-auto scrollbar-thin border-t-0 rounded-t-none"
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs overflow-y-auto scrollbar-thin border-t-0 rounded-t-none min-h-[240px]"
               >
-                {generatedDescription ? (
+                {isGenerating && !generatedDescription ? (
+                  <SkeletonMarkdown />
+                ) : generatedDescription ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-xs">
                     <ReactMarkdown>{generatedDescription}</ReactMarkdown>
                   </div>
