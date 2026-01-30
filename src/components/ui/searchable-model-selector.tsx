@@ -205,7 +205,10 @@ export const SearchableModelSelector: React.FC<
       clearTimeout(scrollTimeoutRef.current);
     }
     scrollTimeoutRef.current = setTimeout(() => {
-      setScrollPosition(e.currentTarget.scrollTop);
+      const target = e.currentTarget;
+      if (target) {
+        setScrollPosition(target.scrollTop);
+      }
     }, 100);
   }, []);
 
