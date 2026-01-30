@@ -223,12 +223,12 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                   </Button>
                 </div>
                 <TooltipProvider delayDuration={100}>
-                  <TabsList className="h-8 bg-muted border border-border rounded-full p-0.5">
+                  <TabsList className="h-8 bg-muted/50 border border-border/50 rounded-full p-0.5">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <TabsTrigger
                           value="raw"
-                          className="rounded-full data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm px-2.5 py-1"
+                          className="rounded-full data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm px-3 py-1.5"
                         >
                           <IconCode className="w-4 h-4 text-foreground" />
                         </TabsTrigger>
@@ -241,7 +241,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                       <TooltipTrigger asChild>
                         <TabsTrigger
                           value="preview"
-                          className="rounded-full data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm px-2.5 py-1"
+                          className="rounded-full data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm px-3 py-1.5"
                         >
                           <IconEye className="w-4 h-4 text-foreground" />
                         </TabsTrigger>
