@@ -7,6 +7,7 @@ import {
   IconSettings,
   IconCode,
   IconEye,
+  IconPlayerStop,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
@@ -62,9 +63,9 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     isGenerating,
     isRegenerating,
     reset,
-    hasGeneratedOnce,
     hasRegenerated,
     setHasRegenerated,
+    stopGeneration,
   } = useGeneratorStore();
 
   const [isCopied, setIsCopied] = useState(false);
@@ -77,14 +78,17 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
   // Handle fade-in transition for result footer after first generation completes
   useEffect(() => {
-    if (hasGeneratedOnce && !isGenerating && !showResultFooter) {
-      // Small delay to ensure the transition is noticeable
+    if (!isGenerating) {
+      // Show footer when not generating (either after success or after stop)
       const timer = setTimeout(() => {
         setShowResultFooter(true);
       }, 100);
       return () => clearTimeout(timer);
+    } else {
+      // Reset the footer state when generation starts
+      setShowResultFooter(false);
     }
-  }, [hasGeneratedOnce, isGenerating, showResultFooter]);
+  }, [isGenerating]);
 
   // Auto-scroll to bottom during generation
   useEffect(() => {
@@ -300,10 +304,10 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       <div className="shrink-0 px-6 py-4 bg-background border-t border-border/50 flex flex-col gap-3">
         {/* During generation (first time or when no content yet), show GeneratorView-style footer */}
         {showGeneratingFooter ? (
-          <>
+          <div className="flex items-center gap-3">
             <Button
               disabled={true}
-              className={`w-full h-10 gap-2 text-base font-bold rounded-lg shadow-lg transition-all duration-300`}
+              className={`flex-1 h-10 gap-2 text-base font-bold rounded-lg shadow-lg transition-all duration-300`}
               size="lg"
             >
               <span
@@ -313,14 +317,22 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                 Generating...
               </span>
             </Button>
-          </>
+            <button
+              onClick={stopGeneration}
+              className="h-10 w-10 flex items-center justify-center rounded-lg text-white hover:text-white/80 transition-colors shrink-0"
+              aria-label="Stop generation"
+              title="Stop generation"
+            >
+              <IconPlayerStop className="w-5 h-5 fill-current" />
+            </button>
+          </div>
         ) : (
           /* After first generation completes, show ResultView footer with fade-in */
           <div
-            className={`flex flex-col gap-4 transition-all duration-500 ${
+            className={`flex flex-col gap-4 transition-opacity duration-300 ${
               showResultFooter
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-4"
+                ? "opacity-100"
+                : "opacity-0"
             }`}
           >
             <div className="flex gap-3">
