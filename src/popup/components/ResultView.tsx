@@ -70,25 +70,11 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
   const [isCopied, setIsCopied] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
-  const [showResultFooter, setShowResultFooter] = useState(false);
+  const [activeTab, setActiveTab] = useState<"raw" | "preview">("preview");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
-
-  // Handle fade-in transition for result footer after first generation completes
-  useEffect(() => {
-    if (!isGenerating) {
-      // Show footer when not generating (either after success or after stop)
-      const timer = setTimeout(() => {
-        setShowResultFooter(true);
-      }, 100);
-      return () => clearTimeout(timer);
-    } else {
-      // Reset the footer state when generation starts
-      setShowResultFooter(false);
-    }
-  }, [isGenerating]);
 
   // Auto-scroll to bottom during generation
   useEffect(() => {
@@ -208,7 +194,11 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             </div>
           )}
 
-          <Tabs defaultValue="preview" className="flex flex-col h-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as "raw" | "preview")}
+            className="flex flex-col h-full"
+          >
             <div className="sticky top-0 bg-background z-10 py-2 border-b border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -232,7 +222,11 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                       <TooltipTrigger asChild>
                         <TabsTrigger
                           value="raw"
-                          className="rounded-full data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm px-3 py-1.5"
+                          className={`rounded-full px-3 py-1.5 ${
+                            activeTab === "raw"
+                              ? "bg-background text-foreground shadow-sm"
+                              : ""
+                          }`}
                         >
                           <IconCode className="w-4 h-4 text-foreground" />
                         </TabsTrigger>
@@ -245,7 +239,11 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                       <TooltipTrigger asChild>
                         <TabsTrigger
                           value="preview"
-                          className="rounded-full data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm px-3 py-1.5"
+                          className={`rounded-full px-3 py-1.5 ${
+                            activeTab === "preview"
+                              ? "bg-background text-foreground shadow-sm"
+                              : ""
+                          }`}
                         >
                           <IconEye className="w-4 h-4 text-foreground" />
                         </TabsTrigger>
@@ -328,13 +326,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
           </div>
         ) : (
           /* After first generation completes, show ResultView footer with fade-in */
-          <div
-            className={`flex flex-col gap-4 transition-opacity duration-300 ${
-              showResultFooter
-                ? "opacity-100"
-                : "opacity-0"
-            }`}
-          >
+          <div className={`flex flex-col gap-4`}>
             <div className="flex gap-3">
               <Button
                 variant="ghost"
