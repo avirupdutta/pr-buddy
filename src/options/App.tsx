@@ -138,6 +138,10 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
       toast.error("Please fill in all fields");
       return;
     }
+    if (name.trim().length > 40) {
+      toast.error("Model name must be 40 characters or less");
+      return;
+    }
     onSave({
       name: name.trim(),
       modelId: modelId.trim(),
@@ -158,7 +162,11 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g., GPT-4 Turbo"
           autoFocus
+          maxLength={40}
         />
+        <p className="text-xs text-muted-foreground">
+          {name.length}/40 characters
+        </p>
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="provider">Provider</Label>
@@ -189,8 +197,7 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Choose the AI provider for this model. OpenRouter works with most
-          models.
+          Choose the AI provider for this model.
         </p>
       </div>
       <div className="flex flex-col gap-2">
@@ -202,13 +209,6 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
           placeholder="e.g., openai/gpt-4-turbo"
           className="font-mono text-sm"
         />
-        <p className="text-xs text-muted-foreground">
-          {provider === "openrouter"
-            ? "Enter OpenRouter model ID (e.g., openai/gpt-4-turbo, anthropic/claude-3-opus)."
-            : `Enter ${
-                providerOptions.find((p) => p.value === provider)?.label
-              } model ID (e.g., gpt-4-turbo, claude-3-5-sonnet-20241022).`}
-        </p>
       </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="ghost" onClick={onCancel}>
