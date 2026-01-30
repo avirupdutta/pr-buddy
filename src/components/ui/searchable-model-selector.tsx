@@ -48,6 +48,7 @@ export const SearchableModelSelector: React.FC<
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedOptionRef = useRef<HTMLDivElement>(null);
 
   // Convert predefined models from JSON to ModelOption format
   const predefinedModelOptions: ModelOption[] = useMemo(() => {
@@ -199,6 +200,34 @@ export const SearchableModelSelector: React.FC<
     }
   }, [isOpen, scrollPosition]);
 
+  // Scroll to selected option when popover opens
+  React.useEffect(() => {
+    if (isOpen) {
+      // Use requestAnimationFrame to ensure DOM is fully rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Check if selected option is in the filtered results
+          const isSelectedInFiltered = selectedOption
+            ? filteredOptions.some(
+                (option) => option.uniqueId === selectedOption.uniqueId,
+              )
+            : false;
+
+          if (isSelectedInFiltered && selectedOptionRef.current) {
+            // Scroll to the selected option with smooth behavior
+            selectedOptionRef.current.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          } else if (scrollAreaRef.current) {
+            // If selected option is not in filtered results or no selection, scroll to top
+            scrollAreaRef.current.scrollTop = 0;
+          }
+        });
+      });
+    }
+  }, [isOpen, selectedOption, filteredOptions]);
+
   // Handle scroll position change with debounce
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (scrollTimeoutRef.current) {
@@ -315,6 +344,11 @@ export const SearchableModelSelector: React.FC<
                     {options.map((option) => (
                       <div
                         key={option.uniqueId}
+                        ref={
+                          option.uniqueId === selectedOption?.uniqueId
+                            ? selectedOptionRef
+                            : null
+                        }
                         className={cn(
                           "px-3 py-2 flex items-center gap-2 transition-colors",
                           isLocked
