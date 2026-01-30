@@ -72,6 +72,13 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   const [isInserting, setIsInserting] = useState(false);
   const [activeTab, setActiveTab] = useState<"raw" | "preview">("preview");
 
+  // Switch to preview tab when generation starts
+  useEffect(() => {
+    if (isGenerating) {
+      setActiveTab("preview");
+    }
+  }, [isGenerating]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
