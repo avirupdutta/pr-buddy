@@ -12,7 +12,9 @@ import type { MessageAction } from "@/types/chrome";
 export function PopupApp() {
   const [currentUrl, setCurrentUrl] = useState<string>("");
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [displayedView, setDisplayedView] = useState<"generator" | "result">("generator");
+  const [displayedView, setDisplayedView] = useState<"generator" | "result">(
+    "generator",
+  );
 
   const {
     load: loadSettings,
@@ -47,7 +49,7 @@ export function PopupApp() {
         setDisplayedView(view);
         setIsTransitioning(false);
       }, 200); // 200ms for fade out
-      
+
       return () => clearTimeout(timer);
     }
   }, [isTransitioning, view]);
@@ -134,25 +136,25 @@ export function PopupApp() {
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {/* Generator View - slides from left to right */}
         <div
-          className={`absolute inset-0 transition-all duration-200 ${
+          className={`absolute inset-0 transition-all duration-100 ${
             displayedView === "generator" && !isTransitioning
               ? "opacity-100 translate-x-0"
               : displayedView === "generator" && isTransitioning
-                ? "opacity-0 -translate-x-8"
-                : "opacity-0 -translate-x-8 pointer-events-none"
+              ? "opacity-0 -translate-x-8"
+              : "opacity-0 -translate-x-8 pointer-events-none"
           }`}
         >
           <GeneratorView currentUrl={currentUrl} />
         </div>
-        
+
         {/* Result View - slides from right to left */}
         <div
-          className={`absolute inset-0 transition-all duration-200 ${
+          className={`absolute inset-0 transition-all duration-100 ${
             displayedView === "result" && !isTransitioning
               ? "opacity-100 translate-x-0"
               : displayedView === "result" && isTransitioning
-                ? "opacity-0 translate-x-8"
-                : "opacity-0 translate-x-8 pointer-events-none"
+              ? "opacity-0 translate-x-8"
+              : "opacity-0 translate-x-8 pointer-events-none"
           }`}
         >
           <ResultView currentUrl={currentUrl} />
