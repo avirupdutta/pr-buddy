@@ -232,7 +232,7 @@ export const SearchableModelSelector: React.FC<
       {/* Trigger */}
       <div
         className={cn(
-          "border-input data-placeholder:text-muted-foreground bg-input/20 dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 gap-1.5 rounded-md border px-2 py-1.5 text-xs/relaxed transition-colors focus-visible:ring-2 aria-invalid:ring-2 flex h-7 w-full items-center justify-between whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          "border-input data-placeholder:text-muted-foreground bg-input/20 dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 gap-1.5 rounded-md border px-2 py-1.5 text-xs/relaxed transition-colors focus-visible:ring-2 aria-invalid:ring-2 flex h-7 w-full items-center justify-between whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50 max-w-[200px]",
           disabled
             ? "cursor-not-allowed opacity-50"
             : "cursor-pointer hover:bg-input/40 dark:hover:bg-input/50",
@@ -240,8 +240,10 @@ export const SearchableModelSelector: React.FC<
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         {selectedOption ? (
-          <div className="flex items-center gap-3">
-            <span className="text-sm flex-1">{selectedOption.model.name}</span>
+          <div className="flex items-center gap-3 max-w-[150px]">
+            <span className="text-xs flex-1 truncate">
+              {selectedOption.model.name}
+            </span>
           </div>
         ) : (
           <span className="text-sm text-muted-foreground">{placeholder}</span>
@@ -254,7 +256,7 @@ export const SearchableModelSelector: React.FC<
         <div
           className={`absolute left-0 right-0 z-50 ${
             popoverPosition === "top" ? "bottom-full mb-1" : "top-full mt-1"
-          } bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-hidden w-68`}
+          } bg-background/95 backdrop-blur-md border border-border rounded-md shadow-lg max-h-60 overflow-hidden w-80`}
         >
           {/* Search Input */}
           <div className="p-2 border-b border-border">
@@ -298,7 +300,7 @@ export const SearchableModelSelector: React.FC<
                     {/* Provider Header */}
                     <div
                       className={
-                        "px-3 py-1.5 bg-muted capitalize text-xs font-medium text-muted-foreground sticky top-0 flex items-center justify-between"
+                        "px-3 py-1.5 bg-background/80 backdrop-blur-sm capitalize text-xs font-medium text-muted-foreground sticky top-0 flex items-center justify-between"
                       }
                     >
                       <span>{providerName}</span>
@@ -327,17 +329,17 @@ export const SearchableModelSelector: React.FC<
                       >
                         <ProviderLogo
                           provider={option.provider as AIProviderType}
-                          size={16}
+                          size={12}
                         />
                         <span
                           className={cn(
-                            "text-sm flex-1",
+                            "text-xs flex-1",
                             isLocked
                               ? "text-muted-foreground/50"
                               : "text-muted-foreground",
                             option.uniqueId === selectedOption?.uniqueId &&
                               !isLocked &&
-                              "text-foreground font-semibold",
+                              "text-foreground font-medium",
                           )}
                         >
                           {option.model.name}
