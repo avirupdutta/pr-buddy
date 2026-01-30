@@ -238,16 +238,7 @@ export const SearchableModelSelector: React.FC<
       >
         {selectedOption ? (
           <div className="flex items-center gap-3">
-            <ProviderLogo
-              provider={selectedOption.provider as AIProviderType}
-              size={14}
-            />
             <span className="text-sm flex-1">{selectedOption.model.name}</span>
-            {selectedOption.isCustom && (
-              <span className="text-[10px] px-1.5 py-0 font-medium bg-blue-500/20 text-blue-400 rounded-full">
-                Custom
-              </span>
-            )}
           </div>
         ) : (
           <span className="text-sm text-muted-foreground">{placeholder}</span>
