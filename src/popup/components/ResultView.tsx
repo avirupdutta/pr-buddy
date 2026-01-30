@@ -5,6 +5,8 @@ import {
   IconLoader2,
   IconCheck,
   IconSettings,
+  IconCode,
+  IconEye,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +14,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import ReactMarkdown from "react-markdown";
 import { useGeneratorStore } from "@/stores/generator-store";
 import {
@@ -213,14 +221,36 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                     )}
                   </Button>
                 </div>
-                <TabsList className="h-8">
-                  <TabsTrigger value="raw" className="text-xs">
-                    Raw
-                  </TabsTrigger>
-                  <TabsTrigger value="preview" className="text-xs">
-                    Preview
-                  </TabsTrigger>
-                </TabsList>
+                <TooltipProvider delayDuration={100}>
+                  <TabsList className="h-8 bg-muted border border-border rounded-full p-0.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <TabsTrigger
+                          value="raw"
+                          className="rounded-full data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm px-2.5 py-1"
+                        >
+                          <IconCode className="w-4 h-4" />
+                        </TabsTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Raw</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <TabsTrigger
+                          value="preview"
+                          className="rounded-full data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm px-2.5 py-1"
+                        >
+                          <IconEye className="w-4 h-4" />
+                        </TabsTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Preview</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TabsList>
+                </TooltipProvider>
               </div>
             </div>
 
@@ -229,7 +259,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                 ref={textareaRef}
                 value={generatedDescription}
                 onChange={(e) => setGeneratedDescription(e.target.value)}
-                className="resize-none h-60 w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary"
+                className="resize-none h-60 w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary focus-visible:border-ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                 placeholder="Your generated description will appear here..."
               />
             </TabsContent>
