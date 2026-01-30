@@ -230,7 +230,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                           value="raw"
                           className="rounded-full data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm px-2.5 py-1"
                         >
-                          <IconCode className="w-4 h-4" />
+                          <IconCode className="w-4 h-4 text-foreground" />
                         </TabsTrigger>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
@@ -243,7 +243,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                           value="preview"
                           className="rounded-full data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm px-2.5 py-1"
                         >
-                          <IconEye className="w-4 h-4" />
+                          <IconEye className="w-4 h-4 text-foreground" />
                         </TabsTrigger>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
