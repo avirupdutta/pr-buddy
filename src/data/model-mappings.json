@@ -5,7 +5,7 @@
       "models": [
         {
           "id": "arcee-ai/trinity-large-preview:free",
-          "name": "Arcee AI: Trinity Large Preview (free)",
+          "name": "Trinity Large Preview (free)",
           "modelId": "arcee-ai/trinity-large-preview:free",
           "description": "Frontier-scale open-weight model for creative writing and agentic performance",
           "isFree": true,

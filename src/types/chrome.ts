@@ -15,6 +15,13 @@ export interface AIModel {
   isActive: boolean;
   provider?: string; // Optional for backward compatibility
   supportsJsonSchema?: boolean; // Whether the model supports JSON Schema for structured output
+  description?: string; // Model description for display
+  isFree?: boolean; // Whether the model is free to use
+  pricing?: {
+    prompt: string;
+    completion: string;
+  };
+  contextLength?: number; // Maximum context length in tokens
 }
 
 // Legacy type - kept for backwards compatibility during migration

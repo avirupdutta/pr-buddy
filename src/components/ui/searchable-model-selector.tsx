@@ -8,6 +8,21 @@ import modelMappings from "@/data/model-mappings.json";
 import { cn } from "@/lib/utils";
 import { IconCheck, IconSelector, IconLock } from "@tabler/icons-react";
 
+interface ModelMappingData {
+  id: string;
+  name: string;
+  modelId: string;
+  description: string;
+  supportsJsonSchema?: boolean;
+  isFree?: boolean;
+  pricing?: {
+    prompt: string;
+    completion: string;
+  };
+  contextLength?: number;
+  reasoningEffort?: string;
+}
+
 interface SearchableModelSelectorProps {
   models: AIModel[];
   value: string;
@@ -27,6 +42,17 @@ interface ModelOption {
   provider: string;
   providerName: string;
   uniqueId: string; // Composite key: provider + model.id to handle duplicate IDs across providers
+  fullModelData?: {
+    description?: string;
+    isFree?: boolean;
+    supportsJsonSchema?: boolean;
+    pricing?: {
+      prompt: string;
+      completion: string;
+    };
+    contextLength?: number;
+    reasoningEffort?: string;
+  };
 }
 
 export const SearchableModelSelector: React.FC<
@@ -45,6 +71,7 @@ export const SearchableModelSelector: React.FC<
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [hoveredModel, setHoveredModel] = useState<ModelOption | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,7 +82,7 @@ export const SearchableModelSelector: React.FC<
     const options: ModelOption[] = [];
     Object.entries(modelMappings.providers).forEach(
       ([providerId, providerData]) => {
-        providerData.models.forEach((model) => {
+        providerData.models.forEach((model: ModelMappingData) => {
           options.push({
             model: {
               id: model.id,
@@ -68,6 +95,14 @@ export const SearchableModelSelector: React.FC<
             provider: providerId,
             providerName: providerData.name,
             uniqueId: `${providerId}:${model.id}`, // Composite key for unique identification
+            fullModelData: {
+              description: model.description,
+              isFree: model.isFree,
+              supportsJsonSchema: model.supportsJsonSchema,
+              pricing: model.pricing,
+              contextLength: model.contextLength,
+              reasoningEffort: model.reasoningEffort,
+            },
           });
         });
       },
@@ -289,7 +324,7 @@ export const SearchableModelSelector: React.FC<
         <div
           className={`absolute left-0 right-0 z-50 ${
             popoverPosition === "top" ? "bottom-full mb-1" : "top-full mt-1"
-          } bg-background/95 backdrop-blur-md border border-border rounded-md shadow-lg max-h-60 overflow-hidden w-80`}
+          } bg-background/95 backdrop-blur-md border border-border rounded-md shadow-lg max-h-80 overflow-hidden w-[400px]`}
         >
           {/* Search Input */}
           <div className="p-2 border-b border-border">
@@ -302,100 +337,247 @@ export const SearchableModelSelector: React.FC<
             />
           </div>
 
-          {/* Options */}
-          <ScrollArea
-            viewportRef={scrollAreaRef}
-            onScroll={handleScroll}
-            classNames={{ root: "h-48" }}
-          >
-            {groupedOptions.length === 0 ? (
-              <div className="p-3 text-sm text-muted-foreground text-center">
-                No models found
-              </div>
-            ) : (
-              groupedOptions.map(([providerName, options]) => {
-                // Get provider ID from provider name
-                const providerEntry = Object.entries(
-                  modelMappings.providers,
-                ).find(([, data]) => data.name === providerName);
-                const providerId = providerEntry
-                  ? providerEntry[0]
-                  : providerName;
-                const hasApiKey =
-                  providerKeyStatus[providerId as AIProviderType] ?? false;
-                const isLocked = providerName !== "Custom" && !hasApiKey;
+          {/* Two-column layout */}
+          <div className="flex h-60">
+            {/* Options Column */}
+            <ScrollArea
+              viewportRef={scrollAreaRef}
+              onScroll={handleScroll}
+              classNames={{ root: "h-full max-w-48 border-r border-border" }}
+            >
+              {groupedOptions.length === 0 ? (
+                <div className="p-3 text-sm text-muted-foreground text-center">
+                  No models found
+                </div>
+              ) : (
+                groupedOptions.map(([providerName, options]) => {
+                  // Get provider ID from provider name
+                  const providerEntry = Object.entries(
+                    modelMappings.providers,
+                  ).find(([, data]) => data.name === providerName);
+                  const providerId = providerEntry
+                    ? providerEntry[0]
+                    : providerName;
+                  const hasApiKey =
+                    providerKeyStatus[providerId as AIProviderType] ?? false;
+                  const isLocked = providerName !== "Custom" && !hasApiKey;
 
-                return (
-                  <div
-                    key={providerName}
-                    className="border-b border-border last:border-b-0"
-                  >
-                    {/* Provider Header */}
+                  return (
                     <div
-                      className={
-                        "px-3 py-1.5 bg-background/80 backdrop-blur-sm capitalize text-xs font-medium text-muted-foreground sticky top-0 flex items-center justify-between"
-                      }
+                      key={providerName}
+                      className="border-b border-border last:border-b-0"
                     >
-                      <span>{providerName}</span>
-                      {isLocked && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-destructive/20 text-destructive rounded-full">
-                          API key required
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Model Options */}
-                    {options.map((option) => (
+                      {/* Provider Header */}
                       <div
-                        key={option.uniqueId}
-                        ref={
-                          option.uniqueId === selectedOption?.uniqueId
-                            ? selectedOptionRef
-                            : null
+                        className={
+                          "px-3 py-1.5 bg-background/80 backdrop-blur-sm capitalize text-xs font-medium text-muted-foreground sticky top-0 flex items-center justify-between"
                         }
-                        className={cn(
-                          "px-3 py-2 flex items-center gap-2 transition-colors",
-                          isLocked
-                            ? "cursor-not-allowed"
-                            : "cursor-pointer hover:bg-accent",
-                          option.uniqueId === selectedOption?.uniqueId &&
-                            !isLocked
-                            ? "bg-accent"
-                            : "",
-                        )}
-                        onClick={() => !isLocked && handleSelect(option)}
                       >
-                        <ProviderLogo
-                          provider={option.provider as AIProviderType}
-                          size={12}
-                        />
-                        <span
-                          className={cn(
-                            "text-xs flex-1",
-                            isLocked
-                              ? "text-muted-foreground/50"
-                              : "text-muted-foreground",
-                            option.uniqueId === selectedOption?.uniqueId &&
-                              !isLocked &&
-                              "text-foreground font-medium",
-                          )}
-                        >
-                          {option.model.name}
-                        </span>
-                        {option.uniqueId === selectedOption?.uniqueId &&
-                          !isLocked && (
-                            <IconCheck className="w-4 h-4 text-green-500" />
-                          )}
+                        <span>{providerName}</span>
                         {isLocked && (
-                          <IconLock className="w-3.5 h-3.5 text-muted-foreground/40" />
+                          <span className="text-[10px] px-1.5 py-0.5 bg-destructive/20 text-destructive rounded-full">
+                            API key required
+                          </span>
                         )}
                       </div>
-                    ))}
+
+                      {/* Model Options */}
+                      {options.map((option) => (
+                        <div
+                          key={option.uniqueId}
+                          ref={
+                            option.uniqueId === selectedOption?.uniqueId
+                              ? selectedOptionRef
+                              : null
+                          }
+                          className={cn(
+                            "px-3 py-2 flex items-center gap-2 transition-colors",
+                            isLocked
+                              ? "cursor-not-allowed"
+                              : "cursor-pointer hover:bg-accent",
+                            option.uniqueId === selectedOption?.uniqueId &&
+                              !isLocked
+                              ? "bg-accent"
+                              : "",
+                            hoveredModel?.uniqueId === option.uniqueId &&
+                              !isLocked
+                              ? "bg-accent/50"
+                              : "",
+                          )}
+                          onClick={() => !isLocked && handleSelect(option)}
+                          onMouseEnter={() =>
+                            !isLocked && setHoveredModel(option)
+                          }
+                          onMouseLeave={() => setHoveredModel(null)}
+                        >
+                          <ProviderLogo
+                            provider={option.provider as AIProviderType}
+                            size={12}
+                          />
+                          <span
+                            className={cn(
+                              "text-xs flex-1",
+                              isLocked
+                                ? "text-muted-foreground/50"
+                                : "text-muted-foreground",
+                              option.uniqueId === selectedOption?.uniqueId &&
+                                !isLocked &&
+                                "text-foreground font-medium",
+                            )}
+                          >
+                            {option.model.name}
+                          </span>
+                          {option.uniqueId === selectedOption?.uniqueId &&
+                            !isLocked && (
+                              <IconCheck className="w-4 h-4 text-green-500" />
+                            )}
+                          {isLocked && (
+                            <IconLock className="w-3.5 h-3.5 text-muted-foreground/40" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
+              )}
+            </ScrollArea>
+
+            {/* Details Panel Column */}
+            <div className="flex-1 p-4 bg-muted/30 overflow-y-auto">
+              {hoveredModel ? (
+                <div className="space-y-4">
+                  {/* Model Name */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-1">
+                      {hoveredModel.model.name}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <ProviderLogo
+                        provider={hoveredModel.provider as AIProviderType}
+                        size={14}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {hoveredModel.providerName}
+                      </span>
+                    </div>
                   </div>
-                );
-              })
-            )}
-          </ScrollArea>
+
+                  {/* Description */}
+                  {hoveredModel.fullModelData?.description && (
+                    <div>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-1">
+                        Description
+                      </h4>
+                      <p className="text-xs text-foreground leading-relaxed">
+                        {hoveredModel.fullModelData.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Features */}
+                  <div className="space-y-2">
+                    {hoveredModel.fullModelData?.isFree !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded-full",
+                            hoveredModel.fullModelData.isFree
+                              ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {hoveredModel.fullModelData.isFree ? "Free" : "Paid"}
+                        </span>
+                      </div>
+                    )}
+
+                    {hoveredModel.fullModelData?.supportsJsonSchema !==
+                      undefined && (
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded-full",
+                            hoveredModel.fullModelData.supportsJsonSchema
+                              ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {hoveredModel.fullModelData.supportsJsonSchema
+                            ? "JSON Schema"
+                            : "No JSON Schema"}
+                        </span>
+                      </div>
+                    )}
+
+                    {hoveredModel.fullModelData?.reasoningEffort && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400">
+                          {hoveredModel.fullModelData.reasoningEffort} reasoning
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pricing */}
+                  {hoveredModel.fullModelData?.pricing && (
+                    <div>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-2">
+                        Pricing
+                      </h4>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Prompt:</span>
+                          <span className="text-foreground">
+                            ${hoveredModel.fullModelData.pricing.prompt}/1K
+                            tokens
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            Completion:
+                          </span>
+                          <span className="text-foreground">
+                            ${hoveredModel.fullModelData.pricing.completion}
+                            /1K tokens
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Context Length */}
+                  {hoveredModel.fullModelData?.contextLength && (
+                    <div>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-1">
+                        Context Length
+                      </h4>
+                      <p className="text-xs text-foreground">
+                        {hoveredModel.fullModelData.contextLength.toLocaleString()}{" "}
+                        tokens
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Model ID */}
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-1">
+                      Model ID
+                    </h4>
+                    <p className="text-xs text-muted-foreground font-mono break-all">
+                      {hoveredModel.model.modelId}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <IconLock className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-xs text-muted-foreground">
+                    Hover over a model to see details
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
