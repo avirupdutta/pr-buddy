@@ -15,6 +15,19 @@ import type {
 } from "@/types/structured-output";
 import { PRResponseSchema } from "@/types/structured-output";
 
+/**
+ * Helper function to strip markdown code blocks from text
+ * Handles both ```json and ``` code blocks
+ */
+function stripMarkdownCodeBlocks(text: string): string {
+  // Match code blocks with optional language specifier
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  if (codeBlockMatch) {
+    return codeBlockMatch[1].trim();
+  }
+  return text;
+}
+
 // Request parameters interface (matching existing implementation)
 export interface AIRequestParams {
   model: AIModel;
@@ -369,7 +382,10 @@ export class AISDKService {
 
       // Try to parse JSON from the response
       try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        // Strip markdown code blocks if present
+        const cleanedText = stripMarkdownCodeBlocks(text);
+        
+        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           const validated = PRResponseSchema.parse(parsed);
@@ -525,6 +541,7 @@ export class AISDKService {
 
         for await (const chunk of textStream) {
           accumulatedText += chunk;
+          
           yield {
             type: "partial",
             data: {
@@ -532,6 +549,27 @@ export class AISDKService {
               isComplete: false,
             },
           };
+        }
+        
+        // Try to parse JSON and extract structured data
+        try {
+          // Strip markdown code blocks if present
+          const cleanedText = stripMarkdownCodeBlocks(accumulatedText);
+          
+          const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            yield {
+              type: "partial",
+              data: {
+                title: parsed.title,
+                description: parsed.description,
+                isComplete: false,
+              },
+            };
+          }
+        } catch {
+          // JSON parsing failed, accumulatedText will be used as description
         }
 
         yield {
