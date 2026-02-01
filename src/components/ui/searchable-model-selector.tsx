@@ -72,6 +72,7 @@ export const SearchableModelSelector: React.FC<
   const [searchQuery, setSearchQuery] = useState("");
   const [scrollPosition, setScrollPosition] = useState(0);
   const [hoveredModel, setHoveredModel] = useState<ModelOption | null>(null);
+  const [isDetailsPanelHovered, setIsDetailsPanelHovered] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -196,6 +197,20 @@ export const SearchableModelSelector: React.FC<
         (!activeProvider || option.provider === activeProvider),
     );
   }, [allModelOptions, value, activeProvider]);
+
+  // Determine which model to show in details panel:
+  // 1. If details panel is hovered, keep showing the last hovered model
+  // 2. If a model is hovered, show that model
+  // 3. Otherwise, show the selected model
+  const modelToShow = useMemo(() => {
+    if (isDetailsPanelHovered && hoveredModel) {
+      return hoveredModel;
+    }
+    if (hoveredModel) {
+      return hoveredModel;
+    }
+    return selectedOption;
+  }, [isDetailsPanelHovered, hoveredModel, selectedOption]);
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -408,7 +423,12 @@ export const SearchableModelSelector: React.FC<
                           onMouseEnter={() =>
                             !isLocked && setHoveredModel(option)
                           }
-                          onMouseLeave={() => setHoveredModel(null)}
+                          onMouseLeave={() => {
+                            // Don't clear hoveredModel if details panel is being hovered
+                            if (!isDetailsPanelHovered) {
+                              setHoveredModel(null);
+                            }
+                          }}
                         >
                           <ProviderLogo
                             provider={option.provider as AIProviderType}
@@ -443,83 +463,87 @@ export const SearchableModelSelector: React.FC<
             </ScrollArea>
 
             {/* Details Panel Column */}
-            <div className="flex-1 p-4 bg-muted/30 overflow-y-auto">
-              {hoveredModel ? (
+            <div
+              className="flex-1 p-4 bg-muted/30 overflow-y-auto"
+              onMouseEnter={() => setIsDetailsPanelHovered(true)}
+              onMouseLeave={() => setIsDetailsPanelHovered(false)}
+            >
+              {modelToShow ? (
                 <div className="space-y-4">
                   {/* Model Name */}
                   <div>
                     <h3 className="text-sm font-semibold text-foreground mb-1">
-                      {hoveredModel.model.name}
+                      {modelToShow.model.name}
                     </h3>
                     <div className="flex items-center gap-2">
                       <ProviderLogo
-                        provider={hoveredModel.provider as AIProviderType}
+                        provider={modelToShow.provider as AIProviderType}
                         size={14}
                       />
                       <span className="text-xs text-muted-foreground">
-                        {hoveredModel.providerName}
+                        {modelToShow.providerName}
                       </span>
                     </div>
                   </div>
 
                   {/* Description */}
-                  {hoveredModel.fullModelData?.description && (
+                  {modelToShow.fullModelData?.description && (
                     <div>
                       <h4 className="text-xs font-medium text-muted-foreground mb-1">
                         Description
                       </h4>
                       <p className="text-xs text-foreground leading-relaxed">
-                        {hoveredModel.fullModelData.description}
+                        {modelToShow.fullModelData.description}
                       </p>
                     </div>
                   )}
 
                   {/* Features */}
                   <div className="space-y-2">
-                    {hoveredModel.fullModelData?.isFree !== undefined && (
+                    {modelToShow.fullModelData?.isFree !== undefined && (
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
                             "text-[10px] px-2 py-0.5 rounded-full",
-                            hoveredModel.fullModelData.isFree
+                            modelToShow.fullModelData.isFree
                               ? "bg-green-500/20 text-green-600 dark:text-green-400"
                               : "bg-muted text-muted-foreground",
                           )}
                         >
-                          {hoveredModel.fullModelData.isFree ? "Free" : "Paid"}
+                          {modelToShow.fullModelData.isFree ? "Free" : "Paid"}
                         </span>
                       </div>
                     )}
 
-                    {hoveredModel.fullModelData?.supportsJsonSchema !==
+                    {modelToShow.fullModelData?.supportsJsonSchema !==
                       undefined && (
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
                             "text-[10px] px-2 py-0.5 rounded-full",
-                            hoveredModel.fullModelData.supportsJsonSchema
+                            modelToShow.fullModelData.supportsJsonSchema
                               ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
                               : "bg-muted text-muted-foreground",
                           )}
                         >
-                          {hoveredModel.fullModelData.supportsJsonSchema
+                          {modelToShow.fullModelData.supportsJsonSchema
                             ? "JSON Schema"
                             : "No JSON Schema"}
                         </span>
                       </div>
                     )}
 
-                    {hoveredModel.fullModelData?.reasoningEffort && (
+                    {modelToShow.fullModelData?.reasoningEffort && (
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400">
-                          {hoveredModel.fullModelData.reasoningEffort} reasoning
+                          {modelToShow.fullModelData.reasoningEffort} reasoning
                         </span>
                       </div>
                     )}
                   </div>
 
                   {/* Pricing */}
-                  {hoveredModel.fullModelData?.pricing && (
+                  {modelToShow.fullModelData?.pricing && (
                     <div>
                       <h4 className="text-xs font-medium text-muted-foreground mb-2">
                         Pricing
@@ -528,7 +552,7 @@ export const SearchableModelSelector: React.FC<
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Prompt:</span>
                           <span className="text-foreground">
-                            ${hoveredModel.fullModelData.pricing.prompt}/1K
+                            ${modelToShow.fullModelData.pricing.prompt}/1K
                             tokens
                           </span>
                         </div>
@@ -537,7 +561,7 @@ export const SearchableModelSelector: React.FC<
                             Completion:
                           </span>
                           <span className="text-foreground">
-                            ${hoveredModel.fullModelData.pricing.completion}
+                            ${modelToShow.fullModelData.pricing.completion}
                             /1K tokens
                           </span>
                         </div>
@@ -546,13 +570,13 @@ export const SearchableModelSelector: React.FC<
                   )}
 
                   {/* Context Length */}
-                  {hoveredModel.fullModelData?.contextLength && (
+                  {modelToShow.fullModelData?.contextLength && (
                     <div>
                       <h4 className="text-xs font-medium text-muted-foreground mb-1">
                         Context Length
                       </h4>
                       <p className="text-xs text-foreground">
-                        {hoveredModel.fullModelData.contextLength.toLocaleString()}{" "}
+                        {modelToShow.fullModelData.contextLength.toLocaleString()}{" "}
                         tokens
                       </p>
                     </div>
@@ -564,7 +588,7 @@ export const SearchableModelSelector: React.FC<
                       Model ID
                     </h4>
                     <p className="text-xs text-muted-foreground font-mono break-all">
-                      {hoveredModel.model.modelId}
+                      {modelToShow.model.modelId}
                     </p>
                   </div>
                 </div>
@@ -572,7 +596,7 @@ export const SearchableModelSelector: React.FC<
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <IconLock className="w-8 h-8 text-muted-foreground/30 mb-2" />
                   <p className="text-xs text-muted-foreground">
-                    Hover over a model to see details
+                    Select a model to see details
                   </p>
                 </div>
               )}
