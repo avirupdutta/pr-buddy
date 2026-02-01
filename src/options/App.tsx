@@ -14,6 +14,7 @@ import {
   IconTrash,
   IconCircleCheck,
   IconX,
+  IconSettings,
 } from "@tabler/icons-react";
 import {
   OpenAILogo,
@@ -975,11 +976,9 @@ export function OptionsApp() {
             )}
             <div className="flex items-center justify-center sm:justify-start gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-                <IconPuzzle className="w-7 h-7" />
+                <IconSettings className="w-7 h-7" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Extension Settings
-              </h1>
+              <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
             </div>
             <p className="text-muted-foreground text-lg leading-relaxed max-w-xl">
               Configure your API keys to enable AI-generated PR descriptions.
