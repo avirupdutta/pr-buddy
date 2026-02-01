@@ -93,11 +93,19 @@
       "name": "Groq",
       "models": [
         {
-          "id": "qwen/qwen3-32b",
-          "name": "Qwen 3 32B",
-          "modelId": "qwen/qwen3-32b",
-          "description": "Qwen's large language model on Groq",
+          "id": "llama-3.3-70b-versatile",
+          "name": "Llama 3.3 70B",
+          "modelId": "llama-3.3-70b-versatile",
+          "description": "Meta's large language model on Groq",
           "supportsJsonSchema": false
+        },
+        {
+          "id": "openai/gpt-oss-120b",
+          "name": "GPT OSS 120B",
+          "modelId": "openai/gpt-oss-120b",
+          "description": "OpenAI's large model on Groq",
+          "supportsJsonSchema": true,
+          "reasoningEffort": "high"
         }
       ]
     },

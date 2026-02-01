@@ -269,7 +269,11 @@ export const SearchableModelSelector: React.FC<
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         {selectedOption ? (
-          <div className="flex items-center gap-3 max-w-[150px]">
+          <div className="flex items-center gap-2 max-w-[150px]">
+            <ProviderLogo
+              provider={selectedOption.provider as AIProviderType}
+              size={12}
+            />
             <span className="text-xs flex-1 truncate">
               {selectedOption.model.name}
             </span>

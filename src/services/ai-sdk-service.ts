@@ -4,6 +4,7 @@ import {
   extractProviderFromModel,
   getProviderStructuredOutputCapabilities,
   modelSupportsJsonSchema,
+  getModelReasoningEffort,
 } from "./ai-provider-registry";
 import type { AIModel, GenerateResponse } from "@/types/chrome";
 import type {
@@ -75,6 +76,16 @@ export class AISDKService {
 
     try {
       const modelId = this.getModelIdentifier(params.model);
+      const modelProvider = params.model.provider || "openrouter";
+
+      // DEBUG: Log reasoning effort lookup
+      const reasoningEffort = getModelReasoningEffort(
+        params.model.modelId,
+        modelProvider,
+      );
+      console.log("[DEBUG generateText] Model:", params.model.modelId);
+      console.log("[DEBUG generateText] Provider:", modelProvider);
+      console.log("[DEBUG generateText] Reasoning Effort:", reasoningEffort);
 
       const { text } = await generateText({
         model: registry.languageModel(modelId as `${string}:${string}`),
@@ -82,6 +93,24 @@ export class AISDKService {
           { role: "system", content: params.systemPrompt },
           { role: "user", content: params.userPrompt },
         ],
+        // Apply reasoning effort from model configuration if specified
+        ...(reasoningEffort && {
+          providerOptions: {
+            [modelProvider]: {
+              reasoningEffort: reasoningEffort,
+            },
+          },
+        }),
+      });
+
+      // DEBUG: Log the actual request options being sent
+      console.log("[DEBUG generateText] Request options:", {
+        model: modelId,
+        provider: modelProvider,
+        reasoningEffort: reasoningEffort,
+        providerOptions: reasoningEffort
+          ? { [modelProvider]: { reasoningEffort } }
+          : undefined,
       });
 
       // Parse response for title and description (similar to existing format)
@@ -113,6 +142,16 @@ export class AISDKService {
 
     try {
       const modelId = this.getModelIdentifier(params.model);
+      const modelProvider = params.model.provider || "openrouter";
+
+      // DEBUG: Log reasoning effort lookup
+      const reasoningEffort = getModelReasoningEffort(
+        params.model.modelId,
+        modelProvider,
+      );
+      console.log("[DEBUG generateTextStream] Model:", params.model.modelId);
+      console.log("[DEBUG generateTextStream] Provider:", modelProvider);
+      console.log("[DEBUG generateTextStream] Reasoning Effort:", reasoningEffort);
 
       const { textStream } = await streamText({
         model: registry.languageModel(modelId),
@@ -120,6 +159,24 @@ export class AISDKService {
           { role: "system", content: params.systemPrompt },
           { role: "user", content: params.userPrompt },
         ],
+        // Apply reasoning effort from model configuration if specified
+        ...(reasoningEffort && {
+          providerOptions: {
+            [modelProvider]: {
+              reasoningEffort: reasoningEffort,
+            },
+          },
+        }),
+      });
+
+      // DEBUG: Log the actual request options being sent
+      console.log("[DEBUG generateTextStream] Request options:", {
+        model: modelId,
+        provider: modelProvider,
+        reasoningEffort: reasoningEffort,
+        providerOptions: reasoningEffort
+          ? { [modelProvider]: { reasoningEffort } }
+          : undefined,
       });
 
       let accumulatedText = "";
@@ -202,10 +259,23 @@ export class AISDKService {
       provider,
     );
 
+    // DEBUG: Log reasoning effort lookup
+    const reasoningEffort = getModelReasoningEffort(params.model.modelId, provider);
+    console.log("[DEBUG generateStructuredText] Model:", params.model.modelId);
+    console.log("[DEBUG generateStructuredText] Provider:", provider);
+    console.log("[DEBUG generateStructuredText] Reasoning Effort:", reasoningEffort);
+    console.log("[DEBUG generateStructuredText] Model provider from params:", params.model.provider);
+
     try {
       // Only use native structured output if both provider and model support it
       if (capabilities.supportsNativeStructuredOutput && supportsJsonSchema) {
         // Use native structured output
+        console.log("[DEBUG generateStructuredText] Request options:", {
+          model: modelId,
+          provider: provider,
+          reasoningEffort: reasoningEffort,
+          hasProviderOptions: !!reasoningEffort,
+        });
         const result = await generateText({
           model: registry.languageModel(modelId),
           output: Output.object({
@@ -215,6 +285,14 @@ export class AISDKService {
             { role: "system", content: params.systemPrompt },
             { role: "user", content: params.userPrompt },
           ],
+          // Apply reasoning effort from model configuration if specified
+          ...(reasoningEffort && {
+            providerOptions: {
+              [provider]: {
+                reasoningEffort: reasoningEffort,
+              },
+            },
+          }),
         });
 
         return {
@@ -261,6 +339,7 @@ export class AISDKService {
     modelId: string,
   ): Promise<StructuredOutputResult | StructuredOutputError> {
     const registry = this.initializeRegistry();
+    const modelProvider = params.model.provider || "openrouter";
 
     try {
       const { text } = await generateText({
@@ -272,6 +351,20 @@ export class AISDKService {
           },
           { role: "user", content: params.userPrompt },
         ],
+        // Apply reasoning effort from model configuration if specified
+        ...(getModelReasoningEffort(
+          params.model.modelId,
+          modelProvider,
+        ) && {
+          providerOptions: {
+            [modelProvider]: {
+              reasoningEffort: getModelReasoningEffort(
+                params.model.modelId,
+                modelProvider,
+              ),
+            },
+          },
+        }),
       });
 
       // Try to parse JSON from the response
@@ -350,12 +443,25 @@ export class AISDKService {
       provider,
     );
 
+    // DEBUG: Log reasoning effort lookup
+    const reasoningEffort = getModelReasoningEffort(params.model.modelId, provider);
+    console.log("[DEBUG generateStructuredTextStream] Model:", params.model.modelId);
+    console.log("[DEBUG generateStructuredTextStream] Provider:", provider);
+    console.log("[DEBUG generateStructuredTextStream] Reasoning Effort:", reasoningEffort);
+
     try {
       // Only use streaming structured output if both provider and model support it
       if (
         capabilities.supportsStreamingStructuredOutput &&
         supportsJsonSchema
       ) {
+        // Use streaming structured output
+        console.log("[DEBUG generateStructuredTextStream] Request options:", {
+          model: modelId,
+          provider: provider,
+          reasoningEffort: reasoningEffort,
+          hasProviderOptions: !!reasoningEffort,
+        });
         // Use streaming structured output
         const result = await streamText({
           model: registry.languageModel(modelId as `${string}:${string}`),
@@ -366,6 +472,14 @@ export class AISDKService {
             { role: "system", content: params.systemPrompt },
             { role: "user", content: params.userPrompt },
           ],
+          // Apply reasoning effort from model configuration if specified
+          ...(reasoningEffort && {
+            providerOptions: {
+              [provider]: {
+                reasoningEffort: reasoningEffort,
+              },
+            },
+          }),
         });
 
         let accumulatedData: Partial<PRResponse> = {};
@@ -397,6 +511,14 @@ export class AISDKService {
             },
             { role: "user", content: params.userPrompt },
           ],
+          // Apply reasoning effort from model configuration if specified
+          ...(reasoningEffort && {
+            providerOptions: {
+              [provider]: {
+                reasoningEffort: reasoningEffort,
+              },
+            },
+          }),
         });
 
         let accumulatedText = "";

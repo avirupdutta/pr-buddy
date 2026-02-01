@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
 // Zod schema for PR response validation
+// Note: Groq API requires all properties to be listed in `required` array
+// when using structured output with response_format
 export const PRResponseSchema = z.object({
-  title: z.string().optional().describe('The PR title'),
+  title: z.string().describe('The PR title'),
   description: z.string().describe('The PR description in markdown format'),
 });
 

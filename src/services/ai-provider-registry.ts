@@ -24,6 +24,7 @@ interface ModelMapping {
   supportsJsonSchema?: boolean;
   pricing?: { prompt: string; completion: string };
   contextLength?: number;
+  reasoningEffort?: "none" | "default" | "low" | "medium" | "high";
 }
 
 interface ProviderData {
@@ -171,6 +172,13 @@ export function createAIProviderRegistry(
 
 // Get provider from model string
 export function extractProviderFromModel(modelString: string): AIProviderType {
+  // Check for models hosted on specific providers first (before checking model prefixes)
+  // These are models that have a provider prefix in their ID but are hosted elsewhere
+  const groqHostedModels = ["openai/gpt-oss-120b"];
+  if (groqHostedModels.includes(modelString)) {
+    return "groq";
+  }
+
   if (modelString.includes("openai/") || modelString.startsWith("gpt-"))
     return "openai";
   if (modelString.includes("anthropic/") || modelString.startsWith("claude-"))
@@ -278,4 +286,29 @@ export function modelSupportsJsonSchema(
 
   // Return the supportsJsonSchema flag, defaulting to false if not specified
   return model.supportsJsonSchema === true;
+}
+
+// Get reasoning effort for a specific model from model-mappings.json
+export function getModelReasoningEffort(
+  modelId: string,
+  provider: string,
+): "none" | "default" | "low" | "medium" | "high" | undefined {
+  const typedMappings = modelMappings as ModelMappingsData;
+  const providerData = typedMappings.providers[provider];
+
+  if (!providerData) {
+    return undefined;
+  }
+
+  // Find the model in the provider's models
+  const model = providerData.models.find(
+    (m) => m.modelId === modelId || modelId.includes(m.modelId) || m.id === modelId,
+  );
+
+  if (!model) {
+    return undefined;
+  }
+
+  // Return the reasoningEffort value if specified
+  return model.reasoningEffort;
 }
