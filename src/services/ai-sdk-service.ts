@@ -1,7 +1,16 @@
 import { streamText, generateText, Output } from "ai";
-import { createAIProviderRegistry, extractProviderFromModel, getProviderStructuredOutputCapabilities } from "./ai-provider-registry";
+import {
+  createAIProviderRegistry,
+  extractProviderFromModel,
+  getProviderStructuredOutputCapabilities,
+} from "./ai-provider-registry";
 import type { AIModel, GenerateResponse } from "@/types/chrome";
-import type { PRResponse, StructuredOutputResult, StructuredOutputError, StructuredStreamEvent } from "@/types/structured-output";
+import type {
+  PRResponse,
+  StructuredOutputResult,
+  StructuredOutputError,
+  StructuredStreamEvent,
+} from "@/types/structured-output";
 import { PRResponseSchema } from "@/types/structured-output";
 
 // Request parameters interface (matching existing implementation)
@@ -57,22 +66,6 @@ export class AISDKService {
   private getModelIdentifier(model: AIModel): `${string}:${string}` {
     // For direct provider calls, use provider:modelId format
     const provider = model.provider || "openrouter";
-    
-    // Handle OpenRouter models that already have provider prefix in modelId (e.g., "openai/gpt-4o-mini")
-    // We need to use the full modelId as-is for OpenRouter
-    if (provider === "openrouter" && model.modelId.includes("/")) {
-      return `${provider}:${model.modelId}` as `${string}:${string}`;
-    }
-    
-    // For other providers, check if modelId already has a provider prefix that needs to be stripped
-    if (model.modelId.includes("/")) {
-      const parts = model.modelId.split("/");
-      if (parts.length === 2) {
-        // Use the part after the slash for non-OpenRouter providers
-        return `${provider}:${parts[1]}` as `${string}:${string}`;
-      }
-    }
-    
     return `${provider}:${model.modelId}` as `${string}:${string}`;
   }
 
@@ -194,7 +187,9 @@ export class AISDKService {
   }
 
   // Generate structured output for PR responses
-  async generateStructuredText(params: AIRequestParams): Promise<StructuredOutputResult | StructuredOutputError> {
+  async generateStructuredText(
+    params: AIRequestParams,
+  ): Promise<StructuredOutputResult | StructuredOutputError> {
     const registry = this.initializeRegistry();
     const provider = extractProviderFromModel(params.model.modelId);
     const capabilities = getProviderStructuredOutputCapabilities(provider);
@@ -221,20 +216,22 @@ export class AISDKService {
           model: params.model.modelId,
         };
       }
-      
+
       // Fallback to JSON parsing for providers that don't support native structured output
       if (capabilities.fallbackToJSONParsing) {
         return await this.generateWithJSONFallback(params, provider, modelId);
       }
     } catch (error) {
       // Check if it's a NoObjectGeneratedError and try fallback
-      if (error instanceof Error && error.name === 'NoObjectGeneratedError') {
+      if (error instanceof Error && error.name === "NoObjectGeneratedError") {
         return await this.generateWithJSONFallback(params, provider, modelId);
       }
-      
+
       return {
         success: false,
-        error: `AI SDK Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        error: `AI SDK Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         provider,
         model: params.model.modelId,
       };
@@ -253,17 +250,17 @@ export class AISDKService {
   private async generateWithJSONFallback(
     params: AIRequestParams,
     provider: string,
-    modelId: string
+    modelId: string,
   ): Promise<StructuredOutputResult | StructuredOutputError> {
     const registry = this.initializeRegistry();
-    
+
     try {
       const { text } = await generateText({
         model: registry.languageModel(modelId as `${string}:${string}`),
         messages: [
-          { 
-            role: "system", 
-            content: `${params.systemPrompt}\n\nIMPORTANT: You must respond with valid JSON in this exact format:\n{\n  "title": "A concise PR title",\n  "description": "The full PR description in Markdown format"\n}` 
+          {
+            role: "system",
+            content: `${params.systemPrompt}\n\nIMPORTANT: You must respond with valid JSON in this exact format:\n{\n  "title": "A concise PR title",\n  "description": "The full PR description in Markdown format"\n}`,
           },
           { role: "user", content: params.userPrompt },
         ],
@@ -275,7 +272,7 @@ export class AISDKService {
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           const validated = PRResponseSchema.parse(parsed);
-          
+
           return {
             success: true,
             data: validated,
@@ -287,15 +284,15 @@ export class AISDKService {
         // If JSON parsing fails, try to extract title and description from text
         const titleMatch = text.match(/TITLE: (.+?)(?=\n\nDESCRIPTION:|$)/s);
         const descriptionMatch = text.match(/DESCRIPTION: (.+?)$/s);
-        
+
         if (descriptionMatch) {
           const result = {
             title: titleMatch ? titleMatch[1].trim() : undefined,
             description: descriptionMatch[1].trim(),
           };
-          
+
           const validated = PRResponseSchema.parse(result);
-          
+
           return {
             success: true,
             data: validated,
@@ -309,9 +306,9 @@ export class AISDKService {
       const fallbackResult = {
         description: text.trim(),
       };
-      
+
       const validated = PRResponseSchema.parse(fallbackResult);
-      
+
       return {
         success: true,
         data: validated,
@@ -321,7 +318,9 @@ export class AISDKService {
     } catch (error) {
       return {
         success: false,
-        error: `JSON fallback failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        error: `JSON fallback failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         provider,
         model: params.model.modelId,
       };
@@ -356,7 +355,7 @@ export class AISDKService {
         for await (const partialObject of result.partialOutputStream) {
           // Accumulate the partial data
           accumulatedData = { ...accumulatedData, ...partialObject };
-          
+
           yield {
             type: "partial",
             data: {
@@ -396,7 +395,9 @@ export class AISDKService {
     } catch (error) {
       yield {
         type: "error",
-        error: `AI SDK Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        error: `AI SDK Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       };
     }
   }

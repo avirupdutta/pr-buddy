@@ -34,7 +34,9 @@ function generateProviderModelMappings(): Record<AIProviderType, string[]> {
     openrouter: [],
   };
 
-  for (const [providerId, providerData] of Object.entries(modelMappings.providers)) {
+  for (const [providerId, providerData] of Object.entries(
+    modelMappings.providers,
+  )) {
     const provider = providerId as AIProviderType;
     if (provider in mappings) {
       mappings[provider] = providerData.models.map((m) => m.modelId);
@@ -123,6 +125,7 @@ export function createAIProviderRegistry(
   if (configs.groq?.apiKey) {
     providers.groq = createGroq({
       apiKey: configs.groq.apiKey,
+      baseURL: "https://api.groq.com/openai/v1",
     });
   }
 
@@ -174,14 +177,8 @@ export function normalizeModelString(
   modelString: string,
   provider: AIProviderType,
 ): `${string}:${string}` {
-  // Remove provider prefixes if they exist
-  const cleanModel = modelString.replace(
-    /^(openai|anthropic|google|groq|cerebras|openrouter)\/|:/,
-    "",
-  );
-
   // Return provider-prefixed model for AI SDK (requires semicolon separator)
-  return `${provider}:${cleanModel}` as `${string}:${string}`;
+  return `${provider}:${modelString}` as `${string}:${string}`;
 }
 
 // Validate provider-model compatibility
@@ -212,16 +209,23 @@ export function getProviderStructuredOutputCapabilities(
 }
 
 // Check if a provider supports native structured output
-export function supportsNativeStructuredOutput(provider: AIProviderType): boolean {
-  return PROVIDER_STRUCTURED_OUTPUT_CAPABILITIES[provider].supportsNativeStructuredOutput;
+export function supportsNativeStructuredOutput(
+  provider: AIProviderType,
+): boolean {
+  return PROVIDER_STRUCTURED_OUTPUT_CAPABILITIES[provider]
+    .supportsNativeStructuredOutput;
 }
 
 // Check if a provider needs fallback to JSON parsing
 export function needsFallbackToJSONParsing(provider: AIProviderType): boolean {
-  return PROVIDER_STRUCTURED_OUTPUT_CAPABILITIES[provider].fallbackToJSONParsing;
+  return PROVIDER_STRUCTURED_OUTPUT_CAPABILITIES[provider]
+    .fallbackToJSONParsing;
 }
 
 // Check if a provider supports streaming structured output
-export function supportsStreamingStructuredOutput(provider: AIProviderType): boolean {
-  return PROVIDER_STRUCTURED_OUTPUT_CAPABILITIES[provider].supportsStreamingStructuredOutput;
+export function supportsStreamingStructuredOutput(
+  provider: AIProviderType,
+): boolean {
+  return PROVIDER_STRUCTURED_OUTPUT_CAPABILITIES[provider]
+    .supportsStreamingStructuredOutput;
 }
