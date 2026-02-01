@@ -14,6 +14,7 @@ export interface AIModel {
   modelId: string;
   isActive: boolean;
   provider?: string; // Optional for backward compatibility
+  supportsJsonSchema?: boolean; // Whether the model supports JSON Schema for structured output
 }
 
 // Legacy type - kept for backwards compatibility during migration
@@ -41,6 +42,7 @@ export interface GeneratorSettings {
     id: string;
     modelId: string;
     provider: string;
+    supportsJsonSchema?: boolean;
   };
 }
 

@@ -14,6 +14,27 @@ export interface AIProviderConfig {
   provider?: string;
 }
 
+// Model mapping interface from JSON
+interface ModelMapping {
+  id: string;
+  name: string;
+  modelId: string;
+  description: string;
+  isFree?: boolean;
+  supportsJsonSchema?: boolean;
+  pricing?: { prompt: string; completion: string };
+  contextLength?: number;
+}
+
+interface ProviderData {
+  name: string;
+  models: ModelMapping[];
+}
+
+type ModelMappingsData = {
+  providers: Record<string, ProviderData>;
+};
+
 // Supported provider types
 export type AIProviderType =
   | "openai"
@@ -34,8 +55,10 @@ function generateProviderModelMappings(): Record<AIProviderType, string[]> {
     openrouter: [],
   };
 
+  const typedMappings = modelMappings as ModelMappingsData;
+
   for (const [providerId, providerData] of Object.entries(
-    modelMappings.providers,
+    typedMappings.providers,
   )) {
     const provider = providerId as AIProviderType;
     if (provider in mappings) {
@@ -228,4 +251,31 @@ export function supportsStreamingStructuredOutput(
 ): boolean {
   return PROVIDER_STRUCTURED_OUTPUT_CAPABILITIES[provider]
     .supportsStreamingStructuredOutput;
+}
+
+// Check if a specific model supports JSON Schema for structured output
+export function modelSupportsJsonSchema(
+  modelId: string,
+  provider: AIProviderType,
+): boolean {
+  const typedMappings = modelMappings as ModelMappingsData;
+  const providerData = typedMappings.providers[provider];
+
+  if (!providerData) {
+    // Default to false for unknown providers (safer default)
+    return false;
+  }
+
+  // Find the model in the provider's models
+  const model = providerData.models.find(
+    (m) => m.modelId === modelId || modelId.includes(m.modelId) || m.id === modelId,
+  );
+
+  if (!model) {
+    // Default to false for unknown models (safer default)
+    return false;
+  }
+
+  // Return the supportsJsonSchema flag, defaulting to false if not specified
+  return model.supportsJsonSchema === true;
 }

@@ -161,6 +161,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
           id: selectedModel.id,
           modelId: selectedModel.modelId,
           provider: selectedModel.provider || 'openrouter',
+          supportsJsonSchema: selectedModel.supportsJsonSchema,
         },
       };
 

@@ -9,6 +9,7 @@
           "modelId": "arcee-ai/trinity-large-preview:free",
           "description": "Frontier-scale open-weight model for creative writing and agentic performance",
           "isFree": true,
+          "supportsJsonSchema": true,
           "pricing": {
             "prompt": "0.00",
             "completion": "0.00"
@@ -24,25 +25,29 @@
           "id": "gpt-4o",
           "name": "GPT-4o",
           "modelId": "gpt-4o",
-          "description": "OpenAI's flagship multimodal model"
+          "description": "OpenAI's flagship multimodal model",
+          "supportsJsonSchema": true
         },
         {
           "id": "gpt-4o-mini",
           "name": "GPT-4o Mini",
           "modelId": "gpt-4o-mini",
-          "description": "OpenAI's efficient small model"
+          "description": "OpenAI's efficient small model",
+          "supportsJsonSchema": true
         },
         {
           "id": "gpt-4-turbo",
           "name": "GPT-4 Turbo",
           "modelId": "gpt-4-turbo",
-          "description": "OpenAI's advanced reasoning model"
+          "description": "OpenAI's advanced reasoning model",
+          "supportsJsonSchema": true
         },
         {
           "id": "gpt-3.5-turbo",
           "name": "GPT-3.5 Turbo",
           "modelId": "gpt-3.5-turbo",
-          "description": "OpenAI's classic chat model"
+          "description": "OpenAI's classic chat model",
+          "supportsJsonSchema": true
         }
       ]
     },
@@ -53,19 +58,22 @@
           "id": "claude-3.5-sonnet",
           "name": "Claude 3.5 Sonnet",
           "modelId": "claude-3-5-sonnet-20241022",
-          "description": "Anthropic's most capable model"
+          "description": "Anthropic's most capable model",
+          "supportsJsonSchema": false
         },
         {
           "id": "claude-3.5-haiku",
           "name": "Claude 3.5 Haiku",
           "modelId": "claude-3-5-haiku-20241022",
-          "description": "Anthropic's fast and compact model"
+          "description": "Anthropic's fast and compact model",
+          "supportsJsonSchema": false
         },
         {
           "id": "claude-3-opus",
           "name": "Claude 3 Opus",
           "modelId": "claude-3-opus-20240229",
-          "description": "Anthropic's most powerful model"
+          "description": "Anthropic's most powerful model",
+          "supportsJsonSchema": false
         }
       ]
     },
@@ -76,7 +84,8 @@
           "id": "gemini-2.5-flash",
           "name": "Gemini 2.5 Flash",
           "modelId": "gemini-2.5-flash",
-          "description": "Google's fast multimodal model"
+          "description": "Google's fast multimodal model",
+          "supportsJsonSchema": true
         }
       ]
     },
@@ -87,7 +96,8 @@
           "id": "qwen/qwen3-32b",
           "name": "Qwen 3 32B",
           "modelId": "qwen/qwen3-32b",
-          "description": "Qwen's large language model on Groq"
+          "description": "Qwen's large language model on Groq",
+          "supportsJsonSchema": false
         }
       ]
     },
@@ -98,13 +108,15 @@
           "id": "zai-glm-4.7",
           "name": "Zai GLM 4.7",
           "modelId": "zai-glm-4.7",
-          "description": "Zai's large model on Cerebras"
+          "description": "Zai's large model on Cerebras",
+          "supportsJsonSchema": true
         },
         {
           "id": "gpt-oss-120b",
           "name": "GPT OSS 120B",
           "modelId": "gpt-oss-120b",
-          "description": "OpenAI's large model on Cerebras"
+          "description": "OpenAI's large model on Cerebras",
+          "supportsJsonSchema": true
         }
       ]
     }

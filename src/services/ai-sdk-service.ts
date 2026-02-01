@@ -3,6 +3,7 @@ import {
   createAIProviderRegistry,
   extractProviderFromModel,
   getProviderStructuredOutputCapabilities,
+  modelSupportsJsonSchema,
 } from "./ai-provider-registry";
 import type { AIModel, GenerateResponse } from "@/types/chrome";
 import type {
@@ -195,8 +196,15 @@ export class AISDKService {
     const capabilities = getProviderStructuredOutputCapabilities(provider);
     const modelId = this.getModelIdentifier(params.model);
 
+    // Check if the specific model supports JSON Schema
+    const supportsJsonSchema = modelSupportsJsonSchema(
+      params.model.modelId,
+      provider,
+    );
+
     try {
-      if (capabilities.supportsNativeStructuredOutput) {
+      // Only use native structured output if both provider and model support it
+      if (capabilities.supportsNativeStructuredOutput && supportsJsonSchema) {
         // Use native structured output
         const result = await generateText({
           model: registry.languageModel(modelId),
@@ -217,8 +225,8 @@ export class AISDKService {
         };
       }
 
-      // Fallback to JSON parsing for providers that don't support native structured output
-      if (capabilities.fallbackToJSONParsing) {
+      // Fallback to JSON parsing for providers/models that don't support native structured output
+      if (capabilities.fallbackToJSONParsing || !supportsJsonSchema) {
         return await this.generateWithJSONFallback(params, provider, modelId);
       }
     } catch (error) {
@@ -336,8 +344,18 @@ export class AISDKService {
     const capabilities = getProviderStructuredOutputCapabilities(provider);
     const modelId = this.getModelIdentifier(params.model);
 
+    // Check if the specific model supports JSON Schema
+    const supportsJsonSchema = modelSupportsJsonSchema(
+      params.model.modelId,
+      provider,
+    );
+
     try {
-      if (capabilities.supportsStreamingStructuredOutput) {
+      // Only use streaming structured output if both provider and model support it
+      if (
+        capabilities.supportsStreamingStructuredOutput &&
+        supportsJsonSchema
+      ) {
         // Use streaming structured output
         const result = await streamText({
           model: registry.languageModel(modelId as `${string}:${string}`),
@@ -369,20 +387,26 @@ export class AISDKService {
           type: "complete",
         };
       } else {
-        // Fallback to regular text streaming
+        // Fallback to regular text streaming for models that don't support JSON Schema
         const { textStream } = await streamText({
           model: registry.languageModel(modelId as `${string}:${string}`),
           messages: [
-            { role: "system", content: params.systemPrompt },
+            {
+              role: "system",
+              content: `${params.systemPrompt}\n\nIMPORTANT: You must respond with valid JSON in this exact format:\n{\n  "title": "A concise PR title",\n  "description": "The full PR description in Markdown format"\n}`,
+            },
             { role: "user", content: params.userPrompt },
           ],
         });
 
+        let accumulatedText = "";
+
         for await (const chunk of textStream) {
+          accumulatedText += chunk;
           yield {
             type: "partial",
             data: {
-              description: chunk,
+              description: accumulatedText,
               isComplete: false,
             },
           };

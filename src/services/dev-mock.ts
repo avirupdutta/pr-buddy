@@ -26,6 +26,7 @@ function findPredefinedModel(id: string): AIModel | null {
         modelId: foundModel.modelId,
         provider: providerId,
         isActive: true,
+        supportsJsonSchema: foundModel.supportsJsonSchema,
       };
     }
   }
@@ -343,6 +344,7 @@ async function handleDevGenerationStream(
             modelId: selectedModelFromSettings.modelId,
             provider: selectedModelFromSettings.provider,
             isActive: true,
+            supportsJsonSchema: selectedModelFromSettings.supportsJsonSchema,
           };
         } else {
           throw new Error(
