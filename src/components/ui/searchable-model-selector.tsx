@@ -353,7 +353,7 @@ export const SearchableModelSelector: React.FC<
           </div>
 
           {/* Two-column layout */}
-          <div className="flex h-60">
+          <div className="flex h-68">
             {/* Options Column */}
             <ScrollArea
               viewportRef={scrollAreaRef}
@@ -463,144 +463,142 @@ export const SearchableModelSelector: React.FC<
             </ScrollArea>
 
             {/* Details Panel Column */}
-            <div
-              className="flex-1 p-4 bg-muted/30 overflow-y-auto"
+            <ScrollArea
+              classNames={{ root: "flex-1 bg-muted/30" }}
               onMouseEnter={() => setIsDetailsPanelHovered(true)}
               onMouseLeave={() => setIsDetailsPanelHovered(false)}
             >
-              {modelToShow ? (
-                <div className="space-y-4">
-                  {/* Model Name */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground mb-1">
-                      {modelToShow.model.name}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <ProviderLogo
-                        provider={modelToShow.provider as AIProviderType}
-                        size={14}
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {modelToShow.providerName}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  {modelToShow.fullModelData?.description && (
+              <div className="p-4">
+                {modelToShow ? (
+                  <div className="space-y-4">
+                    {/* Model Name */}
                     <div>
-                      <h4 className="text-xs font-medium text-muted-foreground mb-1">
-                        Description
-                      </h4>
-                      <p className="text-xs text-foreground leading-relaxed">
-                        {modelToShow.fullModelData.description}
-                      </p>
+                      <h3 className="text-sm font-semibold text-foreground mb-1">
+                        {modelToShow.model.name}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <ProviderLogo
+                          provider={modelToShow.provider as AIProviderType}
+                          size={14}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {modelToShow.providerName}
+                        </span>
+                      </div>
                     </div>
-                  )}
 
-                  {/* Features */}
-                  <div className="space-y-2">
-                    {modelToShow.fullModelData?.isFree !== undefined && (
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded-full",
-                            modelToShow.fullModelData.isFree
-                              ? "bg-green-500/20 text-green-600 dark:text-green-400"
-                              : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {modelToShow.fullModelData.isFree ? "Free" : "Paid"}
-                        </span>
+                    {/* Description */}
+                    {modelToShow.fullModelData?.description && (
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground mb-1">
+                          Description
+                        </h4>
+                        <p className="text-xs text-foreground leading-relaxed">
+                          {modelToShow.fullModelData.description}
+                        </p>
                       </div>
                     )}
 
-                    {modelToShow.fullModelData?.supportsJsonSchema !==
-                      undefined && (
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded-full",
-                            modelToShow.fullModelData.supportsJsonSchema
-                              ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                              : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {modelToShow.fullModelData.supportsJsonSchema
-                            ? "JSON Schema"
-                            : "No JSON Schema"}
-                        </span>
-                      </div>
-                    )}
-
-                    {modelToShow.fullModelData?.reasoningEffort && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400">
-                          {modelToShow.fullModelData.reasoningEffort} reasoning
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Pricing */}
-                  {modelToShow.fullModelData?.pricing && (
-                    <div>
-                      <h4 className="text-xs font-medium text-muted-foreground mb-2">
-                        Pricing
-                      </h4>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Prompt:</span>
-                          <span className="text-foreground">
-                            ${modelToShow.fullModelData.pricing.prompt}/1K
-                            tokens
+                    {/* Features */}
+                    <div className="space-y-2">
+                      {modelToShow.fullModelData?.isFree !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full",
+                              modelToShow.fullModelData.isFree
+                                ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {modelToShow.fullModelData.isFree ? "Free" : "Paid"}
                           </span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">
-                            Completion:
-                          </span>
-                          <span className="text-foreground">
-                            ${modelToShow.fullModelData.pricing.completion}
-                            /1K tokens
+                      )}
+
+                      {modelToShow.fullModelData?.supportsJsonSchema !==
+                        undefined && (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full",
+                              modelToShow.fullModelData.supportsJsonSchema
+                                ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {modelToShow.fullModelData.supportsJsonSchema
+                              ? "JSON Schema"
+                              : "No JSON Schema"}
                           </span>
                         </div>
-                      </div>
-                    </div>
-                  )}
+                      )}
 
-                  {/* Context Length */}
-                  {modelToShow.fullModelData?.contextLength && (
+                      {modelToShow.fullModelData?.reasoningEffort && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400">
+                            {modelToShow.fullModelData.reasoningEffort} reasoning
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Pricing */}
+                    {modelToShow.fullModelData?.pricing && (
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground mb-2">
+                          Pricing
+                        </h4>
+                        <div className="space-y-1">
+                          <div className="flex gap-1.5 text-xs">
+                            <span className="text-muted-foreground">Input:</span>
+                            <span className="text-foreground">
+                              ${modelToShow.fullModelData.pricing.prompt} / M
+                            </span>
+                          </div>
+                          <div className="flex gap-1.5 text-xs">
+                            <span className="text-muted-foreground">Output:</span>
+                            <span className="text-foreground">
+                              ${modelToShow.fullModelData.pricing.completion} / M
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Context Length */}
+                    {modelToShow.fullModelData?.contextLength && (
+                      <div>
+                        <h4 className="text-xs font-medium text-muted-foreground mb-1">
+                          Context Length
+                        </h4>
+                        <p className="text-xs text-foreground">
+                          {modelToShow.fullModelData.contextLength.toLocaleString()}{" "}
+                          tokens
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Model ID */}
                     <div>
                       <h4 className="text-xs font-medium text-muted-foreground mb-1">
-                        Context Length
+                        Model ID
                       </h4>
-                      <p className="text-xs text-foreground">
-                        {modelToShow.fullModelData.contextLength.toLocaleString()}{" "}
-                        tokens
+                      <p className="text-xs text-muted-foreground font-mono break-all">
+                        {modelToShow.model.modelId}
                       </p>
                     </div>
-                  )}
-
-                  {/* Model ID */}
-                  <div>
-                    <h4 className="text-xs font-medium text-muted-foreground mb-1">
-                      Model ID
-                    </h4>
-                    <p className="text-xs text-muted-foreground font-mono break-all">
-                      {modelToShow.model.modelId}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <IconLock className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                    <p className="text-xs text-muted-foreground">
+                      Select a model to see details
                     </p>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <IconLock className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                  <p className="text-xs text-muted-foreground">
-                    Select a model to see details
-                  </p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </ScrollArea>
           </div>
         </div>
       )}
