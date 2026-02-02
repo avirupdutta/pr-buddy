@@ -151,7 +151,7 @@ async function handleGenerationStream(
     aiModels?: AIModel[];
   };
 
-  // Decrypt API keys
+  // Decrypt all API keys
   const githubToken = result.githubToken
     ? await decryptApiKey(result.githubToken)
     : null;
@@ -161,6 +161,16 @@ async function handleGenerationStream(
   const cerebrasKey = result.cerebrasKey
     ? await decryptApiKey(result.cerebrasKey)
     : null;
+  const openaiKey = result.openaiKey
+    ? await decryptApiKey(result.openaiKey)
+    : null;
+  const anthropicKey = result.anthropicKey
+    ? await decryptApiKey(result.anthropicKey)
+    : null;
+  const googleKey = result.googleKey
+    ? await decryptApiKey(result.googleKey)
+    : null;
+  const groqKey = result.groqKey ? await decryptApiKey(result.groqKey) : null;
 
   const templates =
     result.templates && result.templates.length > 0
@@ -171,7 +181,8 @@ async function handleGenerationStream(
       ? result.aiModels
       : DEFAULT_AI_MODELS;
 
-  if (!githubToken || (!openRouterKey && !cerebrasKey)) {
+  // Validate that we have GitHub token and at least one AI provider API key
+  if (!githubToken || (!openRouterKey && !cerebrasKey && !openaiKey && !anthropicKey && !googleKey && !groqKey)) {
     throw new Error("Missing API Keys. Please configure them in Settings.");
   }
 
@@ -315,7 +326,7 @@ async function handleGeneration(
     aiModels?: AIModel[];
   };
 
-  // Decrypt API keys
+  // Decrypt all API keys
   const githubToken = result.githubToken
     ? await decryptApiKey(result.githubToken)
     : null;
@@ -325,27 +336,6 @@ async function handleGeneration(
   const cerebrasKey = result.cerebrasKey
     ? await decryptApiKey(result.cerebrasKey)
     : null;
-
-  const templates =
-    result.templates && result.templates.length > 0
-      ? result.templates
-      : DEFAULT_TEMPLATES;
-  const aiModels =
-    result.aiModels && result.aiModels.length > 0
-      ? result.aiModels
-      : DEFAULT_AI_MODELS;
-
-  if (!githubToken || !openRouterKey) {
-    throw new Error("Missing API Keys. Please configure them in Settings.");
-  }
-
-  // Find active model
-  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
-
-  // Get the provider for the selected model
-  const provider = activeModel.provider || "openrouter";
-
-  // Decrypt additional API keys
   const openaiKey = result.openaiKey
     ? await decryptApiKey(result.openaiKey)
     : null;
@@ -356,6 +346,21 @@ async function handleGeneration(
     ? await decryptApiKey(result.googleKey)
     : null;
   const groqKey = result.groqKey ? await decryptApiKey(result.groqKey) : null;
+
+  const templates =
+    result.templates && result.templates.length > 0
+      ? result.templates
+      : DEFAULT_TEMPLATES;
+  const aiModels =
+    result.aiModels && result.aiModels.length > 0
+      ? result.aiModels
+      : DEFAULT_AI_MODELS;
+
+  // Find active model
+  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+
+  // Get the provider for the selected model
+  const provider = activeModel.provider || "openrouter";
 
   // Get the correct API key for the provider
   const getProviderApiKey = (): string | null => {
@@ -375,6 +380,11 @@ async function handleGeneration(
         return openRouterKey;
     }
   };
+
+  // Validate that we have GitHub token and at least one AI provider API key
+  if (!githubToken || (!openRouterKey && !cerebrasKey && !openaiKey && !anthropicKey && !googleKey && !groqKey)) {
+    throw new Error("Missing API Keys. Please configure them in Settings.");
+  }
 
   const providerApiKey = getProviderApiKey();
   if (!providerApiKey) {
