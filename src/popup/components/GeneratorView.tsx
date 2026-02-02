@@ -1,5 +1,6 @@
 import { IconSparkles, IconSettings } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { useGeneratorStore } from "@/stores/generator-store";
 import { TemplateSelector } from "./TemplateSelector";
@@ -86,12 +87,21 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
         </Button>
         <div className="flex items-center justify-between">
           <ModelSelector />
-          <button
-            onClick={openOptionsPage}
-            className="underline hover:text-foreground transition-colors cursor-pointer"
-          >
-            <IconSettings className="w-5 h-5" />
-          </button>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={openOptionsPage}
+                  className="underline hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <IconSettings className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">Settings</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

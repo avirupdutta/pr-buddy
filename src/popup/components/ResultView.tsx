@@ -41,13 +41,22 @@ function ModelSelectorFooter({ disabled = false }: { disabled?: boolean }) {
   return (
     <div className="flex items-center justify-between">
       <ModelSelector disabled={disabled} />
-      <button
-        onClick={openOptionsPage}
-        disabled={disabled}
-        className="underline hover:text-foreground transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <IconSettings className="w-5 h-5" />
-      </button>
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={openOptionsPage}
+              disabled={disabled}
+              className="underline hover:text-foreground transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <IconSettings className="w-5 h-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p className="text-xs">Settings</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
@@ -211,18 +220,27 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Label className="text-sm font-medium">Description</Label>
-                  <Button
-                    variant="ghost"
-                    onClick={handleCopy}
-                    disabled={isCopied || isGenerating}
-                    className="h-8 w-8 p-0 rounded-sm"
-                  >
-                    {isCopied ? (
-                      <IconCheck className="w-4 h-4" />
-                    ) : (
-                      <IconCopy className="w-4 h-4" />
-                    )}
-                  </Button>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          onClick={handleCopy}
+                          disabled={isCopied || isGenerating}
+                          className="h-8 w-8 p-0 rounded-sm"
+                        >
+                          {isCopied ? (
+                            <IconCheck className="w-4 h-4" />
+                          ) : (
+                            <IconCopy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p className="text-xs">{isCopied ? "Copied!" : "Copy to clipboard"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <TooltipProvider delayDuration={100}>
                   <TabsList className="h-8 bg-muted/50 border border-border/50 rounded-full p-0.5">
