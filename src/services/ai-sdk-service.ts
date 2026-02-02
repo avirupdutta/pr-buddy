@@ -157,14 +157,11 @@ export class AISDKService {
       const modelId = this.getModelIdentifier(params.model);
       const modelProvider = params.model.provider || "openrouter";
 
-      // DEBUG: Log reasoning effort lookup
+      // Get reasoning effort from model configuration if specified
       const reasoningEffort = getModelReasoningEffort(
         params.model.modelId,
         modelProvider,
       );
-      console.log("[DEBUG generateTextStream] Model:", params.model.modelId);
-      console.log("[DEBUG generateTextStream] Provider:", modelProvider);
-      console.log("[DEBUG generateTextStream] Reasoning Effort:", reasoningEffort);
 
       const { textStream } = await streamText({
         model: registry.languageModel(modelId),
@@ -180,16 +177,6 @@ export class AISDKService {
             },
           },
         }),
-      });
-
-      // DEBUG: Log the actual request options being sent
-      console.log("[DEBUG generateTextStream] Request options:", {
-        model: modelId,
-        provider: modelProvider,
-        reasoningEffort: reasoningEffort,
-        providerOptions: reasoningEffort
-          ? { [modelProvider]: { reasoningEffort } }
-          : undefined,
       });
 
       let accumulatedText = "";
@@ -459,11 +446,8 @@ export class AISDKService {
       provider,
     );
 
-    // DEBUG: Log reasoning effort lookup
+    // Get reasoning effort from model configuration if specified
     const reasoningEffort = getModelReasoningEffort(params.model.modelId, provider);
-    console.log("[DEBUG generateStructuredTextStream] Model:", params.model.modelId);
-    console.log("[DEBUG generateStructuredTextStream] Provider:", provider);
-    console.log("[DEBUG generateStructuredTextStream] Reasoning Effort:", reasoningEffort);
 
     try {
       // Only use streaming structured output if both provider and model support it
@@ -471,13 +455,6 @@ export class AISDKService {
         capabilities.supportsStreamingStructuredOutput &&
         supportsJsonSchema
       ) {
-        // Use streaming structured output
-        console.log("[DEBUG generateStructuredTextStream] Request options:", {
-          model: modelId,
-          provider: provider,
-          reasoningEffort: reasoningEffort,
-          hasProviderOptions: !!reasoningEffort,
-        });
         // Use streaming structured output
         const result = await streamText({
           model: registry.languageModel(modelId as `${string}:${string}`),
@@ -500,17 +477,27 @@ export class AISDKService {
 
         let accumulatedData: Partial<PRResponse> = {};
 
-        for await (const partialObject of result.partialOutputStream) {
-          // Accumulate the partial data
-          accumulatedData = { ...accumulatedData, ...partialObject };
+        try {
+          for await (const partialObject of result.partialOutputStream) {
+            // Accumulate the partial data
+            accumulatedData = { ...accumulatedData, ...partialObject };
 
+            yield {
+              type: "partial",
+              data: {
+                ...accumulatedData,
+                isComplete: false,
+              },
+            };
+          }
+        } catch (error) {
           yield {
-            type: "partial",
-            data: {
-              ...accumulatedData,
-              isComplete: false,
-            },
+            type: "error",
+            error: `AI SDK Error: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
           };
+          return;
         }
 
         yield {
@@ -518,63 +505,83 @@ export class AISDKService {
         };
       } else {
         // Fallback to regular text streaming for models that don't support JSON Schema
-        const { textStream } = await streamText({
-          model: registry.languageModel(modelId as `${string}:${string}`),
-          messages: [
-            {
-              role: "system",
-              content: `${params.systemPrompt}\n\nIMPORTANT: You must respond with valid JSON in this exact format:\n{\n  "title": "A concise PR title",\n  "description": "The full PR description in Markdown format"\n}`,
-            },
-            { role: "user", content: params.userPrompt },
-          ],
-          // Apply reasoning effort from model configuration if specified
-          ...(reasoningEffort && {
-            providerOptions: {
-              [provider]: {
-                reasoningEffort: reasoningEffort,
-              },
-            },
-          }),
-        });
-
-        let accumulatedText = "";
-
-        for await (const chunk of textStream) {
-          accumulatedText += chunk;
-          
-          yield {
-            type: "partial",
-            data: {
-              description: accumulatedText,
-              isComplete: false,
-            },
-          };
-        }
-        
-        // Try to parse JSON and extract structured data
         try {
-          // Strip markdown code blocks if present
-          const cleanedText = stripMarkdownCodeBlocks(accumulatedText);
-          
-          const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            yield {
-              type: "partial",
-              data: {
-                title: parsed.title,
-                description: parsed.description,
-                isComplete: false,
+          const { textStream } = await streamText({
+            model: registry.languageModel(modelId as `${string}:${string}`),
+            messages: [
+              {
+                role: "system",
+                content: `${params.systemPrompt}\n\nIMPORTANT: You must respond with valid JSON in this exact format:\n{\n  "title": "A concise PR title",\n  "description": "The full PR description in Markdown format"\n}`,
               },
-            };
-          }
-        } catch {
-          // JSON parsing failed, accumulatedText will be used as description
-        }
+              { role: "user", content: params.userPrompt },
+            ],
+            // Apply reasoning effort from model configuration if specified
+            ...(reasoningEffort && {
+              providerOptions: {
+                [provider]: {
+                  reasoningEffort: reasoningEffort,
+                },
+              },
+            }),
+          });
 
-        yield {
-          type: "complete",
-        };
+          let accumulatedText = "";
+
+          try {
+            for await (const chunk of textStream) {
+              accumulatedText += chunk;
+              
+              yield {
+                type: "partial",
+                data: {
+                  description: accumulatedText,
+                  isComplete: false,
+                },
+              };
+            }
+          } catch (error) {
+            yield {
+              type: "error",
+              error: `AI SDK Error: ${
+                error instanceof Error ? error.message : "Unknown error"
+              }`,
+            };
+            return;
+          }
+          
+          // Try to parse JSON and extract structured data
+          try {
+            // Strip markdown code blocks if present
+            const cleanedText = stripMarkdownCodeBlocks(accumulatedText);
+            
+            const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              yield {
+                type: "partial",
+                data: {
+                  title: parsed.title,
+                  description: parsed.description,
+                  isComplete: false,
+                },
+              };
+            }
+          } catch {
+            // JSON parsing failed, accumulatedText will be used as description
+          }
+
+          yield {
+            type: "complete",
+          };
+        } catch (error) {
+          yield {
+            type: "error",
+            error: `AI SDK Error: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          };
+          return;
+        }
       }
     } catch (error) {
       yield {

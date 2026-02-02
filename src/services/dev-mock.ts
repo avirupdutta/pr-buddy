@@ -238,16 +238,11 @@ export const mockRuntime = {
             const errorMessage =
               err instanceof Error ? err.message : "Unknown error";
 
-            // Send toast notification for OpenRouter API errors
-            if (
-              errorMessage.includes("OpenRouter") ||
-              errorMessage.includes("API")
-            ) {
-              sendToastNotification(
-                `OpenRouter API Error: ${errorMessage}`,
-                "error",
-              );
-            }
+            // Send toast notification for all API errors
+            sendToastNotification(
+              `API Error: ${errorMessage}`,
+              "error",
+            );
 
             listeners.forEach((cb) =>
               cb({
@@ -509,8 +504,9 @@ Generate the title and description now.`;
 
   // Stream the response using AI SDK with structured output
   let lastSentContent = "";
+  
   for await (const event of aiService.generateStructuredTextStream(requestParams)) {
-    if (event.type === "error") {
+    if (event.type === "error" && event.error) {
       throw new Error(event.error);
     }
     
@@ -539,6 +535,15 @@ Generate the title and description now.`;
         lastSentContent = content;
       }
     }
+  }
+  
+  // Check if the stream completed successfully or with an error
+  // If the stream completed with no content, it likely failed silently
+  if (!lastSentContent) {
+    // This indicates the stream completed but no content was generated
+    // This typically happens when the AI SDK handles the error internally
+    // We need to throw an error to trigger the toast notification
+    throw new Error("API request failed: The stream completed without generating content. This usually indicates an API error such as rate limiting or content size limits.");
   }
 
   postMessage({

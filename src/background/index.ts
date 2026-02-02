@@ -80,9 +80,12 @@ chrome.runtime.onConnect.addListener((port) => {
       try {
         await handleGenerationStream(msg.url, msg.settings, port);
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Generation failed";
+        // Send toast notification for API errors
+        sendToastNotification(`API Error: ${errorMessage}`, "error");
         port.postMessage({
           type: "error",
-          error: err instanceof Error ? err.message : "Generation failed",
+          error: errorMessage,
         });
       }
     },
