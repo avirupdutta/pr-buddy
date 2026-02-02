@@ -237,7 +237,9 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p className="text-xs">{isCopied ? "Copied!" : "Copy to clipboard"}</p>
+                        <p className="text-xs">
+                          {isCopied ? "Copied!" : "Copy to clipboard"}
+                        </p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -344,7 +346,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             </Button>
             <button
               onClick={stopGeneration}
-              className="h-10 w-10 flex items-center justify-center rounded-lg text-white hover:text-white/80 transition-colors shrink-0"
+              className="h-10 w-10 flex items-center justify-center rounded-lg text-white hover:text-white/80 transition-colors shrink-0 cursor-pointer"
               aria-label="Stop generation"
               title="Stop generation"
             >
