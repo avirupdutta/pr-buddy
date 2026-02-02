@@ -113,21 +113,21 @@
           "id": "llama-3.3-70b-versatile",
           "name": "Llama 3.3 70B",
           "modelId": "llama-3.3-70b-versatile",
-          "description": "Meta's large language model on Groq",
+          "description": "Meta's open source model on Groq",
           "supportsJsonSchema": false
         },
         {
           "id": "openai/gpt-oss-20b",
           "name": "GPT OSS 20B",
           "modelId": "openai/gpt-oss-20b",
-          "description": "OpenAI's large model on Groq",
+          "description": "OpenAI's medium sized open source model on Groq",
           "supportsJsonSchema": false
         },
         {
           "id": "openai/gpt-oss-120b",
           "name": "GPT OSS 120B",
           "modelId": "openai/gpt-oss-120b",
-          "description": "OpenAI's large model on Groq",
+          "description": "OpenAI's largest open source model on Groq",
           "supportsJsonSchema": true,
           "reasoningEffort": "high"
         }
