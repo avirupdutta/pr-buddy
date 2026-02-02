@@ -1,4 +1,5 @@
 import { useSettingsStore } from "@/stores/settings-store";
+import { useGeneratorStore } from "@/stores/generator-store";
 import { SearchableModelSelector } from "@/components/ui/searchable-model-selector";
 import type { AIProviderType } from "@/services/ai-provider-registry";
 
@@ -8,6 +9,7 @@ interface ModelSelectorProps {
 
 const ModelSelector = ({ disabled = false }: ModelSelectorProps) => {
   const { aiModels, getActiveModel, setActiveModel, openRouterKey, openaiKey, anthropicKey, googleKey, groqKey, cerebrasKey } = useSettingsStore();
+  const { clearError } = useGeneratorStore();
   const activeModel = getActiveModel();
 
   // Map of provider API key status
@@ -20,6 +22,12 @@ const ModelSelector = ({ disabled = false }: ModelSelectorProps) => {
     cerebras: Boolean(cerebrasKey),
   };
 
+  const handleModelChange = (id: string, provider?: string) => {
+    // Clear any previous error when switching models
+    clearError();
+    setActiveModel(id, provider);
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <SearchableModelSelector
@@ -27,7 +35,7 @@ const ModelSelector = ({ disabled = false }: ModelSelectorProps) => {
         customModels={aiModels}
         value={activeModel?.id || ""}
         activeProvider={activeModel?.provider}
-        onValueChange={(id: string, provider?: string) => setActiveModel(id, provider)}
+        onValueChange={handleModelChange}
         placeholder="Select a model"
         className="w-full"
         popoverPosition="top"

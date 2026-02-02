@@ -45,6 +45,7 @@ interface GeneratorState {
   setView: (view: ViewType) => void;
   setIsRegenerating: (regenerating: boolean) => void;
   setHasRegenerated: (hasRegenerated: boolean) => void;
+  clearError: () => void;
   generate: (url: string, isRegeneration?: boolean) => Promise<void>;
   stopGeneration: () => void;
   reset: () => void;
@@ -115,8 +116,12 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
     set({ isRegenerating });
   },
 
-  setHasRegenerated: (hasRegenerated) => {
+  setHasRegenerated: (hasRegenerated: boolean) => {
     set({ hasRegenerated });
+  },
+
+  clearError: () => {
+    set({ error: null });
   },
 
   generate: async (url, isRegeneration = false) => {
