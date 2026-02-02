@@ -195,7 +195,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               <Input
                 value={generatedTitle}
                 onChange={(e) => setGeneratedTitle(e.target.value)}
-                className="font-medium"
+                disabled={isGenerating}
+                className="font-medium disabled:cursor-not-allowed"
                 placeholder="PR Title"
               />
             </div>
@@ -274,7 +275,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                   ref={textareaRef}
                   value={generatedDescription}
                   onChange={(e) => setGeneratedDescription(e.target.value)}
-                  className="resize-none h-[280px] w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary focus-visible:border-ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  disabled={isGenerating}
+                  className="resize-none h-[280px] w-full text-sm font-mono scrollbar-thin rounded-t-none border border-t-0 border-secondary focus-visible:border-ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed"
                   placeholder="Your generated description will appear here..."
                 />
               )}
