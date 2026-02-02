@@ -466,7 +466,7 @@ export const SearchableModelSelector: React.FC<
                           />
                           <span
                             className={cn(
-                              "text-xs flex-1",
+                              "text-xs flex-1 truncate",
                               isLocked
                                 ? "text-muted-foreground/50"
                                 : "text-muted-foreground",
