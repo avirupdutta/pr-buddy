@@ -382,7 +382,12 @@ export function ResultView({ currentUrl }: ResultViewProps) {
 
               <Button
                 onClick={handleInsert}
-                disabled={isInserting || isGenerating}
+                disabled={
+                  isInserting ||
+                  isGenerating ||
+                  (!generatedDescription &&
+                    (!generateTitle || !generatedTitle))
+                }
                 className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border shadow-lg"
               >
                 {isInserting ? (
