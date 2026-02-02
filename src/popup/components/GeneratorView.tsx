@@ -1,6 +1,11 @@
 import { IconSparkles, IconSettings } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { useGeneratorStore } from "@/stores/generator-store";
 import { TemplateSelector } from "./TemplateSelector";
@@ -66,6 +71,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
           disabled={isGenerating}
           className={`w-full h-10 gap-2 text-base font-bold rounded-lg shadow-lg transition-all duration-300`}
           size="lg"
+          id="tour-generate"
         >
           {isGenerating ? (
             <>

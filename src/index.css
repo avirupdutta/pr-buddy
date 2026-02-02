@@ -333,3 +333,31 @@
 .animate-dropdown-fade-up-top {
   animation: dropdown-fade-up-top 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Fix for NextStepJS wrapper divs height in Chrome extension popup */
+[data-name="nextstep-wrapper"],
+[data-name="nextstep-site"] {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* NextStepJS overlay - darker in dark mode for better contrast */
+[data-nextstep-spotlight] {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75) !important;
+}
+
+.dark [data-nextstep-spotlight] {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Alternative: style the overlay backdrop if it uses a different selector */
+[data-nextstep-overlay],
+[data-nextstep-backdrop] {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.dark [data-nextstep-overlay],
+.dark [data-nextstep-backdrop] {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+}
