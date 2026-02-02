@@ -93,18 +93,48 @@
           "name": "Gemini 2.5 Flash",
           "modelId": "gemini-2.5-flash",
           "description": "Google's fast multimodal model",
-          "supportsJsonSchema": true
+          "supportsJsonSchema": true,
+          "contextLength": 1048576
         },
         {
           "id": "gemini-2.5-flash-lite",
           "name": "Gemini 2.5 Flash Lite",
           "modelId": "gemini-2.5-flash-lite",
           "description": "Google's fast and compact model",
-          "supportsJsonSchema": true
+          "supportsJsonSchema": true,
+          "contextLength": 1048576
         }
       ],
       "enabled": true,
       "sortRank": 2
+    },
+    "cerebras": {
+      "name": "Cerebras",
+      "models": [
+        {
+          "id": "zai-glm-4.7",
+          "name": "Zai GLM 4.7",
+          "modelId": "zai-glm-4.7",
+          "description": "Zai's large model on Cerebras",
+          "supportsJsonSchema": true
+        },
+        {
+          "id": "gpt-oss-120b",
+          "name": "GPT OSS 120B",
+          "modelId": "gpt-oss-120b",
+          "description": "OpenAI's large model on Cerebras",
+          "supportsJsonSchema": true
+        },
+        {
+          "id": "qwen-3-32b",
+          "name": "Qwen 3 32B",
+          "modelId": "qwen-3-32b",
+          "description": "Alibaba's open source model on Cerebras",
+          "supportsJsonSchema": true
+        }
+      ],
+      "enabled": true,
+      "sortRank": 3
     },
     "groq": {
       "name": "Groq",
@@ -130,27 +160,6 @@
           "description": "OpenAI's largest open source model on Groq",
           "supportsJsonSchema": true,
           "reasoningEffort": "high"
-        }
-      ],
-      "enabled": true,
-      "sortRank": 3
-    },
-    "cerebras": {
-      "name": "Cerebras",
-      "models": [
-        {
-          "id": "zai-glm-4.7",
-          "name": "Zai GLM 4.7",
-          "modelId": "zai-glm-4.7",
-          "description": "Zai's large model on Cerebras",
-          "supportsJsonSchema": true
-        },
-        {
-          "id": "gpt-oss-120b",
-          "name": "GPT OSS 120B",
-          "modelId": "gpt-oss-120b",
-          "description": "OpenAI's large model on Cerebras",
-          "supportsJsonSchema": true
         }
       ],
       "enabled": true,

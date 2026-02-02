@@ -619,16 +619,6 @@ export const SearchableModelSelector: React.FC<
                         </p>
                       </div>
                     )}
-
-                    {/* Model ID */}
-                    <div>
-                      <h4 className="text-xs font-medium text-muted-foreground mb-1">
-                        Model ID
-                      </h4>
-                      <p className="text-xs text-muted-foreground font-mono break-all">
-                        {modelToShow.model.modelId}
-                      </p>
-                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center">
