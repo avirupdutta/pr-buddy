@@ -17,7 +17,8 @@
           "contextLength": 131072
         }
       ],
-      "enabled": true
+      "enabled": true,
+      "sortRank": 1
     },
     "openai": {
       "name": "OpenAI",
@@ -39,7 +40,8 @@
           "reasoningEffort": "low"
         }
       ],
-      "enabled": false
+      "enabled": false,
+      "sortRank": -1
     },
     "anthropic": {
       "name": "Anthropic",
@@ -66,7 +68,8 @@
           "supportsJsonSchema": false
         }
       ],
-      "enabled": false
+      "enabled": false,
+      "sortRank": -1
     },
     "google": {
       "name": "Google",
@@ -86,7 +89,8 @@
           "supportsJsonSchema": true
         }
       ],
-      "enabled": true
+      "enabled": true,
+      "sortRank": 2
     },
     "groq": {
       "name": "Groq",
@@ -114,7 +118,8 @@
           "reasoningEffort": "high"
         }
       ],
-      "enabled": true
+      "enabled": true,
+      "sortRank": 3
     },
     "cerebras": {
       "name": "Cerebras",
@@ -134,7 +139,8 @@
           "supportsJsonSchema": true
         }
       ],
-      "enabled": true
+      "enabled": true,
+      "sortRank": 4
     }
   }
 }
