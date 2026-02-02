@@ -365,9 +365,9 @@ export const SearchableModelSelector: React.FC<
       {/* Dropdown */}
       {isOpen && (
         <div
-          className={`absolute left-0 right-0 z-50 ${
+          className={`absolute left-0 right-0 z-50 shadow-md ${
             popoverPosition === "top" ? "bottom-full mb-1" : "top-full mt-1"
-          } bg-background/95 backdrop-blur-md border border-border rounded-md shadow-lg max-h-80 overflow-hidden w-[400px]`}
+          } bg-background/95 backdrop-blur-md border border-border rounded-md shadow-lg max-h-80 overflow-hidden w-[432px]`}
         >
           {/* Search Input */}
           <div className="p-2 border-b border-border">
@@ -386,7 +386,9 @@ export const SearchableModelSelector: React.FC<
             <ScrollArea
               viewportRef={scrollAreaRef}
               onScroll={handleScroll}
-              classNames={{ root: "h-full max-w-48 border-r border-border" }}
+              classNames={{
+                root: "h-full w-[220px] max-w-[220px] border-r border-border",
+              }}
             >
               {groupedOptions.length === 0 ? (
                 <div className="p-3 text-sm text-muted-foreground text-center">
