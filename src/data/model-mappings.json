@@ -16,66 +16,57 @@
           },
           "contextLength": 131072
         }
-      ]
+      ],
+      "enabled": true
     },
     "openai": {
       "name": "OpenAI",
       "models": [
         {
-          "id": "gpt-4o",
-          "name": "GPT-4o",
-          "modelId": "gpt-4o",
+          "id": "gpt-5.2",
+          "name": "GPT-5.2",
+          "modelId": "gpt-5.2",
           "description": "OpenAI's flagship multimodal model",
-          "supportsJsonSchema": true
+          "supportsJsonSchema": true,
+          "reasoningEffort": "low"
         },
         {
-          "id": "gpt-4o-mini",
-          "name": "GPT-4o Mini",
-          "modelId": "gpt-4o-mini",
-          "description": "OpenAI's efficient small model",
-          "supportsJsonSchema": true
-        },
-        {
-          "id": "gpt-4-turbo",
-          "name": "GPT-4 Turbo",
-          "modelId": "gpt-4-turbo",
-          "description": "OpenAI's advanced reasoning model",
-          "supportsJsonSchema": true
-        },
-        {
-          "id": "gpt-3.5-turbo",
-          "name": "GPT-3.5 Turbo",
-          "modelId": "gpt-3.5-turbo",
-          "description": "OpenAI's classic chat model",
-          "supportsJsonSchema": true
+          "id": "gpt-5.2-mini",
+          "name": "GPT-5.2 Mini",
+          "modelId": "gpt-5.2-mini",
+          "description": "OpenAI's compact model",
+          "supportsJsonSchema": true,
+          "reasoningEffort": "low"
         }
-      ]
+      ],
+      "enabled": false
     },
     "anthropic": {
       "name": "Anthropic",
       "models": [
         {
-          "id": "claude-3.5-sonnet",
-          "name": "Claude 3.5 Sonnet",
-          "modelId": "claude-3-5-sonnet-20241022",
-          "description": "Anthropic's most capable model",
-          "supportsJsonSchema": false
-        },
-        {
-          "id": "claude-3.5-haiku",
-          "name": "Claude 3.5 Haiku",
-          "modelId": "claude-3-5-haiku-20241022",
+          "id": "claude-4.5-haiku",
+          "name": "Claude 4.5 Haiku",
+          "modelId": "claude-4-5-haiku",
           "description": "Anthropic's fast and compact model",
           "supportsJsonSchema": false
         },
         {
-          "id": "claude-3-opus",
-          "name": "Claude 3 Opus",
-          "modelId": "claude-3-opus-20240229",
+          "id": "claude-4.5-sonnet",
+          "name": "Claude 4.5 Sonnet",
+          "modelId": "claude-4-5-sonnet",
+          "description": "Anthropic's most capable model",
+          "supportsJsonSchema": false
+        },
+        {
+          "id": "claude-4.5-opus",
+          "name": "Claude 4.5 Opus",
+          "modelId": "claude-4-5-opus",
           "description": "Anthropic's most powerful model",
           "supportsJsonSchema": false
         }
-      ]
+      ],
+      "enabled": false
     },
     "google": {
       "name": "Google",
@@ -94,7 +85,8 @@
           "description": "Google's fast and compact model",
           "supportsJsonSchema": true
         }
-      ]
+      ],
+      "enabled": true
     },
     "groq": {
       "name": "Groq",
@@ -121,7 +113,8 @@
           "supportsJsonSchema": true,
           "reasoningEffort": "high"
         }
-      ]
+      ],
+      "enabled": true
     },
     "cerebras": {
       "name": "Cerebras",
@@ -140,7 +133,8 @@
           "description": "OpenAI's large model on Cerebras",
           "supportsJsonSchema": true
         }
-      ]
+      ],
+      "enabled": true
     }
   }
 }
