@@ -20,7 +20,7 @@ export function ThemeToggle({
           value="light"
           className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm px-3 py-1.5 gap-2"
         >
-          <IconSun className="h-4 w-4" />
+          <IconSun className="h-4 w-4 text-foreground" />
           {variant === "full" && <span className="text-xs">Light</span>}
         </TabsTrigger>
         <TabsTrigger

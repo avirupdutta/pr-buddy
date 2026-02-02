@@ -12,6 +12,28 @@ import type {
 } from "@/types/chrome";
 import { decryptApiKey } from "./encryption";
 import { sendToastNotification } from "./notifications";
+import { createAISDKService, type AIRequestParams } from "./ai-sdk-service";
+import modelMappings from "@/data/model-mappings.json";
+
+// Helper function to find a predefined model by ID
+function findPredefinedModel(id: string): AIModel | null {
+  for (const [providerId, providerData] of Object.entries(
+    modelMappings.providers,
+  )) {
+    const foundModel = providerData.models.find((m) => m.id === id);
+    if (foundModel) {
+      return {
+        id: foundModel.id,
+        name: foundModel.name,
+        modelId: foundModel.modelId,
+        provider: providerId,
+        isActive: true,
+        supportsJsonSchema: foundModel.supportsJsonSchema,
+      };
+    }
+  }
+  return null;
+}
 
 /**
  * Check if we're running in a Chrome extension context
@@ -217,15 +239,10 @@ export const mockRuntime = {
           } catch (err) {
             const errorMessage =
               err instanceof Error ? err.message : "Unknown error";
-            
-            // Send toast notification for OpenRouter API errors
-            if (errorMessage.includes("OpenRouter") || errorMessage.includes("API")) {
-              sendToastNotification(
-                `OpenRouter API Error: ${errorMessage}`,
-                "error"
-              );
-            }
-            
+
+            // Send toast notification for all API errors
+            sendToastNotification(`API Error: ${errorMessage}`, "error");
+
             listeners.forEach((cb) =>
               cb({
                 type: "error",
@@ -261,6 +278,11 @@ async function handleDevGenerationStream(
   const devStorage = getDevStorage();
   const encryptedGithubToken = devStorage.githubToken as string;
   const encryptedOpenRouterKey = devStorage.openRouterKey as string;
+  const encryptedOpenaiKey = devStorage.openaiKey as string;
+  const encryptedAnthropicKey = devStorage.anthropicKey as string;
+  const encryptedGoogleKey = devStorage.googleKey as string;
+  const encryptedGroqKey = devStorage.groqKey as string;
+  const encryptedCerebrasKey = devStorage.cerebrasKey as string;
 
   // Decrypt API keys
   const githubToken = encryptedGithubToken
@@ -269,16 +291,117 @@ async function handleDevGenerationStream(
   const openRouterKey = encryptedOpenRouterKey
     ? await decryptApiKey(encryptedOpenRouterKey)
     : null;
+  const openaiKey = encryptedOpenaiKey
+    ? await decryptApiKey(encryptedOpenaiKey)
+    : null;
+  const anthropicKey = encryptedAnthropicKey
+    ? await decryptApiKey(encryptedAnthropicKey)
+    : null;
+  const googleKey = encryptedGoogleKey
+    ? await decryptApiKey(encryptedGoogleKey)
+    : null;
+  const groqKey = encryptedGroqKey
+    ? await decryptApiKey(encryptedGroqKey)
+    : null;
+  const cerebrasKey = encryptedCerebrasKey
+    ? await decryptApiKey(encryptedCerebrasKey)
+    : null;
 
   const templates = (devStorage.templates as PRTemplate[]) || DEFAULT_TEMPLATES;
   const aiModels = (devStorage.aiModels as AIModel[]) || DEFAULT_AI_MODELS;
 
-  if (!githubToken || !openRouterKey) {
-    throw new Error("Missing API Keys. Please configure them in Settings.");
+  if (!githubToken) {
+    throw new Error("Missing GitHub Token. Please configure it in Settings.");
   }
 
-  // Find active model
-  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  // Get selected model from settings or fallback to active model
+  let selectedModel: AIModel;
+  const selectedModelFromSettings = settings.selectedModel;
+  if (selectedModelFromSettings && selectedModelFromSettings.id) {
+    // First, try to find the model in the custom aiModels list
+    const foundModel = aiModels.find(
+      (m) => m.id === selectedModelFromSettings.id,
+    );
+    if (foundModel) {
+      selectedModel = foundModel;
+    } else {
+      // If not found in custom models, check predefined models
+      const predefinedModel = findPredefinedModel(selectedModelFromSettings.id);
+      if (predefinedModel) {
+        selectedModel = predefinedModel;
+      } else {
+        // Last resort: try to construct a model from the settings data
+        if (
+          selectedModelFromSettings.modelId &&
+          selectedModelFromSettings.provider
+        ) {
+          selectedModel = {
+            id: selectedModelFromSettings.id,
+            name: selectedModelFromSettings.id,
+            modelId: selectedModelFromSettings.modelId,
+            provider: selectedModelFromSettings.provider,
+            isActive: true,
+            supportsJsonSchema: selectedModelFromSettings.supportsJsonSchema,
+          };
+        } else {
+          throw new Error(
+            `Selected model not found: ${selectedModelFromSettings.id}`,
+          );
+        }
+      }
+    }
+  } else {
+    // Fallback to active model (backward compatibility)
+    // First check custom models for an active one
+    const activeCustomModel = aiModels.find((m) => m.isActive);
+    if (activeCustomModel) {
+      selectedModel = activeCustomModel;
+    } else {
+      // If no custom model is active, check for active predefined model
+      const activePredefinedId = devStorage.activePredefinedModelId as
+        | string
+        | undefined;
+      if (activePredefinedId) {
+        const predefinedModel = findPredefinedModel(activePredefinedId);
+        if (predefinedModel) {
+          selectedModel = predefinedModel;
+        } else {
+          selectedModel = aiModels[0];
+        }
+      } else {
+        selectedModel = aiModels[0];
+      }
+    }
+  }
+
+  // Get the provider for the selected model
+  const provider = selectedModel.provider || "openrouter";
+
+  // Check if the required API key is available for the provider
+  const getProviderApiKey = (): string | null => {
+    switch (provider) {
+      case "openai":
+        return openaiKey;
+      case "anthropic":
+        return anthropicKey;
+      case "google":
+        return googleKey;
+      case "groq":
+        return groqKey;
+      case "cerebras":
+        return cerebrasKey;
+      case "openrouter":
+      default:
+        return openRouterKey;
+    }
+  };
+
+  const providerApiKey = getProviderApiKey();
+  if (!providerApiKey) {
+    throw new Error(
+      `Missing API key for ${provider} provider. Please configure it in Settings.`,
+    );
+  }
 
   // Find selected template
   const selectedTemplate =
@@ -318,17 +441,14 @@ async function handleDevGenerationStream(
     diff = diff.substring(0, 50000) + "\n...[Diff Truncated]...";
   }
 
-  // Generate with AI Streaming
+  // Generate with AI Streaming using AI SDK
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone || "professional"] ||
     TONE_DESCRIPTIONS.professional;
 
   const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description.
 
-IMPORTANT: You must stream the response in this EXACT format:
-TITLE: <Your concise title here>
-<<<SEPARATOR>>>
-DESCRIPTION: <Your markdown description here>
+You must respond with a structured object containing a title and description.
 
 TITLE GUIDELINES:
 - Use the imperative mood
@@ -339,6 +459,8 @@ DESCRIPTION GUIDELINES:
 - Writing Style: ${toneDescription}
 - Use this structure:
 ${selectedTemplate.structure}
+
+REMINDERS:
 - Be specific, reference files.
 - No diffs.
 
@@ -367,67 +489,72 @@ Diff:
 ${diff}
 \`\`\`
 
-Generate the TITLE and DESCRIPTION now in the requested format.`;
+Generate the title and description now.`;
 
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openRouterKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/pr-buddy-extension",
-        "X-Title": "PR Buddy",
-      },
-      body: JSON.stringify({
-        model: activeModel.modelId,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: true,
-      }),
-    },
-  );
+  // Create AI SDK service instance
+  const aiService = createAISDKService({
+    openaiKey: openaiKey || "",
+    anthropicKey: anthropicKey || "",
+    googleKey: googleKey || "",
+    groqKey: groqKey || "",
+    cerebrasKey: cerebrasKey || "",
+    openRouterKey: openRouterKey || "",
+  });
 
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(
-      "AI Generation failed: " + (err.error?.message || response.statusText),
-    );
-  }
+  const requestParams: AIRequestParams = {
+    model: selectedModel,
+    systemPrompt,
+    userPrompt,
+    stream: true,
+  };
 
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("Response body is null");
+  // Stream the response using AI SDK with structured output
+  let lastSentContent = "";
 
-  const decoder = new TextDecoder();
-  let buffer = "";
+  for await (const event of aiService.generateStructuredTextStream(
+    requestParams,
+  )) {
+    if (event.type === "error" && event.error) {
+      throw new Error(event.error);
+    }
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+    if (event.type === "partial" && event.data) {
+      // Convert structured output to existing format
+      // Only include the separator if we have both title and description
+      const hasTitle = !!event.data.title;
+      const hasDescription = !!event.data.description;
 
-    buffer += decoder.decode(value, { stream: true });
+      let content = "";
+      if (hasTitle) {
+        content += `TITLE: ${event.data.title}`;
+      }
+      if (hasTitle && hasDescription) {
+        content +=
+          "\n\n<<<SEPARATOR>>>\n\nDESCRIPTION: " + event.data.description;
+      } else if (hasDescription) {
+        content += event.data.description;
+      }
 
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed === "data: [DONE]") continue;
-
-      if (trimmed.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(trimmed.slice(6));
-          const content = data.choices?.[0]?.delta?.content;
-          if (content) {
-            postMessage({ type: "chunk", content });
-          }
-        } catch (e) {
-          console.error("Error parsing stream chunk", e);
+      // Only send if content is new and not empty
+      if (content && content !== lastSentContent) {
+        const newContent = content.replace(lastSentContent, "");
+        if (newContent) {
+          postMessage({ type: "chunk", content: newContent });
         }
+        lastSentContent = content;
       }
     }
+  }
+
+  // Check if the stream completed successfully or with an error
+  // If the stream completed with no content, it likely failed silently
+  if (!lastSentContent) {
+    // This indicates the stream completed but no content was generated
+    // This typically happens when the AI SDK handles the error internally
+    // We need to throw an error to trigger the toast notification
+    throw new Error(
+      "API request failed: The stream completed without generating content. This usually indicates an API error such as rate limiting or content size limits.",
+    );
   }
 
   postMessage({
@@ -452,6 +579,11 @@ async function handleDevGeneration(
   const devStorage = getDevStorage();
   const encryptedGithubToken = devStorage.githubToken as string;
   const encryptedOpenRouterKey = devStorage.openRouterKey as string;
+  const encryptedOpenaiKey = devStorage.openaiKey as string;
+  const encryptedCerebrasKey = devStorage.cerebrasKey as string;
+  const encryptedAnthropicKey = devStorage.anthropicKey as string;
+  const encryptedGoogleKey = devStorage.googleKey as string;
+  const encryptedGroqKey = devStorage.groqKey as string;
 
   // Decrypt API keys
   const githubToken = encryptedGithubToken
@@ -460,20 +592,87 @@ async function handleDevGeneration(
   const openRouterKey = encryptedOpenRouterKey
     ? await decryptApiKey(encryptedOpenRouterKey)
     : null;
+  const openaiKey = encryptedOpenaiKey
+    ? await decryptApiKey(encryptedOpenaiKey)
+    : null;
+  const anthropicKey = encryptedAnthropicKey
+    ? await decryptApiKey(encryptedAnthropicKey)
+    : null;
+  const googleKey = encryptedGoogleKey
+    ? await decryptApiKey(encryptedGoogleKey)
+    : null;
+  const groqKey = encryptedGroqKey
+    ? await decryptApiKey(encryptedGroqKey)
+    : null;
+  const cerebrasKey = encryptedCerebrasKey
+    ? await decryptApiKey(encryptedCerebrasKey)
+    : null;
 
   // Get templates and models from storage or use defaults
   const templates = (devStorage.templates as PRTemplate[]) || DEFAULT_TEMPLATES;
   const aiModels = (devStorage.aiModels as AIModel[]) || DEFAULT_AI_MODELS;
 
-  if (!githubToken || !openRouterKey) {
-    throw new Error("Missing API Keys. Please configure them in Settings.");
+  if (!githubToken) {
+    throw new Error("Missing GitHub Token. Please configure it in Settings.");
   }
-
-  // Find active model
-  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
 
   // Parse settings
   const s = (settings as Partial<GeneratorSettings>) || {};
+
+  // Get selected model from settings or fallback to active model
+  let selectedModel: AIModel;
+  const selectedModelFromSettings = s.selectedModel;
+  if (selectedModelFromSettings && selectedModelFromSettings.id) {
+    // First, try to find the model in the custom aiModels list
+    const foundModel = aiModels.find(
+      (m) => m.id === selectedModelFromSettings.id,
+    );
+    if (foundModel) {
+      selectedModel = foundModel;
+    } else {
+      // If not found in custom models, check predefined models
+      const predefinedModel = findPredefinedModel(selectedModelFromSettings.id);
+      if (predefinedModel) {
+        selectedModel = predefinedModel;
+      } else {
+        throw new Error(
+          `Selected model not found: ${selectedModelFromSettings.id}`,
+        );
+      }
+    }
+  } else {
+    // Fallback to active model (backward compatibility)
+    selectedModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  }
+
+  // Get the provider for the selected model
+  const provider = selectedModel.provider || "openrouter";
+
+  // Check if the required API key is available for the provider
+  const getProviderApiKey = (): string | null => {
+    switch (provider) {
+      case "openai":
+        return openaiKey;
+      case "anthropic":
+        return anthropicKey;
+      case "google":
+        return googleKey;
+      case "groq":
+        return groqKey;
+      case "cerebras":
+        return cerebrasKey;
+      case "openrouter":
+      default:
+        return openRouterKey;
+    }
+  };
+
+  const providerApiKey = getProviderApiKey();
+  if (!providerApiKey) {
+    throw new Error(
+      `Missing API key for ${provider} provider. Please configure it in Settings.`,
+    );
+  }
 
   // Find selected template
   const selectedTemplate =
@@ -518,14 +717,21 @@ async function handleDevGeneration(
     diff = diff.substring(0, 50000) + "\n...[Diff Truncated]...";
   }
 
-  // Generate with AI (single API call with structured output)
-  const aiResult = await generateWithOpenRouter(
+  // Generate with AI using AI SDK
+  const aiResult = await generateWithAISDK(
     diff,
     metadata,
     s,
     selectedTemplate,
-    activeModel.modelId,
-    openRouterKey,
+    selectedModel,
+    {
+      openaiKey: openaiKey || "",
+      anthropicKey: anthropicKey || "",
+      googleKey: googleKey || "",
+      groqKey: groqKey || "",
+      cerebrasKey: cerebrasKey || "",
+      openRouterKey: openRouterKey || "",
+    },
   );
 
   return {
@@ -574,16 +780,13 @@ async function handleDevUpdatePR(
     },
   );
 
-if (!response.ok) {
+  if (!response.ok) {
     const err = await response.json();
     const errorMessage = err.error?.message || response.statusText;
-    
+
     // Send specific toast notification for OpenRouter API failure
-    sendToastNotification(
-      `OpenRouter API Error: ${errorMessage}`,
-      "error"
-    );
-    
+    sendToastNotification(`OpenRouter API Error: ${errorMessage}`, "error");
+
     throw new Error("AI Generation failed: " + errorMessage);
   }
   return { success: true };
@@ -602,7 +805,7 @@ interface AIGenerationResult {
   description: string;
 }
 
-async function generateWithOpenRouter(
+async function generateWithAISDK(
   diff: string,
   metadata: {
     title: string;
@@ -614,8 +817,15 @@ async function generateWithOpenRouter(
   },
   settings: Partial<GeneratorSettings>,
   template: PRTemplate,
-  modelId: string,
-  apiKey: string,
+  model: AIModel,
+  apiKeys: {
+    openaiKey: string;
+    anthropicKey: string;
+    googleKey: string;
+    groqKey: string;
+    cerebrasKey: string;
+    openRouterKey: string;
+  },
 ): Promise<AIGenerationResult> {
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone || "professional"] ||
@@ -623,11 +833,7 @@ async function generateWithOpenRouter(
 
   const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description based on the provided code diffs and context.
 
-You MUST respond with valid JSON in this exact format:
-{
-  "title": "A concise PR title",
-  "description": "The full PR description in Markdown format"
-}
+You must respond with a structured object containing a title and description.
 
 TITLE GUIDELINES:
 - Use the imperative mood (e.g., "Add feature" not "Added feature")
@@ -669,57 +875,38 @@ Diff:
 ${diff}
 \`\`\`
 
-Generate the JSON response with title and description now.`;
+Generate the title and description now.`;
 
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/pr-buddy-extension",
-        "X-Title": "PR Buddy",
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    },
-  );
+  // Create AI SDK service instance
+  const aiService = createAISDKService(apiKeys);
 
-  if (!response.ok) {
-    const err = await response.json();
-    const errorMessage = err.error?.message || response.statusText;
-    
-    // Send specific toast notification for OpenRouter API failure
-    sendToastNotification(
-      `OpenRouter API Error: ${errorMessage}`,
-      "error"
-    );
-    
-    throw new Error("AI Generation failed: " + errorMessage);
-  }
-
-  const data = await response.json();
-  const content = data.choices[0].message.content;
+  const requestParams: AIRequestParams = {
+    model,
+    systemPrompt,
+    userPrompt,
+    stream: false,
+  };
 
   try {
-    const parsed = JSON.parse(content);
+    const result = await aiService.generateStructuredText(requestParams);
+
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
+    // Extract title and description from structured output result
+    const title = result.data.title || "";
+    const description = result.data.description;
+
     return {
-      title: (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, ""),
-      description: parsed.description || "",
+      title,
+      description,
     };
-  } catch {
-    // Fallback: if JSON parsing fails, treat content as description
-    return {
-      title: "",
-      description: content,
-    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    sendToastNotification(`AI SDK Error: ${errorMessage}`, "error");
+    throw new Error("AI Generation failed: " + errorMessage);
   }
 }
 

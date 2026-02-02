@@ -12,9 +12,69 @@ import type {
   PRTemplate,
   AIModel,
 } from "@/types/chrome";
+
 import { decryptApiKey } from "@/services/encryption";
+import { getDecryptedAPIKeys } from "@/services/api-keys";
 import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 import { sendToastNotification } from "@/services/notifications";
+import { aiServiceAdapter } from "@/services/ai-service-adapter";
+import { createAISDKService } from "@/services/ai-sdk-service";
+import modelMappings from "@/data/model-mappings.json";
+
+// Get structured output setting from storage
+async function getUseStructuredOutput(): Promise<boolean> {
+  const result = await chrome.storage.local.get(["useStructuredOutput"]);
+  // Default to true for new installations
+  return result.useStructuredOutput !== false;
+}
+
+// Helper function to find a predefined model by ID
+function findPredefinedModel(id: string): AIModel | null {
+  for (const [providerId, providerData] of Object.entries(
+    modelMappings.providers,
+  )) {
+    const foundModel = providerData.models.find((m) => m.id === id);
+    if (foundModel) {
+      return {
+        id: foundModel.id,
+        name: foundModel.name,
+        modelId: foundModel.modelId,
+        provider: providerId,
+        isActive: true,
+      };
+    }
+  }
+  return null;
+}
+
+// Helper function to infer provider from modelId
+function inferProviderFromModelId(modelId: string): string {
+  if (modelId.includes("openai/") || modelId.startsWith("gpt-")) {
+    return "openai";
+  }
+  if (modelId.includes("anthropic/") || modelId.startsWith("claude-")) {
+    return "anthropic";
+  }
+  if (modelId.includes("google/") || modelId.startsWith("gemini-")) {
+    return "google";
+  }
+  if (
+    modelId.includes("groq/") ||
+    (modelId.startsWith("llama") && modelId.includes("versatile"))
+  ) {
+    return "groq";
+  }
+  if (modelId.includes("cerebras/")) {
+    return "cerebras";
+  }
+  // Default to openrouter for models with provider prefix or unknown format
+  if (modelId.includes("/")) {
+    return modelId.split("/")[0];
+  }
+  return "openrouter";
+}
+
+// Helper functions for AI service adapter integration
 
 // Listen for long-lived connections (streaming)
 chrome.runtime.onConnect.addListener((port) => {
@@ -25,9 +85,13 @@ chrome.runtime.onConnect.addListener((port) => {
       try {
         await handleGenerationStream(msg.url, msg.settings, port);
       } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Generation failed";
+        // Send toast notification for API errors
+        sendToastNotification(`API Error: ${errorMessage}`, "error");
         port.postMessage({
           type: "error",
-          error: err instanceof Error ? err.message : "Generation failed",
+          error: errorMessage,
         });
       }
     },
@@ -64,26 +128,49 @@ async function handleGenerationStream(
   settings: GeneratorSettings,
   port: chrome.runtime.Port,
 ): Promise<void> {
-  // 1. Get Credentials, Templates, and Models
+  // 1. Get Credentials and Templates
   const result = (await chrome.storage.local.get([
     "githubToken",
     "openRouterKey",
+    "cerebrasKey",
+    "openaiKey",
+    "anthropicKey",
+    "googleKey",
+    "groqKey",
     "templates",
     "aiModels",
   ])) as {
     githubToken?: string;
     openRouterKey?: string;
+    cerebrasKey?: string;
+    openaiKey?: string;
+    anthropicKey?: string;
+    googleKey?: string;
+    groqKey?: string;
     templates?: PRTemplate[];
     aiModels?: AIModel[];
   };
 
-  // Decrypt API keys
+  // Decrypt all API keys
   const githubToken = result.githubToken
     ? await decryptApiKey(result.githubToken)
     : null;
   const openRouterKey = result.openRouterKey
     ? await decryptApiKey(result.openRouterKey)
     : null;
+  const cerebrasKey = result.cerebrasKey
+    ? await decryptApiKey(result.cerebrasKey)
+    : null;
+  const openaiKey = result.openaiKey
+    ? await decryptApiKey(result.openaiKey)
+    : null;
+  const anthropicKey = result.anthropicKey
+    ? await decryptApiKey(result.anthropicKey)
+    : null;
+  const googleKey = result.googleKey
+    ? await decryptApiKey(result.googleKey)
+    : null;
+  const groqKey = result.groqKey ? await decryptApiKey(result.groqKey) : null;
 
   const templates =
     result.templates && result.templates.length > 0
@@ -94,12 +181,83 @@ async function handleGenerationStream(
       ? result.aiModels
       : DEFAULT_AI_MODELS;
 
-  if (!githubToken || !openRouterKey) {
+  // Validate that we have GitHub token and at least one AI provider API key
+  if (!githubToken || (!openRouterKey && !cerebrasKey && !openaiKey && !anthropicKey && !googleKey && !groqKey)) {
     throw new Error("Missing API Keys. Please configure them in Settings.");
   }
 
-  // Find active model
-  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  // Get selected model from settings or fallback to active model
+  let selectedModel: AIModel;
+  const selectedModelFromSettings = settings.selectedModel;
+  if (selectedModelFromSettings && selectedModelFromSettings.id) {
+    // First, try to find the model in the custom aiModels list
+    const foundModel = aiModels.find(
+      (m) => m.id === selectedModelFromSettings.id,
+    );
+    if (foundModel) {
+      selectedModel = foundModel;
+    } else {
+      // If not found in custom models, check predefined models
+      const predefinedModel = findPredefinedModel(selectedModelFromSettings.id);
+      if (predefinedModel) {
+        selectedModel = predefinedModel;
+      } else {
+        // Last resort: try to construct a model from the settings data
+        // This handles cases where the model ID might not be in predefined list
+        // but we have the modelId and provider from the generator store
+        if (
+          selectedModelFromSettings.modelId &&
+          selectedModelFromSettings.provider
+        ) {
+          selectedModel = {
+            id: selectedModelFromSettings.id,
+            name: selectedModelFromSettings.id, // Use ID as name fallback
+            modelId: selectedModelFromSettings.modelId,
+            provider: selectedModelFromSettings.provider,
+            isActive: true,
+          };
+        } else {
+          throw new Error(
+            `Selected model not found: ${selectedModelFromSettings.id}`,
+          );
+        }
+      }
+    }
+  } else {
+    // Fallback to active model (backward compatibility)
+    // First check custom models for an active one
+    const activeCustomModel = aiModels.find((m) => m.isActive);
+    if (activeCustomModel) {
+      selectedModel = activeCustomModel;
+    } else {
+      // If no custom model is active, check for active predefined model
+      const storageResult = await chrome.storage.local.get([
+        "activePredefinedModelId",
+      ]);
+      const activePredefinedId = storageResult.activePredefinedModelId as
+        | string
+        | undefined;
+      if (activePredefinedId) {
+        const predefinedModel = findPredefinedModel(activePredefinedId);
+        if (predefinedModel) {
+          selectedModel = predefinedModel;
+        } else {
+          selectedModel = aiModels[0];
+        }
+      } else {
+        selectedModel = aiModels[0];
+      }
+    }
+  }
+
+  // Validate that the selected model has a provider
+  if (!selectedModel.provider) {
+    // Try to infer provider from modelId or use openrouter as default
+    selectedModel = {
+      ...selectedModel,
+      provider: inferProviderFromModelId(selectedModel.modelId),
+    };
+  }
 
   // Find selected template
   const selectedTemplate =
@@ -116,16 +274,27 @@ async function handleGenerationStream(
   // 3. Fetch PR Data
   const { diff, metadata } = await fetchPRData(prDetails, githubToken);
 
-  // 4. Generate with AI (streaming)
-  await generateWithAIStream(
-    diff,
-    metadata,
-    settings,
-    selectedTemplate,
-    activeModel.modelId,
-    openRouterKey,
-    port,
-  );
+  // 4. Generate with AI (streaming) using the AI service adapter
+  const useStructuredOutput = await getUseStructuredOutput();
+  if (useStructuredOutput) {
+    await generateWithAIStructuredStreaming(
+      diff,
+      metadata,
+      settings,
+      selectedTemplate,
+      selectedModel,
+      port,
+    );
+  } else {
+    await generateWithAIStreaming(
+      diff,
+      metadata,
+      settings,
+      selectedTemplate,
+      selectedModel,
+      port,
+    );
+  }
 
   // Note: generateWithAIStream handles sending the 'complete' message
 }
@@ -138,22 +307,45 @@ async function handleGeneration(
   const result = (await chrome.storage.local.get([
     "githubToken",
     "openRouterKey",
+    "cerebrasKey",
+    "openaiKey",
+    "anthropicKey",
+    "googleKey",
+    "groqKey",
     "templates",
     "aiModels",
   ])) as {
     githubToken?: string;
     openRouterKey?: string;
+    cerebrasKey?: string;
+    openaiKey?: string;
+    anthropicKey?: string;
+    googleKey?: string;
+    groqKey?: string;
     templates?: PRTemplate[];
     aiModels?: AIModel[];
   };
 
-  // Decrypt API keys
+  // Decrypt all API keys
   const githubToken = result.githubToken
     ? await decryptApiKey(result.githubToken)
     : null;
   const openRouterKey = result.openRouterKey
     ? await decryptApiKey(result.openRouterKey)
     : null;
+  const cerebrasKey = result.cerebrasKey
+    ? await decryptApiKey(result.cerebrasKey)
+    : null;
+  const openaiKey = result.openaiKey
+    ? await decryptApiKey(result.openaiKey)
+    : null;
+  const anthropicKey = result.anthropicKey
+    ? await decryptApiKey(result.anthropicKey)
+    : null;
+  const googleKey = result.googleKey
+    ? await decryptApiKey(result.googleKey)
+    : null;
+  const groqKey = result.groqKey ? await decryptApiKey(result.groqKey) : null;
 
   const templates =
     result.templates && result.templates.length > 0
@@ -164,12 +356,42 @@ async function handleGeneration(
       ? result.aiModels
       : DEFAULT_AI_MODELS;
 
-  if (!githubToken || !openRouterKey) {
+  // Find active model
+  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+
+  // Get the provider for the selected model
+  const provider = activeModel.provider || "openrouter";
+
+  // Get the correct API key for the provider
+  const getProviderApiKey = (): string | null => {
+    switch (provider) {
+      case "openai":
+        return openaiKey;
+      case "anthropic":
+        return anthropicKey;
+      case "google":
+        return googleKey;
+      case "groq":
+        return groqKey;
+      case "cerebras":
+        return cerebrasKey;
+      case "openrouter":
+      default:
+        return openRouterKey;
+    }
+  };
+
+  // Validate that we have GitHub token and at least one AI provider API key
+  if (!githubToken || (!openRouterKey && !cerebrasKey && !openaiKey && !anthropicKey && !googleKey && !groqKey)) {
     throw new Error("Missing API Keys. Please configure them in Settings.");
   }
 
-  // Find active model
-  const activeModel = aiModels.find((m) => m.isActive) || aiModels[0];
+  const providerApiKey = getProviderApiKey();
+  if (!providerApiKey) {
+    throw new Error(
+      `Missing API key for ${provider} provider. Please configure it in Settings.`,
+    );
+  }
 
   // Find selected template
   const selectedTemplate =
@@ -187,14 +409,26 @@ async function handleGeneration(
   const { diff, metadata } = await fetchPRData(prDetails, githubToken);
 
   // 4. Generate with AI (single API call with structured output)
-  const aiResult = await generateWithAI(
-    diff,
-    metadata,
-    settings,
-    selectedTemplate,
-    activeModel.modelId,
-    openRouterKey,
-  );
+  const useStructuredOutput = await getUseStructuredOutput();
+  let aiResult: { title: string; description: string };
+  if (useStructuredOutput) {
+    aiResult = await generateWithAIStructured(
+      diff,
+      metadata,
+      settings,
+      selectedTemplate,
+      activeModel,
+    );
+  } else {
+    aiResult = await generateWithAI(
+      diff,
+      metadata,
+      settings,
+      selectedTemplate,
+      activeModel.modelId,
+      providerApiKey,
+    );
+  }
 
   return {
     success: true,
@@ -333,10 +567,10 @@ function buildStreamingSystemPrompt(
   template: PRTemplate,
   toneDescription: string,
   context: string,
+  generateTitle: boolean,
 ): string {
-  return `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description.
-
-IMPORTANT: You must stream the response in this EXACT format:
+  const titleSection = generateTitle
+    ? `IMPORTANT: You must stream the response in this EXACT format:
 TITLE: <Your concise title here>
 <<<SEPARATOR>>>
 DESCRIPTION: <Your markdown description here>
@@ -346,10 +580,22 @@ TITLE GUIDELINES:
 - Max 60 chars
 - Focus on main change
 
-DESCRIPTION GUIDELINES:
+DESCRIPTION GUIDELINES:`
+    : `IMPORTANT: You must stream the response in this EXACT format:
+DESCRIPTION: <Your markdown description here>
+
+GUIDELINES:`;
+
+  return `You are an expert software engineer assistant. Your task is to generate a Pull Request ${
+    generateTitle ? "title and description" : "description"
+  }.
+
+${titleSection}
 - Writing Style: ${toneDescription}
 - Use this structure:
 ${template.structure}
+
+REMINDERS:
 - Be specific, reference files.
 - No diffs.
 
@@ -361,13 +607,12 @@ ${context}`
 }`;
 }
 
-async function generateWithAIStream(
+async function generateWithAIStreaming(
   diff: string,
   metadata: PRMetadata,
   settings: GeneratorSettings,
   template: PRTemplate,
-  modelId: string,
-  apiKey: string,
+  model: AIModel,
   port: chrome.runtime.Port,
 ): Promise<void> {
   const toneDescription =
@@ -377,6 +622,7 @@ async function generateWithAIStream(
     template,
     toneDescription,
     settings.context,
+    settings.generateTitle ?? false,
   );
 
   const userPrompt = `
@@ -400,101 +646,46 @@ ${diff}
 
 Generate the TITLE and DESCRIPTION now in the requested format.`;
 
+  // Use the AI service adapter for multi-provider support
   try {
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://github.com/pr-buddy-extension",
-          "X-Title": "PR Buddy",
-        },
-        body: JSON.stringify({
-          model: modelId,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          stream: true, // Enable streaming
-        }),
-      },
-    );
+    const stream = aiServiceAdapter.generateTextStream({
+      model,
+      systemPrompt,
+      userPrompt,
+      stream: true,
+    });
 
-    if (!response.ok) {
-      const err = await response.json();
-      const errorMessage = err.error?.message || response.statusText;
-      
-      // Send specific toast notification for OpenRouter API failure
-      sendToastNotification(
-        `OpenRouter API Error: ${errorMessage}`,
-        "error"
-      );
-      
-      throw new Error("AI Generation failed: " + errorMessage);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("Response body is null");
-
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      // Process lines in buffer
-      const lines = buffer.split("\n");
-      // Keep the last incomplete line in buffer
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed === "data: [DONE]") continue;
-
-        if (trimmed.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(trimmed.slice(6));
-            const content = data.choices?.[0]?.delta?.content;
-            if (content) {
-              port.postMessage({ type: "chunk", content });
-            }
-          } catch (e) {
-            console.error("Error parsing stream chunk", e);
-          }
-        }
+    for await (const chunk of stream) {
+      if (chunk.type === "error" && chunk.error) {
+        throw new Error(chunk.error);
+      }
+      if (chunk.type === "chunk" && chunk.content) {
+        port.postMessage({ type: "chunk", content: chunk.content });
+      }
+      if (chunk.type === "complete") {
+        port.postMessage({
+          type: "complete",
+          data: chunk.data || {
+            success: true,
+            description: "",
+            title: "",
+            prDetails: {
+              owner: metadata.base.ref.split(":")[0] || "unknown",
+              repo: "unknown",
+              number: "0",
+            },
+          },
+        });
       }
     }
-
-    // Final success message
-    port.postMessage({
-      type: "complete",
-      data: {
-        success: true,
-        description: "", // Client will have assembled it
-        title: "", // Client will have assembled it
-        prDetails: {
-          owner: metadata.base.ref.split(":")[0] || "unknown", // Fallback, not critical for result
-          repo: "unknown",
-          number: "0",
-        },
-      },
-    });
   } catch (error) {
-    console.error("Error in generateWithAIStream", error);
-    
-    // Send toast notification for streaming errors
+    console.error("Error in generateWithAIStreaming", error);
+
+    // Send toast notification for errors
     if (error instanceof Error) {
-      sendToastNotification(
-        `OpenRouter API Error: ${error.message}`,
-        "error"
-      );
+      sendToastNotification(`AI Generation Error: ${error.message}`, "error");
     }
-    
+
     throw error;
   }
 }
@@ -510,21 +701,34 @@ async function generateWithAI(
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
 
-  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request title and description based on the provided code diffs and context.
-
-You MUST respond with valid JSON in this exact format:
-{
+  const shouldGenerateTitle = settings.generateTitle ?? false;
+  const jsonFormat = shouldGenerateTitle
+    ? `{
   "title": "A concise PR title",
   "description": "The full PR description in Markdown format"
-}
+}`
+    : `{
+  "description": "The full PR description in Markdown format"
+}`;
 
-TITLE GUIDELINES:
+  const titleGuidelines = shouldGenerateTitle
+    ? `TITLE GUIDELINES:
 - Use the imperative mood (e.g., "Add feature" not "Added feature")
 - Max 60 characters is ideal, but up to 80 is acceptable
 - Focus on the main change
 - No quotes or markdown formatting
 
-DESCRIPTION GUIDELINES:
+DESCRIPTION GUIDELINES:`
+    : "GUIDELINES:";
+
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${
+    shouldGenerateTitle ? "title and description" : "description"
+  } based on the provided code diffs and context.
+
+You MUST respond with valid JSON in this exact format:
+${jsonFormat}
+
+${titleGuidelines}
 - Writing Style: ${toneDescription}
 - Use this template structure:
 ${template.structure}
@@ -536,7 +740,9 @@ ${template.structure}
 
 ${
   settings.context
-    ? `USER INSTRUCTIONS (apply to both title and description):\n${settings.context}`
+    ? `USER INSTRUCTIONS (apply to ${
+        shouldGenerateTitle ? "both title and description" : "description"
+      }):\n${settings.context}`
     : ""
 }`;
 
@@ -584,13 +790,10 @@ Generate the JSON response with title and description now.`;
   if (!response.ok) {
     const err = await response.json();
     const errorMessage = err.error?.message || response.statusText;
-    
+
     // Send specific toast notification for OpenRouter API failure
-    sendToastNotification(
-      `OpenRouter API Error: ${errorMessage}`,
-      "error"
-    );
-    
+    sendToastNotification(`OpenRouter API Error: ${errorMessage}`, "error");
+
     throw new Error("AI Generation failed: " + errorMessage);
   }
 
@@ -599,8 +802,11 @@ Generate the JSON response with title and description now.`;
 
   try {
     const parsed = JSON.parse(content);
+    const shouldGenerateTitle = settings.generateTitle ?? false;
     return {
-      title: (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, ""),
+      title: shouldGenerateTitle
+        ? (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, "")
+        : "",
       description: parsed.description || "",
     };
   } catch {
@@ -609,5 +815,227 @@ Generate the JSON response with title and description now.`;
       title: "",
       description: content,
     };
+  }
+}
+
+async function generateWithAIStructuredStreaming(
+  diff: string,
+  metadata: PRMetadata,
+  settings: GeneratorSettings,
+  template: PRTemplate,
+  model: AIModel,
+  port: chrome.runtime.Port,
+): Promise<void> {
+  const toneDescription =
+    TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
+
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${
+    settings.generateTitle ? "title and description" : "description"
+  } based on the provided code diff and context.
+
+${
+  settings.generateTitle
+    ? "You must generate both a title and description."
+    : "You must generate a description."
+}
+
+WRITING STYLE: ${toneDescription}
+
+TEMPLATE STRUCTURE TO FOLLOW:
+${template.structure}
+
+GUIDELINES:
+- Be specific about what changed
+- Reference file names when relevant
+- Keep it readable and scannable
+- Don't include the diff in your response
+- Don't make up information not present in the diff
+${
+  settings.context
+    ? `USER INSTRUCTIONS (apply to ${
+        settings.generateTitle ? "both title and description" : "description"
+      }):\n${settings.context}`
+    : ""
+}`;
+
+  const userPrompt = `
+Current PR Title: ${metadata.title}
+Branch: ${metadata.head.ref} -> ${metadata.base.ref}
+${
+  settings.includeTickets
+    ? `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.`
+    : ""
+}
+
+File Changes Summary:
+- ${metadata.changed_files || "N/A"} files changed
+- +${metadata.additions || 0} additions, -${metadata.deletions || 0} deletions
+
+Diff:
+\`\`\`diff
+${diff}
+\`\`\`
+
+Generate the ${
+    settings.generateTitle ? "title and description" : "description"
+  } now.`;
+
+  try {
+    // Get API keys for AI SDK service
+    const decryptedKeys = await getDecryptedAPIKeys();
+    const aiService = createAISDKService(decryptedKeys);
+    const stream = aiService.generateStructuredTextStream({
+      model,
+      systemPrompt,
+      userPrompt,
+      stream: true,
+    });
+
+    let lastSentContent = "";
+
+    for await (const event of stream) {
+      if (event.type === "error") {
+        port.postMessage({ type: "error", error: event.error });
+        throw new Error(event.error);
+      }
+
+      if (event.type === "partial" && event.data) {
+        // Convert structured output to existing format
+        // Only include the separator if we have both title and description
+        const hasTitle = !!event.data.title;
+        const hasDescription = !!event.data.description;
+
+        let content = "";
+        if (hasTitle) {
+          content += `TITLE: ${event.data.title}`;
+        }
+        if (hasTitle && hasDescription) {
+          content +=
+            "\n\n<<<SEPARATOR>>>\n\nDESCRIPTION: " + event.data.description;
+        } else if (hasDescription) {
+          content += event.data.description;
+        }
+
+        // Only send if content is new and not empty
+        if (content && content !== lastSentContent) {
+          const newContent = content.replace(lastSentContent, "");
+          if (newContent) {
+            port.postMessage({ type: "chunk", content: newContent });
+          }
+          lastSentContent = content;
+        }
+      }
+
+      if (event.type === "complete") {
+        port.postMessage({
+          type: "complete",
+          data: {
+            success: true,
+            description: "",
+            title: "",
+            prDetails: {
+              owner: metadata.base.ref.split(":")[0] || "unknown",
+              repo: "unknown",
+              number: "0",
+            },
+          },
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error in generateWithAIStructuredStreaming", error);
+
+    // Send toast notification for errors
+    if (error instanceof Error) {
+      sendToastNotification(`AI Generation Error: ${error.message}`, "error");
+    }
+
+    throw error;
+  }
+}
+
+async function generateWithAIStructured(
+  diff: string,
+  metadata: PRMetadata,
+  settings: GeneratorSettings,
+  template: PRTemplate,
+  model: AIModel,
+): Promise<{ title: string; description: string }> {
+  const toneDescription =
+    TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
+
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${
+    settings.generateTitle ? "title and description" : "description"
+  } based on the provided code diff and context.
+
+${
+  settings.generateTitle
+    ? "You must generate both a title and description."
+    : "You must generate a description."
+}
+
+WRITING STYLE: ${toneDescription}
+
+TEMPLATE STRUCTURE TO FOLLOW:
+${template.structure}
+
+GUIDELINES:
+- Be specific about what changed
+- Reference file names when relevant
+- Keep it readable and scannable
+- Don't include the diff in your response
+- Don't make up information not present in the diff
+${
+  settings.context
+    ? `USER INSTRUCTIONS (apply to ${
+        settings.generateTitle ? "both title and description" : "description"
+      }):\n${settings.context}`
+    : ""
+}`;
+
+  const userPrompt = `
+Current PR Title: ${metadata.title}
+Branch: ${metadata.head.ref} -> ${metadata.base.ref}
+${
+  settings.includeTickets
+    ? `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.`
+    : ""
+}
+
+File Changes Summary:
+- ${metadata.changed_files || "N/A"} files changed
+- +${metadata.additions || 0} additions, -${metadata.deletions || 0} deletions
+
+Diff:
+\`\`\`diff
+${diff}
+\`\`\`
+
+Generate the ${
+    settings.generateTitle ? "title and description" : "description"
+  } now.`;
+
+  try {
+    // Get API keys for AI SDK service
+    const decryptedKeys = await getDecryptedAPIKeys();
+    const aiService = createAISDKService(decryptedKeys);
+    const result = await aiService.generateStructuredText({
+      model,
+      systemPrompt,
+      userPrompt,
+      stream: false,
+    });
+
+    if (result.success) {
+      return {
+        title: result.data.title || "",
+        description: result.data.description,
+      };
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error("Error in generateWithAIStructured", error);
+    throw error;
   }
 }

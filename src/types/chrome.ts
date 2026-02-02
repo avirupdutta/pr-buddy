@@ -13,6 +13,15 @@ export interface AIModel {
   name: string;
   modelId: string;
   isActive: boolean;
+  provider?: string; // Optional for backward compatibility
+  supportsJsonSchema?: boolean; // Whether the model supports JSON Schema for structured output
+  description?: string; // Model description for display
+  isFree?: boolean; // Whether the model is free to use
+  pricing?: {
+    prompt: string;
+    completion: string;
+  };
+  contextLength?: number; // Maximum context length in tokens
 }
 
 // Legacy type - kept for backwards compatibility during migration
@@ -36,6 +45,12 @@ export interface GeneratorSettings {
   tone: ToneType;
   includeTickets: boolean;
   generateTitle?: boolean;
+  selectedModel?: {
+    id: string;
+    modelId: string;
+    provider: string;
+    supportsJsonSchema?: boolean;
+  };
 }
 
 export interface PRMetadata {
@@ -110,11 +125,19 @@ export interface StreamMessage {
 export interface StoredSettings {
   githubToken?: string;
   openRouterKey?: string;
+  // New AI SDK provider keys
+  openaiKey?: string;
+  anthropicKey?: string;
+  googleKey?: string;
+  groqKey?: string;
+  cerebrasKey?: string; // Future support when available
   devMode?: boolean;
   devPrUrl?: string;
   theme?: "dark" | "light" | "system";
   templates?: PRTemplate[];
   aiModels?: AIModel[];
+  activePredefinedModelId?: string; // ID of active predefined model (not in aiModels)
+  activePredefinedModelProvider?: string; // Provider of active predefined model
   encryptionSalt?: string; // Salt for API key encryption
 }
 

@@ -1,14 +1,15 @@
-import { IconSparkles, IconLoader2 } from "@tabler/icons-react";
+import { IconSparkles, IconSettings } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { useGeneratorStore } from "@/stores/generator-store";
 import { TemplateSelector } from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
 import { ContextInput } from "./ContextInput";
 import { toast } from "sonner";
-import { openOptionsPage } from "@/services/chrome-messaging";
-import packageJson from "../../../package.json";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { openOptionsPage } from "@/services/chrome-messaging";
+import ModelSelector from "./ModelSelector";
 
 interface GeneratorViewProps {
   currentUrl: string;
@@ -59,7 +60,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       </ScrollArea>
 
       {/* Footer */}
-      <div className="px-6 py-4 bg-background border-t border-border/50 shrink-0">
+      <div className="px-6 py-4 bg-background border-t border-border/50 shrink-0 space-y-3">
         <Button
           onClick={handleGenerate}
           disabled={isGenerating}
@@ -76,7 +77,6 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
               >
                 Generating...
               </span>
-              <IconLoader2 className="w-5 h-5 animate-spin" />
             </>
           ) : (
             <>
@@ -85,16 +85,24 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
             </>
           )}
         </Button>
-
-        <p className="text-center text-xs text-muted-foreground mt-3">
-          v{packageJson.version} • Powered by Codebuddy •{" "}
-          <button
-            onClick={openOptionsPage}
-            className="underline hover:text-foreground transition-colors text-primary cursor-pointer"
-          >
-            Settings
-          </button>
-        </p>
+        <div className="flex items-center justify-between">
+          <ModelSelector />
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={openOptionsPage}
+                  className="underline hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <IconSettings className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">Settings</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     </div>
   );

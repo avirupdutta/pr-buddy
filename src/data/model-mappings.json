@@ -1,0 +1,177 @@
+{
+  "providers": {
+    "openrouter": {
+      "name": "OpenRouter",
+      "models": [
+        {
+          "id": "arcee-ai/trinity-large-preview:free",
+          "name": "Trinity Large Preview",
+          "modelId": "arcee-ai/trinity-large-preview:free",
+          "description": "Frontier-scale open-weight model for creative writing and agentic performance",
+          "isFree": true,
+          "supportsJsonSchema": true,
+          "contextLength": 131072
+        },
+        {
+          "id": "stepfun/step-3.5-flash:free",
+          "name": "Step 3.5 Flash",
+          "modelId": "stepfun/step-3.5-flash:free",
+          "description": "Step 3.5 Flash is StepFun's most capable open-source foundation model",
+          "isFree": true,
+          "supportsJsonSchema": false,
+          "contextLength": 256000 
+        },
+        {
+          "id": "nvidia/nemotron-3-nano-30b-a3b:free",
+          "name": "Nemotron 3 Nano 30B A3B",
+          "modelId": "nvidia/nemotron-3-nano-30b-a3b:free",
+          "description": "NVIDIA Nemotron 3 Nano 30B A3B is a small language MoE model with highest compute efficiency and accuracy for developers to build specialized agentic AI systems.",
+          "isFree": true,
+          "supportsJsonSchema": true,
+          "contextLength": 256000 
+        }
+      ],
+      "enabled": true,
+      "sortRank": 1
+    },
+    "openai": {
+      "name": "OpenAI",
+      "models": [
+        {
+          "id": "gpt-5.2",
+          "name": "GPT-5.2",
+          "modelId": "gpt-5.2",
+          "description": "OpenAI's flagship multimodal model",
+          "supportsJsonSchema": true,
+          "reasoningEffort": "low"
+        },
+        {
+          "id": "gpt-5.2-mini",
+          "name": "GPT-5.2 Mini",
+          "modelId": "gpt-5.2-mini",
+          "description": "OpenAI's compact model",
+          "supportsJsonSchema": true,
+          "reasoningEffort": "low"
+        }
+      ],
+      "enabled": false,
+      "sortRank": -1
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "models": [
+        {
+          "id": "claude-4.5-haiku",
+          "name": "Claude 4.5 Haiku",
+          "modelId": "claude-4-5-haiku",
+          "description": "Anthropic's fast and compact model",
+          "supportsJsonSchema": false
+        },
+        {
+          "id": "claude-4.5-sonnet",
+          "name": "Claude 4.5 Sonnet",
+          "modelId": "claude-4-5-sonnet",
+          "description": "Anthropic's most capable model",
+          "supportsJsonSchema": false
+        },
+        {
+          "id": "claude-4.5-opus",
+          "name": "Claude 4.5 Opus",
+          "modelId": "claude-4-5-opus",
+          "description": "Anthropic's most powerful model",
+          "supportsJsonSchema": false
+        }
+      ],
+      "enabled": false,
+      "sortRank": -1
+    },
+    "google": {
+      "name": "Google",
+      "models": [
+        {
+          "id": "gemini-3-flash-preview",
+          "name": "Gemini 3 Flash preview",
+          "modelId": "gemini-3-flash-preview",
+          "description": "Google's latest & fastest multimodal model",
+          "supportsJsonSchema": true,
+          "contextLength": 1048576
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "name": "Gemini 2.5 Flash",
+          "modelId": "gemini-2.5-flash",
+          "description": "Google's fast multimodal model",
+          "supportsJsonSchema": true,
+          "contextLength": 1048576
+        },
+        {
+          "id": "gemini-2.5-flash-lite",
+          "name": "Gemini 2.5 Flash Lite",
+          "modelId": "gemini-2.5-flash-lite",
+          "description": "Google's fast and compact model",
+          "supportsJsonSchema": true,
+          "contextLength": 1048576
+        }
+      ],
+      "enabled": true,
+      "sortRank": 2
+    },
+    "cerebras": {
+      "name": "Cerebras",
+      "models": [
+        {
+          "id": "zai-glm-4.7",
+          "name": "Zai GLM 4.7",
+          "modelId": "zai-glm-4.7",
+          "description": "Zai's large model on Cerebras",
+          "supportsJsonSchema": true
+        },
+        {
+          "id": "gpt-oss-120b",
+          "name": "GPT OSS 120B",
+          "modelId": "gpt-oss-120b",
+          "description": "OpenAI's large model on Cerebras",
+          "supportsJsonSchema": true
+        },
+        {
+          "id": "qwen-3-32b",
+          "name": "Qwen 3 32B",
+          "modelId": "qwen-3-32b",
+          "description": "Alibaba's open source model on Cerebras",
+          "supportsJsonSchema": true
+        }
+      ],
+      "enabled": true,
+      "sortRank": 3
+    },
+    "groq": {
+      "name": "Groq",
+      "models": [
+        {
+          "id": "llama-3.3-70b-versatile",
+          "name": "Llama 3.3 70B",
+          "modelId": "llama-3.3-70b-versatile",
+          "description": "Meta's open source model on Groq",
+          "supportsJsonSchema": false
+        },
+        {
+          "id": "openai/gpt-oss-20b",
+          "name": "GPT OSS 20B",
+          "modelId": "openai/gpt-oss-20b",
+          "description": "OpenAI's medium sized open source model on Groq",
+          "supportsJsonSchema": false
+        },
+        {
+          "id": "openai/gpt-oss-120b",
+          "name": "GPT OSS 120B",
+          "modelId": "openai/gpt-oss-120b",
+          "description": "OpenAI's largest open source model on Groq",
+          "supportsJsonSchema": true,
+          "reasoningEffort": "high"
+        }
+      ],
+      "enabled": true,
+      "sortRank": 4
+    }
+  }
+}
