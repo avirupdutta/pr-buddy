@@ -17,7 +17,9 @@ import modelMappings from "@/data/model-mappings.json";
 
 // Helper function to find a predefined model by ID
 function findPredefinedModel(id: string): AIModel | null {
-  for (const [providerId, providerData] of Object.entries(modelMappings.providers)) {
+  for (const [providerId, providerData] of Object.entries(
+    modelMappings.providers,
+  )) {
     const foundModel = providerData.models.find((m) => m.id === id);
     if (foundModel) {
       return {
@@ -239,10 +241,7 @@ export const mockRuntime = {
               err instanceof Error ? err.message : "Unknown error";
 
             // Send toast notification for all API errors
-            sendToastNotification(
-              `API Error: ${errorMessage}`,
-              "error",
-            );
+            sendToastNotification(`API Error: ${errorMessage}`, "error");
 
             listeners.forEach((cb) =>
               cb({
@@ -332,7 +331,10 @@ async function handleDevGenerationStream(
         selectedModel = predefinedModel;
       } else {
         // Last resort: try to construct a model from the settings data
-        if (selectedModelFromSettings.modelId && selectedModelFromSettings.provider) {
+        if (
+          selectedModelFromSettings.modelId &&
+          selectedModelFromSettings.provider
+        ) {
           selectedModel = {
             id: selectedModelFromSettings.id,
             name: selectedModelFromSettings.id,
@@ -356,7 +358,9 @@ async function handleDevGenerationStream(
       selectedModel = activeCustomModel;
     } else {
       // If no custom model is active, check for active predefined model
-      const activePredefinedId = devStorage.activePredefinedModelId as string | undefined;
+      const activePredefinedId = devStorage.activePredefinedModelId as
+        | string
+        | undefined;
       if (activePredefinedId) {
         const predefinedModel = findPredefinedModel(activePredefinedId);
         if (predefinedModel) {
@@ -455,6 +459,8 @@ DESCRIPTION GUIDELINES:
 - Writing Style: ${toneDescription}
 - Use this structure:
 ${selectedTemplate.structure}
+
+REMINDERS:
 - Be specific, reference files.
 - No diffs.
 
@@ -504,24 +510,27 @@ Generate the title and description now.`;
 
   // Stream the response using AI SDK with structured output
   let lastSentContent = "";
-  
-  for await (const event of aiService.generateStructuredTextStream(requestParams)) {
+
+  for await (const event of aiService.generateStructuredTextStream(
+    requestParams,
+  )) {
     if (event.type === "error" && event.error) {
       throw new Error(event.error);
     }
-    
+
     if (event.type === "partial" && event.data) {
       // Convert structured output to existing format
       // Only include the separator if we have both title and description
       const hasTitle = !!event.data.title;
       const hasDescription = !!event.data.description;
-      
+
       let content = "";
       if (hasTitle) {
         content += `TITLE: ${event.data.title}`;
       }
       if (hasTitle && hasDescription) {
-        content += "\n\n<<<SEPARATOR>>>\n\nDESCRIPTION: " + event.data.description;
+        content +=
+          "\n\n<<<SEPARATOR>>>\n\nDESCRIPTION: " + event.data.description;
       } else if (hasDescription) {
         content += event.data.description;
       }
@@ -536,14 +545,16 @@ Generate the title and description now.`;
       }
     }
   }
-  
+
   // Check if the stream completed successfully or with an error
   // If the stream completed with no content, it likely failed silently
   if (!lastSentContent) {
     // This indicates the stream completed but no content was generated
     // This typically happens when the AI SDK handles the error internally
     // We need to throw an error to trigger the toast notification
-    throw new Error("API request failed: The stream completed without generating content. This usually indicates an API error such as rate limiting or content size limits.");
+    throw new Error(
+      "API request failed: The stream completed without generating content. This usually indicates an API error such as rate limiting or content size limits.",
+    );
   }
 
   postMessage({
@@ -892,7 +903,8 @@ Generate the title and description now.`;
       description,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     sendToastNotification(`AI SDK Error: ${errorMessage}`, "error");
     throw new Error("AI Generation failed: " + errorMessage);
   }

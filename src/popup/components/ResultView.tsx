@@ -344,18 +344,26 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                 Generating...
               </span>
             </Button>
-            <button
-              onClick={stopGeneration}
-              className="h-10 w-10 flex items-center justify-center rounded-lg text-white hover:text-white/80 transition-colors shrink-0 cursor-pointer"
-              aria-label="Stop generation"
-              title="Stop generation"
-            >
-              <FluentRecordStopFilled
-                width={20}
-                height={20}
-                className="fill-current"
-              />
-            </button>
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={stopGeneration}
+                    className="h-10 w-10 flex items-center justify-center rounded-lg text-white hover:text-white/80 transition-colors shrink-0 cursor-pointer"
+                    aria-label="Stop generation"
+                  >
+                    <FluentRecordStopFilled
+                      width={20}
+                      height={20}
+                      className="fill-current"
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p className="text-xs">Stop generation</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         ) : (
           /* After first generation completes, show ResultView footer with fade-in */
@@ -380,9 +388,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                 )}
               </Button>
 
-              {((generatedDescription &&
-                (!generateTitle || generatedTitle)) ||
-                  isInserting) && (
+              {((generatedDescription && (!generateTitle || generatedTitle)) ||
+                isInserting) && (
                 <Button
                   onClick={handleInsert}
                   disabled={isInserting || isGenerating}

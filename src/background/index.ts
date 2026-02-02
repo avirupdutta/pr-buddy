@@ -23,14 +23,16 @@ import modelMappings from "@/data/model-mappings.json";
 
 // Get structured output setting from storage
 async function getUseStructuredOutput(): Promise<boolean> {
-  const result = await chrome.storage.local.get(['useStructuredOutput']);
+  const result = await chrome.storage.local.get(["useStructuredOutput"]);
   // Default to true for new installations
   return result.useStructuredOutput !== false;
 }
 
 // Helper function to find a predefined model by ID
 function findPredefinedModel(id: string): AIModel | null {
-  for (const [providerId, providerData] of Object.entries(modelMappings.providers)) {
+  for (const [providerId, providerData] of Object.entries(
+    modelMappings.providers,
+  )) {
     const foundModel = providerData.models.find((m) => m.id === id);
     if (foundModel) {
       return {
@@ -56,7 +58,10 @@ function inferProviderFromModelId(modelId: string): string {
   if (modelId.includes("google/") || modelId.startsWith("gemini-")) {
     return "google";
   }
-  if (modelId.includes("groq/") || (modelId.startsWith("llama") && modelId.includes("versatile"))) {
+  if (
+    modelId.includes("groq/") ||
+    (modelId.startsWith("llama") && modelId.includes("versatile"))
+  ) {
     return "groq";
   }
   if (modelId.includes("cerebras/")) {
@@ -80,7 +85,8 @@ chrome.runtime.onConnect.addListener((port) => {
       try {
         await handleGenerationStream(msg.url, msg.settings, port);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Generation failed";
+        const errorMessage =
+          err instanceof Error ? err.message : "Generation failed";
         // Send toast notification for API errors
         sendToastNotification(`API Error: ${errorMessage}`, "error");
         port.postMessage({
@@ -188,7 +194,10 @@ async function handleGenerationStream(
         // Last resort: try to construct a model from the settings data
         // This handles cases where the model ID might not be in predefined list
         // but we have the modelId and provider from the generator store
-        if (selectedModelFromSettings.modelId && selectedModelFromSettings.provider) {
+        if (
+          selectedModelFromSettings.modelId &&
+          selectedModelFromSettings.provider
+        ) {
           selectedModel = {
             id: selectedModelFromSettings.id,
             name: selectedModelFromSettings.id, // Use ID as name fallback
@@ -211,8 +220,12 @@ async function handleGenerationStream(
       selectedModel = activeCustomModel;
     } else {
       // If no custom model is active, check for active predefined model
-      const storageResult = await chrome.storage.local.get(['activePredefinedModelId']);
-      const activePredefinedId = storageResult.activePredefinedModelId as string | undefined;
+      const storageResult = await chrome.storage.local.get([
+        "activePredefinedModelId",
+      ]);
+      const activePredefinedId = storageResult.activePredefinedModelId as
+        | string
+        | undefined;
       if (activePredefinedId) {
         const predefinedModel = findPredefinedModel(activePredefinedId);
         if (predefinedModel) {
@@ -546,7 +559,8 @@ function buildStreamingSystemPrompt(
   context: string,
   generateTitle: boolean,
 ): string {
-  const titleSection = generateTitle ? `IMPORTANT: You must stream the response in this EXACT format:
+  const titleSection = generateTitle
+    ? `IMPORTANT: You must stream the response in this EXACT format:
 TITLE: <Your concise title here>
 <<<SEPARATOR>>>
 DESCRIPTION: <Your markdown description here>
@@ -556,17 +570,22 @@ TITLE GUIDELINES:
 - Max 60 chars
 - Focus on main change
 
-DESCRIPTION GUIDELINES:` : `IMPORTANT: You must stream the response in this EXACT format:
+DESCRIPTION GUIDELINES:`
+    : `IMPORTANT: You must stream the response in this EXACT format:
 DESCRIPTION: <Your markdown description here>
 
 GUIDELINES:`;
 
-  return `You are an expert software engineer assistant. Your task is to generate a Pull Request ${generateTitle ? 'title and description' : 'description'}.
+  return `You are an expert software engineer assistant. Your task is to generate a Pull Request ${
+    generateTitle ? "title and description" : "description"
+  }.
 
 ${titleSection}
 - Writing Style: ${toneDescription}
 - Use this structure:
 ${template.structure}
+
+REMINDERS:
 - Be specific, reference files.
 - No diffs.
 
@@ -673,22 +692,28 @@ async function generateWithAI(
     TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
 
   const shouldGenerateTitle = settings.generateTitle ?? false;
-  const jsonFormat = shouldGenerateTitle ? `{
+  const jsonFormat = shouldGenerateTitle
+    ? `{
   "title": "A concise PR title",
   "description": "The full PR description in Markdown format"
-}` : `{
+}`
+    : `{
   "description": "The full PR description in Markdown format"
 }`;
 
-  const titleGuidelines = shouldGenerateTitle ? `TITLE GUIDELINES:
+  const titleGuidelines = shouldGenerateTitle
+    ? `TITLE GUIDELINES:
 - Use the imperative mood (e.g., "Add feature" not "Added feature")
 - Max 60 characters is ideal, but up to 80 is acceptable
 - Focus on the main change
 - No quotes or markdown formatting
 
-DESCRIPTION GUIDELINES:` : "GUIDELINES:";
+DESCRIPTION GUIDELINES:`
+    : "GUIDELINES:";
 
-  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${shouldGenerateTitle ? 'title and description' : 'description'} based on the provided code diffs and context.
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${
+    shouldGenerateTitle ? "title and description" : "description"
+  } based on the provided code diffs and context.
 
 You MUST respond with valid JSON in this exact format:
 ${jsonFormat}
@@ -705,7 +730,9 @@ ${template.structure}
 
 ${
   settings.context
-    ? `USER INSTRUCTIONS (apply to ${shouldGenerateTitle ? 'both title and description' : 'description'}):\n${settings.context}`
+    ? `USER INSTRUCTIONS (apply to ${
+        shouldGenerateTitle ? "both title and description" : "description"
+      }):\n${settings.context}`
     : ""
 }`;
 
@@ -767,7 +794,9 @@ Generate the JSON response with title and description now.`;
     const parsed = JSON.parse(content);
     const shouldGenerateTitle = settings.generateTitle ?? false;
     return {
-      title: shouldGenerateTitle ? (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, "") : "",
+      title: shouldGenerateTitle
+        ? (parsed.title || "").replace(/^"|"$/g, "").replace(/^`|`$/g, "")
+        : "",
       description: parsed.description || "",
     };
   } catch {
@@ -790,11 +819,14 @@ async function generateWithAIStructuredStreaming(
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
 
-  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${settings.generateTitle ? 'title and description' : 'description'} based on the provided code diff and context.
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${
+    settings.generateTitle ? "title and description" : "description"
+  } based on the provided code diff and context.
 
-${settings.generateTitle ? 
-  'You must generate both a title and description.' : 
-  'You must generate a description.'
+${
+  settings.generateTitle
+    ? "You must generate both a title and description."
+    : "You must generate a description."
 }
 
 WRITING STYLE: ${toneDescription}
@@ -808,17 +840,21 @@ GUIDELINES:
 - Keep it readable and scannable
 - Don't include the diff in your response
 - Don't make up information not present in the diff
-${settings.context ? 
-  `USER INSTRUCTIONS (apply to ${settings.generateTitle ? 'both title and description' : 'description'}):\n${settings.context}` : 
-  ""
+${
+  settings.context
+    ? `USER INSTRUCTIONS (apply to ${
+        settings.generateTitle ? "both title and description" : "description"
+      }):\n${settings.context}`
+    : ""
 }`;
 
   const userPrompt = `
 Current PR Title: ${metadata.title}
 Branch: ${metadata.head.ref} -> ${metadata.base.ref}
-${settings.includeTickets ? 
-  `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.` : 
-  ""
+${
+  settings.includeTickets
+    ? `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.`
+    : ""
 }
 
 File Changes Summary:
@@ -830,7 +866,9 @@ Diff:
 ${diff}
 \`\`\`
 
-Generate the ${settings.generateTitle ? 'title and description' : 'description'} now.`;
+Generate the ${
+    settings.generateTitle ? "title and description" : "description"
+  } now.`;
 
   try {
     // Get API keys for AI SDK service
@@ -843,26 +881,27 @@ Generate the ${settings.generateTitle ? 'title and description' : 'description'}
       stream: true,
     });
 
-let lastSentContent = "";
-    
+    let lastSentContent = "";
+
     for await (const event of stream) {
       if (event.type === "error") {
         port.postMessage({ type: "error", error: event.error });
         throw new Error(event.error);
       }
-      
+
       if (event.type === "partial" && event.data) {
         // Convert structured output to existing format
         // Only include the separator if we have both title and description
         const hasTitle = !!event.data.title;
         const hasDescription = !!event.data.description;
-        
+
         let content = "";
         if (hasTitle) {
           content += `TITLE: ${event.data.title}`;
         }
         if (hasTitle && hasDescription) {
-          content += "\n\n<<<SEPARATOR>>>\n\nDESCRIPTION: " + event.data.description;
+          content +=
+            "\n\n<<<SEPARATOR>>>\n\nDESCRIPTION: " + event.data.description;
         } else if (hasDescription) {
           content += event.data.description;
         }
@@ -876,7 +915,7 @@ let lastSentContent = "";
           lastSentContent = content;
         }
       }
-      
+
       if (event.type === "complete") {
         port.postMessage({
           type: "complete",
@@ -915,11 +954,14 @@ async function generateWithAIStructured(
   const toneDescription =
     TONE_DESCRIPTIONS[settings.tone] || TONE_DESCRIPTIONS.professional;
 
-  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${settings.generateTitle ? 'title and description' : 'description'} based on the provided code diff and context.
+  const systemPrompt = `You are an expert software engineer assistant. Your task is to generate a Pull Request ${
+    settings.generateTitle ? "title and description" : "description"
+  } based on the provided code diff and context.
 
-${settings.generateTitle ? 
-  'You must generate both a title and description.' : 
-  'You must generate a description.'
+${
+  settings.generateTitle
+    ? "You must generate both a title and description."
+    : "You must generate a description."
 }
 
 WRITING STYLE: ${toneDescription}
@@ -933,17 +975,21 @@ GUIDELINES:
 - Keep it readable and scannable
 - Don't include the diff in your response
 - Don't make up information not present in the diff
-${settings.context ? 
-  `USER INSTRUCTIONS (apply to ${settings.generateTitle ? 'both title and description' : 'description'}):\n${settings.context}` : 
-  ""
+${
+  settings.context
+    ? `USER INSTRUCTIONS (apply to ${
+        settings.generateTitle ? "both title and description" : "description"
+      }):\n${settings.context}`
+    : ""
 }`;
 
   const userPrompt = `
 Current PR Title: ${metadata.title}
 Branch: ${metadata.head.ref} -> ${metadata.base.ref}
-${settings.includeTickets ? 
-  `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.` : 
-  ""
+${
+  settings.includeTickets
+    ? `\nTicket Detection: Look for ticket IDs (like JIRA IDs) in the branch name "${metadata.head.ref}" and include them.`
+    : ""
 }
 
 File Changes Summary:
@@ -955,7 +1001,9 @@ Diff:
 ${diff}
 \`\`\`
 
-Generate the ${settings.generateTitle ? 'title and description' : 'description'} now.`;
+Generate the ${
+    settings.generateTitle ? "title and description" : "description"
+  } now.`;
 
   try {
     // Get API keys for AI SDK service
