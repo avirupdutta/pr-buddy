@@ -89,6 +89,14 @@
       "name": "Google",
       "models": [
         {
+          "id": "gemini-3-flash-preview",
+          "name": "Gemini 3 Flash preview",
+          "modelId": "gemini-3-flash-preview",
+          "description": "Google's latest & fastest multimodal model",
+          "supportsJsonSchema": true,
+          "contextLength": 1048576
+        },
+        {
           "id": "gemini-2.5-flash",
           "name": "Gemini 2.5 Flash",
           "modelId": "gemini-2.5-flash",
