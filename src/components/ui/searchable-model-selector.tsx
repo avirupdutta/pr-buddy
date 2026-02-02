@@ -365,9 +365,12 @@ export const SearchableModelSelector: React.FC<
       {/* Dropdown */}
       {isOpen && (
         <div
-          className={`absolute left-0 right-0 z-50 shadow-md ${
-            popoverPosition === "top" ? "bottom-full mb-1" : "top-full mt-1"
-          } bg-background/95 backdrop-blur-md border border-border rounded-md shadow-lg max-h-80 overflow-hidden w-[432px]`}
+          className={cn(
+            "absolute left-0 right-0 z-50 shadow-md bg-background/95 backdrop-blur-md border border-border rounded-md max-h-80 overflow-hidden w-[432px]",
+            popoverPosition === "top"
+              ? "bottom-full mb-1 animate-dropdown-fade-up-top"
+              : "top-full mt-1 animate-dropdown-fade-up",
+          )}
         >
           {/* Search Input */}
           <div className="p-2 border-b border-border">
