@@ -380,28 +380,27 @@ export function ResultView({ currentUrl }: ResultViewProps) {
                 )}
               </Button>
 
-              <Button
-                onClick={handleInsert}
-                disabled={
-                  isInserting ||
-                  isGenerating ||
-                  (!generatedDescription &&
-                    (!generateTitle || !generatedTitle))
-                }
-                className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border shadow-lg"
-              >
-                {isInserting ? (
-                  <>
-                    <IconLoader2 className="w-5 h-5 animate-spin" />
-                    <span>Applying...</span>
-                  </>
-                ) : (
-                  <>
-                    <IconCheck className="w-5 h-5" />
-                    <span>Apply</span>
-                  </>
-                )}
-              </Button>
+              {((generatedDescription &&
+                (!generateTitle || generatedTitle)) ||
+                  isInserting) && (
+                <Button
+                  onClick={handleInsert}
+                  disabled={isInserting || isGenerating}
+                  className="flex-1 h-10 gap-2 text-xs font-medium rounded-lg border border-border shadow-lg"
+                >
+                  {isInserting ? (
+                    <>
+                      <IconLoader2 className="w-5 h-5 animate-spin" />
+                      <span>Applying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <IconCheck className="w-5 h-5" />
+                      <span>Apply</span>
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         )}
