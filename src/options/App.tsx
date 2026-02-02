@@ -15,7 +15,9 @@ import {
   IconCircleCheck,
   IconX,
   IconSettings,
+  IconHelp,
 } from "@tabler/icons-react";
+import { NextStepProvider, NextStepReact, useNextStep } from "nextstepjs";
 import { OpenRouterLogo } from "@/components/provider-logos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,6 +44,8 @@ import { ProviderLogo } from "@/components/provider-logos";
 import type { PRTemplate, AIModel } from "@/types/chrome";
 import type { AIProviderType } from "@/services/ai-provider-registry";
 import modelMappings from "@/data/model-mappings.json";
+import { settingsTourSteps } from "@/data/settings-tour-steps";
+import { SettingsTourCard } from "@/components/onboarding/SettingsTourCard";
 
 // ============================================
 // Template Editor Component
@@ -624,22 +628,22 @@ function SettingsForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <Tabs defaultValue="general" className="w-full">
+      <Tabs defaultValue="general" className="w-full" id="settings-tabs">
         <TabsList className={`grid w-full ${gridCols}`}>
-          <TabsTrigger value="general" className="gap-2">
+          <TabsTrigger value="general" className="gap-2" id="settings-tab-general">
             <IconPuzzle className="w-4 h-4" />
             General
           </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-2">
+          <TabsTrigger value="templates" className="gap-2" id="settings-tab-templates">
             <IconTemplate className="w-4 h-4" />
             Templates
           </TabsTrigger>
-          <TabsTrigger value="ai-models" className="gap-2">
+          <TabsTrigger value="ai-models" className="gap-2" id="settings-tab-models">
             <IconCpu className="w-4 h-4" />
             Custom Models
           </TabsTrigger>
           {isDev && (
-            <TabsTrigger value="developer" className="gap-2">
+            <TabsTrigger value="developer" className="gap-2" id="settings-tab-developer">
               <IconCode className="w-4 h-4" />
               Developer
             </TabsTrigger>
@@ -648,7 +652,7 @@ function SettingsForm({
 
         <TabsContent value="general" className="flex flex-col gap-6 mt-4">
           {/* GitHub Token */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3" id="settings-github-token">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                 GitHub Personal Access Token
@@ -680,7 +684,7 @@ function SettingsForm({
           </div>
 
           {/* OpenRouter Key */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3" id="settings-openrouter-key">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                 OpenRouter
@@ -813,6 +817,7 @@ function SettingsForm({
               <ThemeToggle variant="full" />
             </div>
           </div>
+
         </TabsContent>
 
         <TabsContent value="templates" className="mt-4">
@@ -868,6 +873,7 @@ function SettingsForm({
           disabled={isSaving}
           className="w-full gap-2 shadow-lg"
           size="lg"
+          id="settings-save-btn"
         >
           {isSaving ? (
             <>
@@ -892,9 +898,9 @@ function SettingsForm({
 }
 
 // ============================================
-// Main Options App Component
+// Options App Content Component (Inner)
 // ============================================
-export function OptionsApp() {
+function OptionsAppContent() {
   const {
     githubToken,
     openRouterKey,
@@ -909,11 +915,33 @@ export function OptionsApp() {
     isSaving,
     load,
     save,
+    settingsOnboardingCompleted,
+    settingsOnboardingStarted,
+    setSettingsOnboardingStarted,
+    resetSettingsOnboarding,
   } = useSettingsStore();
+  const { startNextStep } = useNextStep();
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Auto-start settings onboarding on fresh install
+  useEffect(() => {
+    if (isLoading) return;
+    
+    const hasGithubToken = !!githubToken;
+    const hasOpenRouterKey = !!openRouterKey;
+    
+    // Start onboarding if no API keys and onboarding hasn't been completed or started
+    if (!hasGithubToken && !hasOpenRouterKey && !settingsOnboardingCompleted && !settingsOnboardingStarted) {
+      const timer = setTimeout(() => {
+        setSettingsOnboardingStarted(true);
+        startNextStep("settingsOnboarding");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, githubToken, openRouterKey, settingsOnboardingCompleted, settingsOnboardingStarted, setSettingsOnboardingStarted, startNextStep]);
 
   if (isLoading) {
     return (
@@ -978,6 +1006,29 @@ export function OptionsApp() {
                 isSaving={isSaving}
                 onSave={save}
               />
+
+              {/* Restart Tours */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Onboarding Tours
+                </Label>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Restart the setup guide to configure API keys.
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      resetSettingsOnboarding();
+                      startNextStep("settingsOnboarding");
+                    }}
+                  >
+                    <IconHelp className="mr-2 h-4 w-4" />
+                    Restart Setup Guide
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -998,5 +1049,23 @@ export function OptionsApp() {
         </div>
       </main>
     </div>
+  );
+}
+
+// ============================================
+// Main Options App Component
+// ============================================
+export function OptionsApp() {
+  return (
+    <NextStepProvider>
+      <NextStepReact
+        steps={settingsTourSteps}
+        cardComponent={SettingsTourCard}
+        shadowRgb="0, 0, 0"
+        shadowOpacity="0.85"
+      >
+        <OptionsAppContent />
+      </NextStepReact>
+    </NextStepProvider>
   );
 }

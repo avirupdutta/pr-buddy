@@ -11,7 +11,14 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Mock Next.js modules to satisfy nextstepjs peer dependencies
+      "next/navigation": path.resolve(__dirname, "./src/mocks/next-navigation.ts"),
+      "next/router": path.resolve(__dirname, "./src/mocks/next-navigation.ts"),
     },
+  },
+  optimizeDeps: {
+    // Exclude nextstepjs from pre-bundling to avoid Next.js adapter resolution
+    exclude: ["nextstepjs"],
   },
   build: {
     rollupOptions: {
@@ -20,6 +27,10 @@ export default defineConfig({
         options: "src/options/index.html",
       },
     },
+  },
+  ssr: {
+    // Ensure nextstepjs and motion are bundled properly
+    noExternal: ['nextstepjs', 'motion']
   },
   server: {
     port: 5000,

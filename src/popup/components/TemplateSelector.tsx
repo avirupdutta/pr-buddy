@@ -14,7 +14,7 @@ export function TemplateSelector() {
   const { templates } = useSettingsStore();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" id="tour-template">
       <Label className="text-sm font-medium">PR Template</Label>
       <Select value={template} onValueChange={(v) => setTemplate(v)}>
         <SelectTrigger className="h-12 text-sm w-full">

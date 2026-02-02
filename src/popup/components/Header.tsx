@@ -16,7 +16,10 @@ export function Header() {
   const { view, reset } = useGeneratorStore();
 
   return (
-    <header className="flex items-center justify-between border-b border-border px-6 py-4 bg-background sticky top-0 z-10">
+    <header
+      className="flex items-center justify-between border-b border-border px-6 py-4 bg-background sticky top-0 z-20"
+      id="tour-header"
+    >
       <div className="flex items-end gap-1.5 text-foreground">
         <TooltipProvider delayDuration={100}>
           <Tooltip>

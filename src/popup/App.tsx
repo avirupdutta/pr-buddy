@@ -18,7 +18,6 @@ export function PopupApp() {
 
   const {
     load: loadSettings,
-    hasValidKeys,
     isLoading: isLoadingSettings,
     devMode,
     devPrUrl,
@@ -110,11 +109,20 @@ export function PopupApp() {
 
   // Redirect to options if no API keys
   useEffect(() => {
-    if (!isLoadingSettings && !hasValidKeys()) {
-      openOptionsPage();
-      window.close();
+    if (!isLoadingSettings) {
+      // Add small delay to ensure store state is fully propagated
+      const timer = setTimeout(() => {
+        // Access fresh state directly from store to avoid stale closure
+        const hasKeys = useSettingsStore.getState().hasValidKeys();
+        if (!hasKeys) {
+          openOptionsPage();
+          // Delay close to let options page open first
+          setTimeout(() => window.close(), 150);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [isLoadingSettings, hasValidKeys]);
+  }, [isLoadingSettings]);
 
   // Show loading state
   if (isLoadingSettings) {
@@ -136,7 +144,7 @@ export function PopupApp() {
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {/* Generator View - slides from left to right */}
         <div
-          className={`absolute inset-0 transition-all duration-100 ${
+          className={`absolute inset-0 transition-all duration-100 z-10 ${
             displayedView === "generator" && !isTransitioning
               ? "opacity-100 translate-x-0"
               : displayedView === "generator" && isTransitioning
@@ -149,7 +157,7 @@ export function PopupApp() {
 
         {/* Result View - slides from right to left */}
         <div
-          className={`absolute inset-0 transition-all duration-100 ${
+          className={`absolute inset-0 transition-all duration-100 z-10 ${
             displayedView === "result" && !isTransitioning
               ? "opacity-100 translate-x-0"
               : displayedView === "result" && isTransitioning

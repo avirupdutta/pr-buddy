@@ -29,7 +29,7 @@ const ModelSelector = ({ disabled = false }: ModelSelectorProps) => {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" id="tour-model">
       <SearchableModelSelector
         models={[]} // Predefined models are handled internally by the component
         customModels={aiModels}

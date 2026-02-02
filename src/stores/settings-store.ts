@@ -113,6 +113,16 @@ interface SettingsState {
   isSaving: boolean;
   error: string | null;
 
+  // Settings Onboarding State
+  settingsOnboardingCompleted: boolean;
+  settingsOnboardingStarted: boolean;
+  setSettingsOnboardingCompleted: (completed: boolean) => void;
+  setSettingsOnboardingStarted: (started: boolean) => void;
+
+  // Reset Functions
+  resetAllOnboarding: () => void;
+  resetSettingsOnboarding: () => void;
+
   // Actions
   load: () => Promise<void>;
   save: (settings: {
@@ -185,6 +195,40 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   isSaving: false,
   error: null,
 
+  // Onboarding State - Settings Tour
+  settingsOnboardingCompleted: false,
+  settingsOnboardingStarted: false,
+  setSettingsOnboardingCompleted: (completed) => {
+    set({ settingsOnboardingCompleted: completed });
+    setStorage({ settingsOnboardingCompleted: completed });
+  },
+  setSettingsOnboardingStarted: (started) => {
+    set({ settingsOnboardingStarted: started });
+    setStorage({ settingsOnboardingStarted: started });
+  },
+
+  // Reset Functions
+  resetAllOnboarding: () => {
+    set({
+      settingsOnboardingCompleted: false,
+      settingsOnboardingStarted: false,
+    });
+    setStorage({
+      settingsOnboardingCompleted: false,
+      settingsOnboardingStarted: false,
+    });
+  },
+  resetSettingsOnboarding: () => {
+    set({
+      settingsOnboardingCompleted: false,
+      settingsOnboardingStarted: false,
+    });
+    setStorage({
+      settingsOnboardingCompleted: false,
+      settingsOnboardingStarted: false,
+    });
+  },
+
   load: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -203,6 +247,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         "aiModels",
         "activePredefinedModelId",
         "activePredefinedModelProvider",
+        "settingsOnboardingCompleted",
+        "settingsOnboardingStarted",
       ]);
 
       // Decrypt API keys
@@ -250,6 +296,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         activePredefinedModelId: result.activePredefinedModelId || null,
         activePredefinedModelProvider:
           result.activePredefinedModelProvider || null,
+        // Onboarding state
+        settingsOnboardingCompleted: result.settingsOnboardingCompleted || false,
+        settingsOnboardingStarted: result.settingsOnboardingStarted || false,
         isLoading: false,
       });
     } catch (error) {

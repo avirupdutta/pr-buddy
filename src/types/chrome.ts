@@ -139,6 +139,9 @@ export interface StoredSettings {
   activePredefinedModelId?: string; // ID of active predefined model (not in aiModels)
   activePredefinedModelProvider?: string; // Provider of active predefined model
   encryptionSalt?: string; // Salt for API key encryption
+  // Onboarding state
+  settingsOnboardingCompleted?: boolean;
+  settingsOnboardingStarted?: boolean;
 }
 
 export interface StoredPreferences {

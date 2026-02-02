@@ -8,7 +8,7 @@ export function ContextInput() {
     useGeneratorStore();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" id="tour-context">
       {/* Generate PR Title Toggle */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-0.5">

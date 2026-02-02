@@ -215,6 +215,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as "raw" | "preview")}
             className="flex flex-col h-full"
+            id="tour-result"
           >
             <div className="sticky top-0 bg-background z-10 py-2 border-b border-border">
               <div className="flex items-center justify-between">

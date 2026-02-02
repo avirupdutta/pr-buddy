@@ -37,7 +37,7 @@ export function ToneSelector() {
   const { tone, setTone } = useGeneratorStore();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" id="tour-tone">
       <Label className="text-sm font-medium">Description Tone</Label>
       <div className="flex flex-wrap gap-2">
         {TONES.map((t) => (
