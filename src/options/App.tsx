@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   IconPuzzle,
   IconKey,
@@ -17,11 +17,6 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import {
-  OpenAILogo,
-  AnthropicLogo,
-  GoogleLogo,
-  GroqLogo,
-  CerebrasLogo,
   OpenRouterLogo,
 } from "@/components/provider-logos";
 import { Button } from "@/components/ui/button";
@@ -48,6 +43,7 @@ import {
 import { ProviderLogo } from "@/components/provider-logos";
 import type { PRTemplate, AIModel } from "@/types/chrome";
 import type { AIProviderType } from "@/services/ai-provider-registry";
+import modelMappings from "@/data/model-mappings.json";
 
 // ============================================
 // Template Editor Component
@@ -124,14 +120,17 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
   const [modelId, setModelId] = useState(model?.modelId || "");
   const [provider, setProvider] = useState(model?.provider || "openrouter");
 
-  const providerOptions = [
-    { value: "openrouter", label: "OpenRouter" },
-    { value: "openai", label: "OpenAI" },
-    { value: "anthropic", label: "Anthropic" },
-    { value: "google", label: "Google AI" },
-    { value: "groq", label: "Groq" },
-    { value: "cerebras", label: "Cerebras" },
-  ];
+  // Generate provider options dynamically from model-mappings.json
+  // Filter enabled providers and sort by sortRank
+  const providerOptions = useMemo(() => {
+    return Object.entries(modelMappings.providers)
+      .filter(([, providerData]: [string, { enabled: boolean; sortRank: number; name: string }]) => providerData.enabled)
+      .sort(([, a]: [string, { sortRank: number }], [, b]: [string, { sortRank: number }]) => a.sortRank - b.sortRank)
+      .map(([providerId, providerData]: [string, { name: string }]) => ({
+        value: providerId,
+        label: providerData.name,
+      }));
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -712,115 +711,46 @@ function SettingsForm({
               OpenRouter will continue to work as the default provider.
             </p>
 
-            {/* OpenAI Key */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">OpenAI</Label>
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
-                >
-                  Get Key
-                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </a>
-              </div>
-              <ApiKeyInput
-                value={localOpenAIKey}
-                onChange={setLocalOpenAIKey}
-                placeholder="Enter API Key..."
-                icon={<OpenAILogo size={20} />}
-              />
-            </div>
+            {/* Dynamically render API key inputs for enabled providers (excluding openrouter) */}
+            {Object.entries(modelMappings.providers)
+              .filter(([providerId, providerData]: [string, { enabled: boolean }]) => providerId !== "openrouter" && providerData.enabled)
+              .sort(([, a]: [string, { sortRank: number }], [, b]: [string, { sortRank: number }]) => a.sortRank - b.sortRank)
+              .map(([providerId, providerData]: [string, { name: string }]) => {
+                // Map provider IDs to their state and setters
+                const keyConfig: Record<string, { value: string; setter: (val: string) => void; url: string }> = {
+                  openai: { value: localOpenAIKey, setter: setLocalOpenAIKey, url: "https://platform.openai.com/api-keys" },
+                  anthropic: { value: localAnthropicKey, setter: setLocalAnthropicKey, url: "https://console.anthropic.com/" },
+                  google: { value: localGoogleKey, setter: setLocalGoogleKey, url: "https://makersuite.google.com/app/apikey" },
+                  groq: { value: localGroqKey, setter: setLocalGroqKey, url: "https://console.groq.com/keys" },
+                  cerebras: { value: localCerebrasKey, setter: setLocalCerebrasKey, url: "https://inference-docs.cerebras.ai/" },
+                };
 
-            {/* Anthropic Key */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Anthropic</Label>
-                <a
-                  href="https://console.anthropic.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
-                >
-                  Get Key
-                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </a>
-              </div>
-              <ApiKeyInput
-                value={localAnthropicKey}
-                onChange={setLocalAnthropicKey}
-                placeholder="Enter API Key..."
-                icon={<AnthropicLogo size={20} />}
-              />
-            </div>
+                const config = keyConfig[providerId];
+                if (!config) return null;
 
-            {/* Google Key */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Google AI</Label>
-                <a
-                  href="https://makersuite.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
-                >
-                  Get Key
-                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </a>
-              </div>
-              <ApiKeyInput
-                value={localGoogleKey}
-                onChange={setLocalGoogleKey}
-                placeholder="Enter API Key..."
-                icon={<GoogleLogo size={20} />}
-              />
-            </div>
-
-            {/* Groq Key */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Groq</Label>
-                <a
-                  href="https://console.groq.com/keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
-                >
-                  Get Key
-                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </a>
-              </div>
-              <ApiKeyInput
-                value={localGroqKey}
-                onChange={setLocalGroqKey}
-                placeholder="Enter API Key..."
-                icon={<GroqLogo size={20} />}
-              />
-            </div>
-
-            {/* Cerebras Key */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Cerebras</Label>
-                <a
-                  href="https://inference-docs.cerebras.ai/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
-                >
-                  Get Key
-                  <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </a>
-              </div>
-              <ApiKeyInput
-                value={localCerebrasKey}
-                onChange={setLocalCerebrasKey}
-                placeholder="Enter API Key..."
-                icon={<CerebrasLogo size={20} />}
-              />
-            </div>
+                return (
+                  <div key={providerId} className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">{providerData.name}</Label>
+                      <a
+                        href={config.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+                      >
+                        Get Key
+                        <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                      </a>
+                    </div>
+                    <ApiKeyInput
+                      value={config.value}
+                      onChange={config.setter}
+                      placeholder="Enter API Key..."
+                      icon={<ProviderLogo provider={providerId as AIProviderType} size={20} />}
+                    />
+                  </div>
+                );
+              })}
           </div>
 
           <Separator />

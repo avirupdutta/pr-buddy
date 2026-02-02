@@ -10,11 +10,25 @@
           "description": "Frontier-scale open-weight model for creative writing and agentic performance",
           "isFree": true,
           "supportsJsonSchema": true,
-          "pricing": {
-            "prompt": "0.00",
-            "completion": "0.00"
-          },
           "contextLength": 131072
+        },
+        {
+          "id": "stepfun/step-3.5-flash:free",
+          "name": "Step 3.5 Flash (free)",
+          "modelId": "stepfun/step-3.5-flash:free",
+          "description": "Step 3.5 Flash is StepFun's most capable open-source foundation model",
+          "isFree": true,
+          "supportsJsonSchema": true,
+          "contextLength": 256000 
+        },
+        {
+          "id": "nvidia/nemotron-3-nano-30b-a3b:free",
+          "name": "Nemotron 3 Nano 30B A3B (free)",
+          "modelId": "nvidia/nemotron-3-nano-30b-a3b:free",
+          "description": "NVIDIA Nemotron 3 Nano 30B A3B is a small language MoE model with highest compute efficiency and accuracy for developers to build specialized agentic AI systems.",
+          "isFree": true,
+          "supportsJsonSchema": true,
+          "contextLength": 256000 
         }
       ],
       "enabled": true,

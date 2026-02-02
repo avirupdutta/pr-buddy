@@ -23,6 +23,13 @@ interface ModelMappingData {
   reasoningEffort?: string;
 }
 
+interface ProviderData {
+  name: string;
+  models: ModelMappingData[];
+  enabled: boolean;
+  sortRank: number;
+}
+
 interface SearchableModelSelectorProps {
   models: AIModel[];
   value: string;
@@ -79,11 +86,21 @@ export const SearchableModelSelector: React.FC<
   const selectedOptionRef = useRef<HTMLDivElement>(null);
 
   // Convert predefined models from JSON to ModelOption format
+  // Filter out disabled providers and sort by sortRank
   const predefinedModelOptions: ModelOption[] = useMemo(() => {
     const options: ModelOption[] = [];
-    Object.entries(modelMappings.providers).forEach(
-      ([providerId, providerData]) => {
-        providerData.models.forEach((model: ModelMappingData) => {
+
+    // Get enabled providers and sort by sortRank
+    const enabledProviders = Object.entries(modelMappings.providers)
+      .filter(([, providerData]) => (providerData as ProviderData).enabled)
+      .sort(
+        ([, a], [, b]) =>
+          (a as ProviderData).sortRank - (b as ProviderData).sortRank,
+      );
+
+    enabledProviders.forEach(([providerId, providerData]) => {
+      (providerData as ProviderData).models.forEach(
+        (model: ModelMappingData) => {
           options.push({
             model: {
               id: model.id,
@@ -94,7 +111,7 @@ export const SearchableModelSelector: React.FC<
             },
             isCustom: false,
             provider: providerId,
-            providerName: providerData.name,
+            providerName: (providerData as ProviderData).name,
             uniqueId: `${providerId}:${model.id}`, // Composite key for unique identification
             fullModelData: {
               description: model.description,
@@ -105,9 +122,9 @@ export const SearchableModelSelector: React.FC<
               reasoningEffort: model.reasoningEffort,
             },
           });
-        });
-      },
-    );
+        },
+      );
+    });
     return options;
   }, []);
 
@@ -167,20 +184,31 @@ export const SearchableModelSelector: React.FC<
       if (a === "Custom") return -1;
       if (b === "Custom") return 1;
 
-      // Get provider IDs for comparison
-      const getProviderId = (providerName: string): string => {
+      // Get provider IDs and sortRank for comparison
+      const getProviderData = (
+        providerName: string,
+      ): { id: string; sortRank: number } => {
         const entry = Object.entries(modelMappings.providers).find(
-          ([, data]) => data.name === providerName,
+          ([, data]) => (data as ProviderData).name === providerName,
         );
-        return entry ? entry[0] : providerName;
+        return entry
+          ? { id: entry[0], sortRank: (entry[1] as ProviderData).sortRank }
+          : { id: providerName, sortRank: 0 };
       };
 
-      const providerA = getProviderId(a);
-      const providerB = getProviderId(b);
+      const providerA = getProviderData(a);
+      const providerB = getProviderData(b);
 
-      // Sort providers with API keys first
-      const hasKeyA = providerKeyStatus[providerA as AIProviderType] ?? false;
-      const hasKeyB = providerKeyStatus[providerB as AIProviderType] ?? false;
+      // First sort by sortRank
+      if (providerA.sortRank !== providerB.sortRank) {
+        return providerA.sortRank - providerB.sortRank;
+      }
+
+      // Then sort providers with API keys first
+      const hasKeyA =
+        providerKeyStatus[providerA.id as AIProviderType] ?? false;
+      const hasKeyB =
+        providerKeyStatus[providerB.id as AIProviderType] ?? false;
 
       if (hasKeyA && !hasKeyB) return -1;
       if (!hasKeyA && hasKeyB) return 1;
@@ -369,7 +397,9 @@ export const SearchableModelSelector: React.FC<
                   // Get provider ID from provider name
                   const providerEntry = Object.entries(
                     modelMappings.providers,
-                  ).find(([, data]) => data.name === providerName);
+                  ).find(
+                    ([, data]) => (data as ProviderData).name === providerName,
+                  );
                   const providerId = providerEntry
                     ? providerEntry[0]
                     : providerName;
@@ -537,7 +567,8 @@ export const SearchableModelSelector: React.FC<
                       {modelToShow.fullModelData?.reasoningEffort && (
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400">
-                            {modelToShow.fullModelData.reasoningEffort} reasoning
+                            {modelToShow.fullModelData.reasoningEffort}{" "}
+                            reasoning
                           </span>
                         </div>
                       )}
@@ -551,15 +582,20 @@ export const SearchableModelSelector: React.FC<
                         </h4>
                         <div className="space-y-1">
                           <div className="flex gap-1.5 text-xs">
-                            <span className="text-muted-foreground">Input:</span>
+                            <span className="text-muted-foreground">
+                              Input:
+                            </span>
                             <span className="text-foreground">
                               ${modelToShow.fullModelData.pricing.prompt} / M
                             </span>
                           </div>
                           <div className="flex gap-1.5 text-xs">
-                            <span className="text-muted-foreground">Output:</span>
+                            <span className="text-muted-foreground">
+                              Output:
+                            </span>
                             <span className="text-foreground">
-                              ${modelToShow.fullModelData.pricing.completion} / M
+                              ${modelToShow.fullModelData.pricing.completion} /
+                              M
                             </span>
                           </div>
                         </div>
