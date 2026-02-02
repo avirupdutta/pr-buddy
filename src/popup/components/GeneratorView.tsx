@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { useGeneratorStore } from "@/stores/generator-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { TemplateSelector } from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
 import { ContextInput } from "./ContextInput";
@@ -22,6 +23,8 @@ interface GeneratorViewProps {
 
 export function GeneratorView({ currentUrl }: GeneratorViewProps) {
   const { generate, error, isGenerating } = useGeneratorStore();
+  const settingsStore = useSettingsStore();
+  const hasSelectedModel = !!settingsStore.getActiveModel();
   const handleGenerate = async () => {
     if (!currentUrl || !currentUrl.includes("github.com/")) {
       toast.error("Please open this extension on a GitHub Pull Request page.");
@@ -68,7 +71,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       <div className="px-6 py-4 bg-background border-t border-border/50 shrink-0 space-y-3">
         <Button
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || !hasSelectedModel}
           className={`w-full h-10 gap-2 text-base font-bold rounded-lg shadow-lg transition-all duration-300`}
           size="lg"
           id="tour-generate"
