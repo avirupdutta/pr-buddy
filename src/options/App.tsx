@@ -760,7 +760,7 @@ function SettingsForm({
                   cerebras: {
                     value: localCerebrasKey,
                     setter: setLocalCerebrasKey,
-                    url: "https://https://cloud.cerebras.ai//",
+                    url: "https://https://cloud.cerebras.ai",
                   },
                 };
 

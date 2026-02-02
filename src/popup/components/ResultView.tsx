@@ -7,7 +7,6 @@ import {
   IconSettings,
   IconCode,
   IconEye,
-  IconPlayerStop,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
@@ -31,6 +30,7 @@ import {
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ModelSelector from "./ModelSelector";
+import FluentRecordStopFilled from "@/components/icons/FluentRecordStopFilled";
 
 interface ResultViewProps {
   currentUrl: string;
@@ -350,7 +350,11 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               aria-label="Stop generation"
               title="Stop generation"
             >
-              <IconPlayerStop className="w-5 h-5 fill-current" />
+              <FluentRecordStopFilled
+                width={20}
+                height={20}
+                className="fill-current"
+              />
             </button>
           </div>
         ) : (

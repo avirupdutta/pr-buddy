@@ -122,7 +122,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
   generate: async (url, isRegeneration = false) => {
     // Create abort controller for this generation
     const abortController = new AbortController();
-    
+
     // Reset state and immediately switch to result view
     set({
       isGenerating: true,
@@ -138,11 +138,11 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
 
     try {
       const { template, tone, context, includeTickets, generateTitle } = get();
-      
+
       // Get the selected model from settings store
       const settingsStore = useSettingsStore.getState();
       const activeModel = settingsStore.getActiveModel();
-      
+
       // Ensure we have a valid model with provider
       let selectedModel = activeModel;
       if (!selectedModel) {
@@ -150,7 +150,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
         const { DEFAULT_AI_MODELS } = await import("@/stores/settings-store");
         selectedModel = DEFAULT_AI_MODELS[0];
       }
-      
+
       const settings: GeneratorSettings = {
         templateId: template,
         tone,
@@ -160,7 +160,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
         selectedModel: {
           id: selectedModel.id,
           modelId: selectedModel.modelId,
-          provider: selectedModel.provider || 'openrouter',
+          provider: selectedModel.provider || "openrouter",
           supportsJsonSchema: selectedModel.supportsJsonSchema,
         },
       };
@@ -194,7 +194,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
               // Still in title section or only description
               const titleMatch = fullContent.match(/TITLE:\s*(.*)/s);
               if (titleMatch && generateTitle) {
-                 set({ generatedTitle: titleMatch[1].trim() });
+                set({ generatedTitle: titleMatch[1].trim() });
               } else {
                 // No title found or title generation disabled, this is description-only response
                 const descMatch = fullContent.match(/DESCRIPTION:\s*(.*)/s);
@@ -210,10 +210,12 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
               const beforeSeparator = fullContent.substring(0, separatorIndex);
               const titleMatch = beforeSeparator.match(/TITLE:\s*(.*)/s);
               if (titleMatch && generateTitle) {
-                 set({ generatedTitle: titleMatch[1].trim() });
+                set({ generatedTitle: titleMatch[1].trim() });
               }
 
-              const afterSeparator = fullContent.substring(separatorIndex + separator.length);
+              const afterSeparator = fullContent.substring(
+                separatorIndex + separator.length,
+              );
               const desc = afterSeparator.replace(/^\s*DESCRIPTION:\s*/, "");
               set({ generatedDescription: desc });
             }
@@ -222,9 +224,9 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
             if (abortController.signal.aborted) {
               return;
             }
-            set({ 
-              isGenerating: false, 
-              isRegenerating: false, 
+            set({
+              isGenerating: false,
+              isRegenerating: false,
               prDetails: data.prDetails,
               hasGeneratedOnce: true,
               abortController: null,
@@ -236,21 +238,23 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
               return;
             }
             reject(new Error(error));
-          }
+          },
         );
 
         // Listen for abort signal
-        abortController.signal.addEventListener('abort', () => {
+        abortController.signal.addEventListener("abort", () => {
           if (disconnectStream) {
             disconnectStream();
           }
           reject(new Error("Generation stopped by user"));
         });
       });
-
     } catch (error) {
       // Don't show error if it was stopped by user
-      if (error instanceof Error && error.message === "Generation stopped by user") {
+      if (
+        error instanceof Error &&
+        error.message === "Generation stopped by user"
+      ) {
         // Mark as generated if there's partial content, so UI shows properly
         const { generatedDescription } = get();
         set({
@@ -281,10 +285,10 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
       isRegenerating: false,
       abortController: null,
       // Only clear content if nothing was generated, otherwise keep it
-      generatedDescription: generatedDescription.length > 0 ? generatedDescription : "",
-      generatedTitle: get().generatedTitle.length > 0 ? get().generatedTitle : "",
-      // Switch back to generator view
-      view: "generator",
+      generatedDescription:
+        generatedDescription.length > 0 ? generatedDescription : "",
+      generatedTitle:
+        get().generatedTitle.length > 0 ? get().generatedTitle : "",
     });
   },
 
