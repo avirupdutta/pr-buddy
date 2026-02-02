@@ -18,7 +18,7 @@
           "modelId": "stepfun/step-3.5-flash:free",
           "description": "Step 3.5 Flash is StepFun's most capable open-source foundation model",
           "isFree": true,
-          "supportsJsonSchema": true,
+          "supportsJsonSchema": false,
           "contextLength": 256000 
         },
         {
