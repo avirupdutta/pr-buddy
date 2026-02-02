@@ -16,9 +16,7 @@ import {
   IconX,
   IconSettings,
 } from "@tabler/icons-react";
-import {
-  OpenRouterLogo,
-} from "@/components/provider-logos";
+import { OpenRouterLogo } from "@/components/provider-logos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -124,8 +122,18 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
   // Filter enabled providers and sort by sortRank
   const providerOptions = useMemo(() => {
     return Object.entries(modelMappings.providers)
-      .filter(([, providerData]: [string, { enabled: boolean; sortRank: number; name: string }]) => providerData.enabled)
-      .sort(([, a]: [string, { sortRank: number }], [, b]: [string, { sortRank: number }]) => a.sortRank - b.sortRank)
+      .filter(
+        ([, providerData]: [
+          string,
+          { enabled: boolean; sortRank: number; name: string },
+        ]) => providerData.enabled,
+      )
+      .sort(
+        (
+          [, a]: [string, { sortRank: number }],
+          [, b]: [string, { sortRank: number }],
+        ) => a.sortRank - b.sortRank,
+      )
       .map(([providerId, providerData]: [string, { name: string }]) => ({
         value: providerId,
         label: providerData.name,
@@ -713,16 +721,47 @@ function SettingsForm({
 
             {/* Dynamically render API key inputs for enabled providers (excluding openrouter) */}
             {Object.entries(modelMappings.providers)
-              .filter(([providerId, providerData]: [string, { enabled: boolean }]) => providerId !== "openrouter" && providerData.enabled)
-              .sort(([, a]: [string, { sortRank: number }], [, b]: [string, { sortRank: number }]) => a.sortRank - b.sortRank)
+              .filter(
+                ([providerId, providerData]: [string, { enabled: boolean }]) =>
+                  providerId !== "openrouter" && providerData.enabled,
+              )
+              .sort(
+                (
+                  [, a]: [string, { sortRank: number }],
+                  [, b]: [string, { sortRank: number }],
+                ) => a.sortRank - b.sortRank,
+              )
               .map(([providerId, providerData]: [string, { name: string }]) => {
                 // Map provider IDs to their state and setters
-                const keyConfig: Record<string, { value: string; setter: (val: string) => void; url: string }> = {
-                  openai: { value: localOpenAIKey, setter: setLocalOpenAIKey, url: "https://platform.openai.com/api-keys" },
-                  anthropic: { value: localAnthropicKey, setter: setLocalAnthropicKey, url: "https://console.anthropic.com/" },
-                  google: { value: localGoogleKey, setter: setLocalGoogleKey, url: "https://makersuite.google.com/app/apikey" },
-                  groq: { value: localGroqKey, setter: setLocalGroqKey, url: "https://console.groq.com/keys" },
-                  cerebras: { value: localCerebrasKey, setter: setLocalCerebrasKey, url: "https://inference-docs.cerebras.ai/" },
+                const keyConfig: Record<
+                  string,
+                  { value: string; setter: (val: string) => void; url: string }
+                > = {
+                  openai: {
+                    value: localOpenAIKey,
+                    setter: setLocalOpenAIKey,
+                    url: "https://platform.openai.com/api-keys",
+                  },
+                  anthropic: {
+                    value: localAnthropicKey,
+                    setter: setLocalAnthropicKey,
+                    url: "https://console.anthropic.com/",
+                  },
+                  google: {
+                    value: localGoogleKey,
+                    setter: setLocalGoogleKey,
+                    url: "https://makersuite.google.com/app/apikey",
+                  },
+                  groq: {
+                    value: localGroqKey,
+                    setter: setLocalGroqKey,
+                    url: "https://console.groq.com/keys",
+                  },
+                  cerebras: {
+                    value: localCerebrasKey,
+                    setter: setLocalCerebrasKey,
+                    url: "https://https://cloud.cerebras.ai//",
+                  },
                 };
 
                 const config = keyConfig[providerId];
@@ -731,7 +770,9 @@ function SettingsForm({
                 return (
                   <div key={providerId} className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">{providerData.name}</Label>
+                      <Label className="text-sm font-medium">
+                        {providerData.name}
+                      </Label>
                       <a
                         href={config.url}
                         target="_blank"
@@ -746,7 +787,12 @@ function SettingsForm({
                       value={config.value}
                       onChange={config.setter}
                       placeholder="Enter API Key..."
-                      icon={<ProviderLogo provider={providerId as AIProviderType} size={20} />}
+                      icon={
+                        <ProviderLogo
+                          provider={providerId as AIProviderType}
+                          size={20}
+                        />
+                      }
                     />
                   </div>
                 );
