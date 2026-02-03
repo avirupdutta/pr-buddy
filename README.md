@@ -124,7 +124,9 @@ pnpm install
 pnpm dev
 ```
 
-Load the extension in Chrome (same steps as above, but select the `dist` folder while dev server is running).
+Load the extension in Chrome (same steps as above, but select the `dist-dev` folder while dev server is running).
+
+**Important:** Use `dist-dev` folder for development and `dist` folder for production builds. Running `pnpm dev` outputs to `dist-dev`, while `pnpm build` outputs to `dist`.
 
 ### Tech Stack
 
