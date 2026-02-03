@@ -7,7 +7,9 @@
   "host_permissions": [
     "https://github.com/*",
     "https://api.github.com/*",
-    "https://openrouter.ai/*"
+    "https://openrouter.ai/*",
+    "https://us.i.posthog.com/*",
+    "https://us-assets.i.posthog.com/*"
   ],
   "background": {
     "service_worker": "src/background/index.ts",

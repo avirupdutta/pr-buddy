@@ -1,5 +1,9 @@
 import posthog from "posthog-js";
-import { EVENTS, type AnalyticsEvent, type AnalyticsScreen } from "@/data/constants";
+import {
+  EVENTS,
+  type AnalyticsEvent,
+  type AnalyticsScreen,
+} from "@/data/constants";
 import type {
   GenerateClickedProperties,
   GenerationCompletedProperties,
@@ -41,6 +45,8 @@ class AnalyticsService {
 
     posthog.init(apiKey, {
       api_host: apiHost,
+      disable_surveys: true,
+      capture_dead_clicks: false,
       capture_pageview: false, // We'll handle pageviews manually
       capture_pageleave: false,
       autocapture: false, // We'll capture events manually for better control
@@ -57,7 +63,10 @@ class AnalyticsService {
   // Core Tracking Methods
   // ============================================
 
-  public track(event: AnalyticsEvent, properties?: Record<string, unknown>): void {
+  public track(
+    event: AnalyticsEvent,
+    properties?: Record<string, unknown>,
+  ): void {
     if (!this.isInitialized) {
       this.initialize();
     }
@@ -72,7 +81,10 @@ class AnalyticsService {
     }
   }
 
-  public trackPageView(screen: AnalyticsScreen, properties?: Record<string, unknown>): void {
+  public trackPageView(
+    screen: AnalyticsScreen,
+    properties?: Record<string, unknown>,
+  ): void {
     this.track(EVENTS.POPUP_OPENED, {
       screen,
       ...properties,
@@ -103,11 +115,18 @@ class AnalyticsService {
     this.track(EVENTS.GENERATE_CLICKED, properties);
   }
 
-  public trackRegenerateClicked(properties: { url: string; model_id: string; model_provider: string; [key: string]: unknown }): void {
+  public trackRegenerateClicked(properties: {
+    url: string;
+    model_id: string;
+    model_provider: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.REGENERATE_CLICKED, properties);
   }
 
-  public trackGenerationCompleted(properties: GenerationCompletedProperties): void {
+  public trackGenerationCompleted(
+    properties: GenerationCompletedProperties,
+  ): void {
     this.track(EVENTS.GENERATION_COMPLETED, properties);
   }
 
@@ -115,9 +134,9 @@ class AnalyticsService {
     this.track(EVENTS.GENERATION_FAILED, properties);
   }
 
-  public trackGenerationStopped(properties: { 
-    url: string; 
-    model_id: string; 
+  public trackGenerationStopped(properties: {
+    url: string;
+    model_id: string;
     partial_description_length: number;
     reason: "user_cancelled" | "error" | "timeout";
     [key: string]: unknown;
@@ -125,8 +144,8 @@ class AnalyticsService {
     this.track(EVENTS.GENERATION_STOPPED, properties);
   }
 
-  public trackCopyClicked(properties: { 
-    description_length: number; 
+  public trackCopyClicked(properties: {
+    description_length: number;
     has_title: boolean;
     view_type: "raw" | "preview";
     [key: string]: unknown;
@@ -134,8 +153,8 @@ class AnalyticsService {
     this.track(EVENTS.COPY_CLICKED, properties);
   }
 
-  public trackApplyClicked(properties: { 
-    url: string; 
+  public trackApplyClicked(properties: {
+    url: string;
     description_length: number;
     has_title: boolean;
     model_id: string;
@@ -149,7 +168,11 @@ class AnalyticsService {
     this.track(EVENTS.SETTINGS_SAVED, properties);
   }
 
-  public trackSettingsTabChanged(properties: { tab: string; previous_tab: string; [key: string]: unknown }): void {
+  public trackSettingsTabChanged(properties: {
+    tab: string;
+    previous_tab: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.SETTINGS_TAB_CHANGED, properties);
   }
 
@@ -165,39 +188,79 @@ class AnalyticsService {
     this.track(EVENTS.TONE_SELECTED, properties);
   }
 
-  public trackTemplateAdded(properties: { template_id: string; template_title: string; [key: string]: unknown }): void {
+  public trackTemplateAdded(properties: {
+    template_id: string;
+    template_title: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.TEMPLATE_ADDED, properties);
   }
 
-  public trackTemplateUpdated(properties: { template_id: string; template_title: string; [key: string]: unknown }): void {
+  public trackTemplateUpdated(properties: {
+    template_id: string;
+    template_title: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.TEMPLATE_UPDATED, properties);
   }
 
-  public trackTemplateDeleted(properties: { template_id: string; template_title: string; [key: string]: unknown }): void {
+  public trackTemplateDeleted(properties: {
+    template_id: string;
+    template_title: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.TEMPLATE_DELETED, properties);
   }
 
-  public trackModelAdded(properties: { model_id: string; model_name: string; model_provider: string; [key: string]: unknown }): void {
+  public trackModelAdded(properties: {
+    model_id: string;
+    model_name: string;
+    model_provider: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.MODEL_ADDED, properties);
   }
 
-  public trackModelUpdated(properties: { model_id: string; model_name: string; model_provider: string; [key: string]: unknown }): void {
+  public trackModelUpdated(properties: {
+    model_id: string;
+    model_name: string;
+    model_provider: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.MODEL_UPDATED, properties);
   }
 
-  public trackModelDeleted(properties: { model_id: string; model_name: string; model_provider: string; [key: string]: unknown }): void {
+  public trackModelDeleted(properties: {
+    model_id: string;
+    model_name: string;
+    model_provider: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.MODEL_DELETED, properties);
   }
 
-  public trackOnboardingStep(properties: { step_id: string; step_name: string; step_number: number; total_steps: number; [key: string]: unknown }): void {
+  public trackOnboardingStep(properties: {
+    step_id: string;
+    step_name: string;
+    step_number: number;
+    total_steps: number;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.ONBOARDING_STEP_VIEWED, properties);
   }
 
-  public trackOnboardingCompleted(properties: { total_steps_completed: number; duration_ms: number; [key: string]: unknown }): void {
+  public trackOnboardingCompleted(properties: {
+    total_steps_completed: number;
+    duration_ms: number;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.ONBOARDING_COMPLETED, properties);
   }
 
-  public trackTourRestarted(properties: { tour_name: string; [key: string]: unknown }): void {
+  public trackTourRestarted(properties: {
+    tour_name: string;
+    [key: string]: unknown;
+  }): void {
     this.track(EVENTS.TOUR_RESTARTED, properties);
   }
 
@@ -208,7 +271,10 @@ class AnalyticsService {
     });
   }
 
-  public trackButtonClick(buttonName: string, properties?: Record<string, unknown>): void {
+  public trackButtonClick(
+    buttonName: string,
+    properties?: Record<string, unknown>,
+  ): void {
     this.track(EVENTS.BUTTON_CLICKED, {
       button_name: buttonName,
       ...properties,
@@ -261,7 +327,8 @@ export function useAnalytics() {
     trackPageView: analytics.trackPageView.bind(analytics),
     trackGenerateClicked: analytics.trackGenerateClicked.bind(analytics),
     trackRegenerateClicked: analytics.trackRegenerateClicked.bind(analytics),
-    trackGenerationCompleted: analytics.trackGenerationCompleted.bind(analytics),
+    trackGenerationCompleted:
+      analytics.trackGenerationCompleted.bind(analytics),
     trackGenerationFailed: analytics.trackGenerationFailed.bind(analytics),
     trackGenerationStopped: analytics.trackGenerationStopped.bind(analytics),
     trackCopyClicked: analytics.trackCopyClicked.bind(analytics),
@@ -278,7 +345,8 @@ export function useAnalytics() {
     trackModelUpdated: analytics.trackModelUpdated.bind(analytics),
     trackModelDeleted: analytics.trackModelDeleted.bind(analytics),
     trackOnboardingStep: analytics.trackOnboardingStep.bind(analytics),
-    trackOnboardingCompleted: analytics.trackOnboardingCompleted.bind(analytics),
+    trackOnboardingCompleted:
+      analytics.trackOnboardingCompleted.bind(analytics),
     trackTourRestarted: analytics.trackTourRestarted.bind(analytics),
     trackError: analytics.trackError.bind(analytics),
     trackButtonClick: analytics.trackButtonClick.bind(analytics),
