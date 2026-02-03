@@ -38,5 +38,10 @@ export default defineConfig({
     hmr: {
       port: 5000,
     },
+    cors: true,
+    origin: "http://localhost:5000",
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+    },
   },
 });
