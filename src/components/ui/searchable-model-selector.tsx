@@ -519,7 +519,7 @@ export const SearchableModelSelector: React.FC<
               onMouseEnter={() => setIsDetailsPanelHovered(true)}
               onMouseLeave={() => setIsDetailsPanelHovered(false)}
             >
-              <div className="p-4">
+              <div className="p-4 h-full">
                 {modelToShow ? (
                   <div className="space-y-4">
                     {/* Model Name */}
