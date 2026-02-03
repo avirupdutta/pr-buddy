@@ -3,6 +3,8 @@ import { useGeneratorStore } from "@/stores/generator-store";
 import { SearchableModelSelector } from "@/components/ui/searchable-model-selector";
 import type { AIProviderType } from "@/services/ai-provider-registry";
 import { useAnalytics } from "@/services/analytics";
+import modelMappings from "@/data/model-mappings.json";
+import { useEffect, useRef } from "react";
 
 interface ModelSelectorProps {
   disabled?: boolean;
@@ -23,6 +25,7 @@ const ModelSelector = ({ disabled = false }: ModelSelectorProps) => {
   const { clearError } = useGeneratorStore();
   const activeModel = getActiveModel();
   const { trackModelSelected, trackButtonClick } = useAnalytics();
+  const initialized = useRef(false);
 
   // Map of provider API key status
   const providerKeyStatus: Record<AIProviderType, boolean> = {
@@ -42,10 +45,12 @@ const ModelSelector = ({ disabled = false }: ModelSelectorProps) => {
     // Clear any previous error when switching models
     clearError();
     setActiveModel(id, provider);
-    
+
     const isCustom = isCustomModel(id);
-    const hasKey = provider ? providerKeyStatus[provider as AIProviderType] : false;
-    
+    const hasKey = provider
+      ? providerKeyStatus[provider as AIProviderType]
+      : false;
+
     trackModelSelected({
       model_id: id,
       model_name: activeModel?.name || id,
@@ -62,6 +67,17 @@ const ModelSelector = ({ disabled = false }: ModelSelectorProps) => {
   const handleSelectorClose = () => {
     trackButtonClick("model_selector_closed");
   };
+
+  useEffect(() => {
+    if (!activeModel && !initialized.current) {
+      initialized.current = true;
+      const openRouterModels = modelMappings.providers.openrouter?.models || [];
+      if (openRouterModels.length > 0) {
+        const firstModel = openRouterModels[0];
+        setActiveModel(firstModel.id, "openrouter");
+      }
+    }
+  }, [activeModel, setActiveModel]);
 
   return (
     <div className="flex flex-col gap-2" id="tour-model">
