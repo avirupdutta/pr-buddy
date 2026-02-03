@@ -7,8 +7,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useGeneratorStore } from "@/stores/generator-store";
+import { useAnalytics } from "@/services/analytics";
 import type { ToneType } from "@/types/chrome";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 const TONES: { value: ToneType; label: string; icon: React.ReactNode }[] = [
   {
@@ -35,6 +37,19 @@ const TONES: { value: ToneType; label: string; icon: React.ReactNode }[] = [
 
 export function ToneSelector() {
   const { tone, setTone } = useGeneratorStore();
+  const { trackToneSelected } = useAnalytics();
+  const [previousTone, setPreviousTone] = useState<ToneType>(tone);
+
+  const handleToneClick = (newTone: ToneType) => {
+    if (newTone !== tone) {
+      trackToneSelected({
+        tone: newTone,
+        previous_tone: previousTone,
+      });
+      setPreviousTone(tone);
+      setTone(newTone);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-2" id="tour-tone">
@@ -45,7 +60,7 @@ export function ToneSelector() {
             key={t.value}
             variant="outline"
             size="sm"
-            onClick={() => setTone(t.value)}
+            onClick={() => handleToneClick(t.value)}
             className={cn(
               "h-8 gap-2 transition-all",
               tone === t.value

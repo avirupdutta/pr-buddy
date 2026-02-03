@@ -1,8 +1,9 @@
 // Zustand store for PR description generator state
 import { create } from "zustand";
-import type { ToneType, PRDetails, GeneratorSettings } from "@/types/chrome";
+import type { ToneType, PRDetails, GeneratorSettings, AIModel } from "@/types/chrome";
 import { getStorage, setStorage } from "@/services/chrome-storage";
 import { streamDescription } from "@/services/chrome-messaging";
+import { analytics } from "@/services/analytics";
 import { useSettingsStore } from "./settings-store";
 
 type ViewType = "generator" | "result";
@@ -125,6 +126,9 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
   },
 
   generate: async (url, isRegeneration = false) => {
+    // Track start time for analytics
+    const startTime = Date.now();
+
     // Create abort controller for this generation
     const abortController = new AbortController();
 
@@ -140,6 +144,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
     });
 
     let disconnectStream: (() => void) | null = null;
+    let selectedModel: AIModel | null = null;
 
     try {
       const { template, tone, context, includeTickets, generateTitle } = get();
@@ -149,7 +154,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
       const activeModel = settingsStore.getActiveModel();
 
       // Ensure we have a valid model with provider
-      let selectedModel = activeModel;
+      selectedModel = activeModel ?? null;
       if (!selectedModel) {
         // Fallback to first default model if no active model found
         const { DEFAULT_AI_MODELS } = await import("@/stores/settings-store");
@@ -236,6 +241,25 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
               hasGeneratedOnce: true,
               abortController: null,
             });
+
+            // Track successful generation
+            const duration_ms = Date.now() - startTime;
+            const { generatedDescription, generatedTitle, generateTitle, template, tone, context } = get();
+            if (selectedModel) {
+              analytics.trackGenerationCompleted({
+                url,
+                duration_ms,
+                description_length: generatedDescription.length,
+                title_length: generateTitle ? generatedTitle.length : undefined,
+                model_id: selectedModel.id,
+                model_provider: selectedModel.provider || "openrouter",
+                template_id: template,
+                tone,
+                has_context: context.length > 0,
+                was_regeneration: isRegeneration,
+              });
+            }
+
             resolve();
           },
           (error) => {
@@ -269,11 +293,24 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
           hasGeneratedOnce: generatedDescription.length > 0,
         });
       } else {
+        const errorMessage = error instanceof Error ? error.message : "Generation failed";
         set({
-          error: error instanceof Error ? error.message : "Generation failed",
+          error: errorMessage,
           isGenerating: false,
           isRegenerating: false,
           abortController: null,
+        });
+
+        // Track generation failure
+        const { template } = get();
+        const stage = selectedModel ? "streaming" : "init";
+        analytics.trackGenerationFailed({
+          url,
+          error_message: errorMessage,
+          model_id: selectedModel?.id ?? "unknown",
+          model_provider: selectedModel?.provider ?? "unknown",
+          template_id: template,
+          stage,
         });
       }
     }

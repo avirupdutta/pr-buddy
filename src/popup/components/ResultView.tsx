@@ -23,6 +23,7 @@ import {
 import { SkeletonMarkdown } from "@/components/ui/skeleton";
 import ReactMarkdown from "react-markdown";
 import { useGeneratorStore } from "@/stores/generator-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import {
   updatePRDescription,
   openOptionsPage,
@@ -31,13 +32,20 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ModelSelector from "./ModelSelector";
 import FluentRecordStopFilled from "@/components/icons/FluentRecordStopFilled";
+import { useAnalytics } from "@/services/analytics";
 
 interface ResultViewProps {
   currentUrl: string;
 }
 
 // Shared footer component for ModelSelector + Settings to avoid duplication
-function ModelSelectorFooter({ disabled = false }: { disabled?: boolean }) {
+function ModelSelectorFooter({ 
+  disabled = false, 
+  onSettingsClick 
+}: { 
+  disabled?: boolean;
+  onSettingsClick?: () => void;
+}) {
   return (
     <div className="flex items-center justify-between">
       <ModelSelector disabled={disabled} />
@@ -45,7 +53,7 @@ function ModelSelectorFooter({ disabled = false }: { disabled?: boolean }) {
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={openOptionsPage}
+              onClick={onSettingsClick || openOptionsPage}
               disabled={disabled}
               className="underline hover:text-foreground transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -76,6 +84,15 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     setHasRegenerated,
     stopGeneration,
   } = useGeneratorStore();
+  const settingsStore = useSettingsStore();
+  const activeModel = settingsStore.getActiveModel();
+  const { 
+    trackCopyClicked, 
+    trackApplyClicked, 
+    trackRegenerateClicked, 
+    trackGenerationStopped,
+    trackButtonClick
+  } = useAnalytics();
 
   const [isCopied, setIsCopied] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
@@ -149,6 +166,12 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       setIsCopied(true);
       toast.success("Copied to clipboard!");
       setTimeout(() => setIsCopied(false), 2000);
+      
+      trackCopyClicked({
+        description_length: generatedDescription.length,
+        has_title: Boolean(generatedTitle),
+        view_type: activeTab,
+      });
     } catch {
       toast.error("Failed to copy to clipboard");
     }
@@ -165,6 +188,15 @@ export function ResultView({ currentUrl }: ResultViewProps) {
         generateTitle ? generatedTitle : undefined,
       );
       toast.success("PR updated!");
+      
+      trackApplyClicked({
+        url: currentUrl,
+        description_length: generatedDescription.length,
+        has_title: Boolean(generatedTitle),
+        model_id: activeModel?.id || "unknown",
+        model_provider: activeModel?.provider || "unknown",
+      });
+      
       reset();
       setTimeout(() => window.close(), 1500);
     } catch (err) {
@@ -180,6 +212,13 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     if (!hasRegenerated) {
       setHasRegenerated(true);
     }
+    
+    trackRegenerateClicked({
+      url: currentUrl,
+      model_id: activeModel?.id || "unknown",
+      model_provider: activeModel?.provider || "unknown",
+    });
+    
     try {
       await generate(currentUrl, true);
     } catch (err) {
@@ -349,7 +388,15 @@ export function ResultView({ currentUrl }: ResultViewProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={stopGeneration}
+                    onClick={() => {
+                      trackGenerationStopped({
+                        url: currentUrl,
+                        model_id: activeModel?.id || "unknown",
+                        partial_description_length: generatedDescription.length,
+                        reason: "user_cancelled",
+                      });
+                      stopGeneration();
+                    }}
                     className="h-10 w-10 flex items-center justify-center rounded-lg text-white hover:text-white/80 transition-colors shrink-0 cursor-pointer"
                     aria-label="Stop generation"
                   >
@@ -412,7 +459,13 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             </div>
           </div>
         )}
-        <ModelSelectorFooter disabled={isGenerating} />
+        <ModelSelectorFooter 
+          disabled={isGenerating} 
+          onSettingsClick={() => {
+            trackButtonClick("settings", { from_view: "result" });
+            openOptionsPage();
+          }}
+        />
       </div>
     </div>
   );

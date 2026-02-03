@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   IconPuzzle,
   IconKey,
@@ -18,6 +18,7 @@ import {
   IconHelp,
 } from "@tabler/icons-react";
 import { NextStepProvider, NextStepReact, useNextStep } from "nextstepjs";
+import { useAnalytics } from "@/services/analytics";
 import { OpenRouterLogo } from "@/components/provider-logos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -242,6 +243,8 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
 function TemplatesTab() {
   const { templates, addTemplate, updateTemplate, deleteTemplate } =
     useSettingsStore();
+  const { trackTemplateAdded, trackTemplateUpdated, trackTemplateDeleted } =
+    useAnalytics();
   const [editingTemplate, setEditingTemplate] = useState<PRTemplate | null>(
     null,
   );
@@ -252,6 +255,14 @@ function TemplatesTab() {
       await addTemplate(data);
       toast.success("Template added successfully");
       setIsAdding(false);
+      // Get the newly added template (should be the last one added with this title)
+      const newTemplate = templates.find(
+        (t) => t.title === data.title && t.structure === data.structure,
+      );
+      trackTemplateAdded({
+        template_id: newTemplate?.id || "unknown",
+        template_title: data.title,
+      });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to add template",
@@ -265,6 +276,10 @@ function TemplatesTab() {
       await updateTemplate(editingTemplate.id, data);
       toast.success("Template updated successfully");
       setEditingTemplate(null);
+      trackTemplateUpdated({
+        template_id: editingTemplate.id,
+        template_title: data.title,
+      });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to update template",
@@ -274,8 +289,15 @@ function TemplatesTab() {
 
   const handleDelete = async (id: string) => {
     try {
+      const templateToDelete = templates.find((t) => t.id === id);
       await deleteTemplate(id);
       toast.success("Template deleted successfully");
+      if (templateToDelete) {
+        trackTemplateDeleted({
+          template_id: templateToDelete.id,
+          template_title: templateToDelete.title,
+        });
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to delete template",
@@ -379,6 +401,12 @@ function AIModelsTab() {
     setActiveModel,
     getActiveModel,
   } = useSettingsStore();
+  const {
+    trackModelAdded,
+    trackModelUpdated,
+    trackModelDeleted,
+    trackButtonClick,
+  } = useAnalytics();
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -393,6 +421,13 @@ function AIModelsTab() {
       await addModel(data);
       toast.success("Model added successfully");
       setIsAdding(false);
+      // Get the newly added model (should be the last one added with this modelId)
+      const newModel = aiModels.find((m) => m.modelId === data.modelId);
+      trackModelAdded({
+        model_id: newModel?.id || "unknown",
+        model_name: data.name,
+        model_provider: data.provider || "openrouter",
+      });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to add model",
@@ -410,6 +445,11 @@ function AIModelsTab() {
       await updateModel(editingModel.id, data);
       toast.success("Model updated successfully");
       setEditingModel(null);
+      trackModelUpdated({
+        model_id: editingModel.id,
+        model_name: data.name,
+        model_provider: data.provider || editingModel.provider || "openrouter",
+      });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to update model",
@@ -419,8 +459,16 @@ function AIModelsTab() {
 
   const handleDelete = async (id: string) => {
     try {
+      const modelToDelete = aiModels.find((m) => m.id === id);
       await deleteModel(id);
       toast.success("Model deleted successfully");
+      if (modelToDelete) {
+        trackModelDeleted({
+          model_id: modelToDelete.id,
+          model_name: modelToDelete.name,
+          model_provider: modelToDelete.provider || "openrouter",
+        });
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to delete model",
@@ -430,8 +478,14 @@ function AIModelsTab() {
 
   const handleSetActive = async (id: string) => {
     try {
+      const model = aiModels.find((m) => m.id === id);
       await setActiveModel(id);
       toast.success("Active model updated");
+      trackButtonClick("set_active_model", {
+        model_id: id,
+        model_name: model?.name,
+        model_provider: model?.provider || "openrouter",
+      });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to set active model",
@@ -591,6 +645,7 @@ function SettingsForm({
   isSaving,
   onSave,
 }: SettingsFormProps) {
+  const { trackSettingsTabChanged, trackSettingsSaved } = useAnalytics();
   const [localGithubToken, setLocalGithubToken] = useState(initialGithubToken);
   const [localOpenRouterKey, setLocalOpenRouterKey] =
     useState(initialOpenRouterKey);
@@ -603,6 +658,7 @@ function SettingsForm({
   const [localDevMode, setLocalDevMode] = useState(initialDevMode);
   const [localDevPrUrl, setLocalDevPrUrl] = useState(initialDevPrUrl);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [currentTab, setCurrentTab] = useState("general");
 
   const handleSave = async () => {
     await onSave({
@@ -617,9 +673,33 @@ function SettingsForm({
       devPrUrl: localDevPrUrl,
     });
 
+    trackSettingsSaved({
+      has_github_token: !!localGithubToken,
+      has_openrouter_key: !!localOpenRouterKey,
+      has_openai_key: !!localOpenAIKey,
+      has_anthropic_key: !!localAnthropicKey,
+      has_google_key: !!localGoogleKey,
+      has_groq_key: !!localGroqKey,
+      has_cerebras_key: !!localCerebrasKey,
+      dev_mode_enabled: localDevMode,
+      theme: "system",
+      custom_models_count: 0,
+      custom_templates_count: 0,
+    });
+
     setShowSuccess(true);
     toast.success("Settings saved successfully!");
     setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const handleTabChange = (newTab: string) => {
+    if (newTab !== currentTab) {
+      trackSettingsTabChanged({
+        tab: newTab,
+        previous_tab: currentTab,
+      });
+      setCurrentTab(newTab);
+    }
   };
 
   // Calculate grid columns based on available tabs
@@ -628,7 +708,12 @@ function SettingsForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <Tabs defaultValue="general" className="w-full" id="settings-tabs">
+      <Tabs
+        value={currentTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+        id="settings-tabs"
+      >
         <TabsList className={`grid w-full ${gridCols}`}>
           <TabsTrigger value="general" className="gap-2" id="settings-tab-general">
             <IconPuzzle className="w-4 h-4" />
@@ -920,28 +1005,73 @@ function OptionsAppContent() {
     setSettingsOnboardingStarted,
     resetSettingsOnboarding,
   } = useSettingsStore();
-  const { startNextStep } = useNextStep();
+  const { startNextStep, currentStep, currentTour } = useNextStep();
+  const {
+    trackPageView,
+    trackOnboardingStep,
+    trackOnboardingCompleted,
+    trackTourRestarted,
+  } = useAnalytics();
+  const onboardingStartTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  // Track page view when options page loads
+  useEffect(() => {
+    trackPageView("options");
+  }, [trackPageView]);
+
   // Auto-start settings onboarding on fresh install
   useEffect(() => {
     if (isLoading) return;
-    
+
     const hasGithubToken = !!githubToken;
     const hasOpenRouterKey = !!openRouterKey;
-    
+
     // Start onboarding if no API keys and onboarding hasn't been completed or started
     if (!hasGithubToken && !hasOpenRouterKey && !settingsOnboardingCompleted && !settingsOnboardingStarted) {
       const timer = setTimeout(() => {
         setSettingsOnboardingStarted(true);
+        onboardingStartTimeRef.current = Date.now();
         startNextStep("settingsOnboarding");
       }, 500);
       return () => clearTimeout(timer);
     }
   }, [isLoading, githubToken, openRouterKey, settingsOnboardingCompleted, settingsOnboardingStarted, setSettingsOnboardingStarted, startNextStep]);
+
+  // Track onboarding steps (currentStep is a number - the step index starting from 0)
+  useEffect(() => {
+    if (currentTour === "settingsOnboarding" && typeof currentStep === "number") {
+      const stepNumber = currentStep + 1; // Convert 0-indexed to 1-indexed
+      const totalSteps = 5; // Total steps in settings onboarding
+      const stepNames = [
+        "Welcome to PR Buddy Setup",
+        "GitHub Token",
+        "OpenRouter Key",
+        "Save Your Keys",
+        "You're Ready!",
+      ];
+      const stepId = `settings_step_${stepNumber}`;
+
+      trackOnboardingStep({
+        step_id: stepId,
+        step_name: stepNames[currentStep] || `Step ${stepNumber}`,
+        step_number: stepNumber,
+        total_steps: totalSteps,
+      });
+
+      // Track completion on last step
+      if (currentStep === totalSteps - 1 && onboardingStartTimeRef.current) {
+        const duration = Date.now() - onboardingStartTimeRef.current;
+        trackOnboardingCompleted({
+          total_steps_completed: totalSteps,
+          duration_ms: duration,
+        });
+      }
+    }
+  }, [currentTour, currentStep, trackOnboardingStep, trackOnboardingCompleted]);
 
   if (isLoading) {
     return (
@@ -1020,6 +1150,7 @@ function OptionsAppContent() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      trackTourRestarted({ tour_name: "settingsOnboarding" });
                       resetSettingsOnboarding();
                       startNextStep("settingsOnboarding");
                     }}
