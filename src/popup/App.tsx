@@ -9,13 +9,6 @@ import { ResultView } from "./components/ResultView";
 import { isDev } from "@/services/is-dev";
 import { toast } from "sonner";
 import type { MessageAction } from "@/types/chrome";
-import { PostHogProvider } from "posthog-js/react";
-
-const options = {
-  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-  defaults: "2025-11-30",
-} as const;
-
 export function PopupApp() {
   const [currentUrl, setCurrentUrl] = useState<string>("");
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -149,45 +142,40 @@ export function PopupApp() {
   }
 
   return (
-    <PostHogProvider
-      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-      options={options}
-    >
-      <div className="w-full h-full flex flex-col bg-background overflow-hidden text-pretty">
-        {isDev && devMode && (
-          <div className="bg-amber-500/10 text-amber-600 text-[10px] uppercase tracking-wider px-4 py-1 flex items-center justify-center font-bold border-t border-amber-500/20">
-            Developer Mode: Active
-          </div>
-        )}
-        <Header />
-        <div className="flex-1 min-h-0 overflow-hidden relative">
-          {/* Generator View - slides from left to right */}
-          <div
-            className={`absolute inset-0 transition-all duration-100 z-10 ${
-              displayedView === "generator" && !isTransitioning
-                ? "opacity-100 translate-x-0"
-                : displayedView === "generator" && isTransitioning
+    <div className="w-full h-full flex flex-col bg-background overflow-hidden text-pretty">
+      {isDev && devMode && (
+        <div className="bg-amber-500/10 text-amber-600 text-[10px] uppercase tracking-wider px-4 py-1 flex items-center justify-center font-bold border-t border-amber-500/20">
+          Developer Mode: Active
+        </div>
+      )}
+      <Header />
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        {/* Generator View - slides from left to right */}
+        <div
+          className={`absolute inset-0 transition-all duration-100 z-10 ${
+            displayedView === "generator" && !isTransitioning
+              ? "opacity-100 translate-x-0"
+              : displayedView === "generator" && isTransitioning
                 ? "opacity-0 -translate-x-8"
                 : "opacity-0 -translate-x-8 pointer-events-none"
-            }`}
-          >
-            <GeneratorView currentUrl={currentUrl} />
-          </div>
+          }`}
+        >
+          <GeneratorView currentUrl={currentUrl} />
+        </div>
 
-          {/* Result View - slides from right to left */}
-          <div
-            className={`absolute inset-0 transition-all duration-100 z-10 ${
-              displayedView === "result" && !isTransitioning
-                ? "opacity-100 translate-x-0"
-                : displayedView === "result" && isTransitioning
+        {/* Result View - slides from right to left */}
+        <div
+          className={`absolute inset-0 transition-all duration-100 z-10 ${
+            displayedView === "result" && !isTransitioning
+              ? "opacity-100 translate-x-0"
+              : displayedView === "result" && isTransitioning
                 ? "opacity-0 translate-x-8"
                 : "opacity-0 translate-x-8 pointer-events-none"
-            }`}
-          >
-            <ResultView currentUrl={currentUrl} />
-          </div>
+          }`}
+        >
+          <ResultView currentUrl={currentUrl} />
         </div>
       </div>
-    </PostHogProvider>
+    </div>
   );
 }
