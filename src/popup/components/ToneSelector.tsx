@@ -53,7 +53,7 @@ export function ToneSelector() {
 
   return (
     <div className="flex flex-col gap-2" id="tour-tone">
-      <Label className="text-sm font-medium">Description Tone</Label>
+      <Label className="text-sm font-medium">Writing Tone</Label>
       <div className="flex flex-wrap gap-2">
         {TONES.map((t) => (
           <Button
@@ -65,7 +65,7 @@ export function ToneSelector() {
               "h-8 gap-2 transition-all",
               tone === t.value
                 ? "bg-primary/20 border-primary/50 text-foreground"
-                : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                : "bg-secondary border-border text-muted-foreground hover:text-foreground",
             )}
           >
             {t.icon}
