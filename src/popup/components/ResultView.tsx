@@ -56,6 +56,9 @@ function ModelSelectorFooter({
           disabled={disabled}
           size="xs"
           popoverSide="top"
+          classNames={{
+            trigger: "max-w-20",
+          }}
         />
       </div>
       <TooltipProvider delayDuration={100}>

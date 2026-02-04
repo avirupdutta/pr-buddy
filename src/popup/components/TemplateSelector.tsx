@@ -18,6 +18,12 @@ interface TemplateSelectorProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   disabled?: boolean;
   popoverSide?: "top" | "right" | "bottom" | "left";
+  classNames?: {
+    root?: string;
+    trigger?: string;
+    content?: string;
+    item?: string;
+  };
 }
 
 const TemplateSelector: React.FC<TemplateSelectorProps> = ({
@@ -25,6 +31,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   size = "sm",
   disabled = false,
   popoverSide = "bottom",
+  classNames,
 }) => {
   const { template, setTemplate } = useGeneratorStore();
   const { templates } = useSettingsStore();
@@ -57,7 +64,10 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-2" id="tour-template">
+    <div
+      className={cn("flex flex-col gap-2", classNames?.root)}
+      id="tour-template"
+    >
       {placeholder && (
         <Label className="text-sm font-medium">{placeholder}</Label>
       )}
@@ -74,13 +84,22 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
             size === "md" && "text-base",
             size === "lg" && "text-lg",
             size === "xl" && "text-xl",
+            classNames?.trigger,
           )}
         >
           <SelectValue placeholder="Select a template" />
         </SelectTrigger>
-        <SelectContent position="popper" side={popoverSide}>
+        <SelectContent
+          position="popper"
+          side={popoverSide}
+          className={cn(classNames?.content)}
+        >
           {templates.map((t) => (
-            <SelectItem key={t.id} value={t.id}>
+            <SelectItem
+              key={t.id}
+              value={t.id}
+              className={cn(classNames?.item)}
+            >
               {t.title}
             </SelectItem>
           ))}
