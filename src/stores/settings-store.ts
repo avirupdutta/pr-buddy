@@ -40,7 +40,7 @@ The summary of the task (within 1-2 sentences).
 ### Checklist before requesting a review
 
 - [x] I have self-reviewed my code.
-- [x] All my code is following Codebuddy Coding Standards and Guidelines.
+- [x] All my code is following best practices.
 - [x] I have tested my code.
 - [x] My PR title is meaningful and max 60 characters.
 - [x] I have made sure only the changes in context of the feature are in this PR.
