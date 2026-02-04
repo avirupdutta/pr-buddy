@@ -7,8 +7,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useGeneratorStore } from "@/stores/generator-store";
+import { useAnalytics } from "@/services/analytics";
 import type { ToneType } from "@/types/chrome";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 const TONES: { value: ToneType; label: string; icon: React.ReactNode }[] = [
   {
@@ -35,22 +37,35 @@ const TONES: { value: ToneType; label: string; icon: React.ReactNode }[] = [
 
 export function ToneSelector() {
   const { tone, setTone } = useGeneratorStore();
+  const { trackToneSelected } = useAnalytics();
+  const [previousTone, setPreviousTone] = useState<ToneType>(tone);
+
+  const handleToneClick = (newTone: ToneType) => {
+    if (newTone !== tone) {
+      trackToneSelected({
+        tone: newTone,
+        previous_tone: previousTone,
+      });
+      setPreviousTone(tone);
+      setTone(newTone);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-2" id="tour-tone">
-      <Label className="text-sm font-medium">Description Tone</Label>
+      <Label className="text-sm font-medium">Writing Tone</Label>
       <div className="flex flex-wrap gap-2">
         {TONES.map((t) => (
           <Button
             key={t.value}
             variant="outline"
             size="sm"
-            onClick={() => setTone(t.value)}
+            onClick={() => handleToneClick(t.value)}
             className={cn(
               "h-8 gap-2 transition-all",
               tone === t.value
                 ? "bg-primary/20 border-primary/50 text-foreground"
-                : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                : "bg-secondary border-border text-muted-foreground hover:text-foreground",
             )}
           >
             {t.icon}

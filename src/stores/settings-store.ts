@@ -10,16 +10,34 @@ export const DEFAULT_TEMPLATES: PRTemplate[] = [
   {
     id: "default",
     title: "Default",
-    structure: `## Describe your changes
+    structure: `### TL;DR
 
-## Clickup link
+The summary of the task (within 1-2 sentences).
 
-## PR Type
+### What changed?
+
+- The list of changes made in the task (e.g. added a new feature, fixed a bug, etc.).
+- Include all the technical details of the changes made in the task.
+
+### How to test?
+
+- The steps to test the changes made in the task (without any technical jargon).
+
+### Why make this change (business impact, if any)?
+
+- The reason for making the changes made in the task.
+- Include the business impact this will have on the product.
+
+### Clickup link(s)
+
+- [Task Name](https://app.clickup.com/t/2672636/LYRICAL-123)
+
+### PR Type
 
 - [ ] Backend
 - [ ] Frontend
 
-## Checklist before requesting a review
+### Checklist before requesting a review
 
 - [x] I have self-reviewed my code.
 - [x] All my code is following Codebuddy Coding Standards and Guidelines.
@@ -297,7 +315,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         activePredefinedModelProvider:
           result.activePredefinedModelProvider || null,
         // Onboarding state
-        settingsOnboardingCompleted: result.settingsOnboardingCompleted || false,
+        settingsOnboardingCompleted:
+          result.settingsOnboardingCompleted || false,
         settingsOnboardingStarted: result.settingsOnboardingStarted || false,
         isLoading: false,
       });

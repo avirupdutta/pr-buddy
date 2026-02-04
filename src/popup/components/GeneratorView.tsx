@@ -9,22 +9,34 @@ import {
 
 import { useGeneratorStore } from "@/stores/generator-store";
 import { useSettingsStore } from "@/stores/settings-store";
-import { TemplateSelector } from "./TemplateSelector";
+import TemplateSelector from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
 import { ContextInput } from "./ContextInput";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { openOptionsPage } from "@/services/chrome-messaging";
 import ModelSelector from "./ModelSelector";
+import { useAnalytics } from "@/services/analytics";
 
 interface GeneratorViewProps {
   currentUrl: string;
 }
 
 export function GeneratorView({ currentUrl }: GeneratorViewProps) {
-  const { generate, error, isGenerating } = useGeneratorStore();
+  const {
+    generate,
+    error,
+    isGenerating,
+    template,
+    tone,
+    context,
+    generateTitle,
+  } = useGeneratorStore();
   const settingsStore = useSettingsStore();
   const hasSelectedModel = !!settingsStore.getActiveModel();
+  const { trackGenerateClicked, trackButtonClick } = useAnalytics();
+  const activeModel = settingsStore.getActiveModel();
+
   const handleGenerate = async () => {
     if (!currentUrl || !currentUrl.includes("github.com/")) {
       toast.error("Please open this extension on a GitHub Pull Request page.");
@@ -37,6 +49,18 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       );
       return;
     }
+
+    // Track the generate click event
+    trackGenerateClicked({
+      url: currentUrl,
+      has_context: context.length > 0,
+      context_length: context.length,
+      template_id: template,
+      tone: tone,
+      model_id: activeModel?.id || "unknown",
+      model_provider: activeModel?.provider || "unknown",
+      generate_title: generateTitle,
+    });
 
     try {
       await generate(currentUrl);
@@ -60,7 +84,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
           </div>
 
           {/* Template Selection */}
-          <TemplateSelector />
+          <TemplateSelector placeholder="PR Template" size="xs" />
 
           {/* Tone Selector */}
           <ToneSelector />
@@ -100,7 +124,10 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={openOptionsPage}
+                  onClick={() => {
+                    trackButtonClick("settings", { from_view: "generator" });
+                    openOptionsPage();
+                  }}
                   className="underline hover:text-foreground transition-colors cursor-pointer"
                 >
                   <IconSettings className="w-5 h-5" />

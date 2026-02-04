@@ -2,10 +2,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useGeneratorStore } from "@/stores/generator-store";
+import { useAnalytics } from "@/services/analytics";
 
 export function ContextInput() {
   const { context, setContext, generateTitle, setGenerateTitle } =
     useGeneratorStore();
+  const { trackButtonClick } = useAnalytics();
+
+  const handleToggleGenerateTitle = (checked: boolean) => {
+    trackButtonClick("generate_title_toggle", { enabled: checked });
+    setGenerateTitle(checked);
+  };
 
   return (
     <div className="flex flex-col gap-4" id="tour-context">
@@ -19,7 +26,7 @@ export function ContextInput() {
         </div>
         <Switch
           checked={generateTitle}
-          onCheckedChange={setGenerateTitle}
+          onCheckedChange={handleToggleGenerateTitle}
           className="data-[state=checked]:bg-primary"
         />
       </div>
@@ -33,7 +40,7 @@ export function ContextInput() {
         <Textarea
           value={context}
           onChange={(e) => setContext(e.target.value)}
-          placeholder="- Use conventional commit format for title&#10;- Mention JIRA ticket PROJ-123&#10;- Keep title under 50 chars&#10;- Note breaking changes..."
+          placeholder="Example:&#10;- Use conventional commit format for title&#10;- Clickup Task ID: PROJ-123&#10;- Keep title under 50 chars"
           className="min-h-[100px] resize-y text-sm"
         />
         <p className="text-xs text-muted-foreground">

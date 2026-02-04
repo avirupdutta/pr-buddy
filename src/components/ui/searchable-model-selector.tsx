@@ -41,6 +41,8 @@ interface SearchableModelSelectorProps {
   customModels?: AIModel[]; // User-added custom models to display in "Custom" section
   providerKeyStatus?: Record<AIProviderType, boolean>; // Map of provider to API key status
   disabled?: boolean; // Disable the selector during generation
+  onOpen?: () => void; // Callback when dropdown opens
+  onClose?: () => void; // Callback when dropdown closes
 }
 
 interface ModelOption {
@@ -74,6 +76,8 @@ export const SearchableModelSelector: React.FC<
   customModels = [],
   providerKeyStatus = {} as Record<AIProviderType, boolean>,
   disabled = false,
+  onOpen,
+  onClose,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -252,6 +256,7 @@ export const SearchableModelSelector: React.FC<
           setScrollPosition(scrollAreaRef.current.scrollTop);
         }
         setIsOpen(false);
+        onClose?.();
       }
     };
 
@@ -262,7 +267,7 @@ export const SearchableModelSelector: React.FC<
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   // Restore scroll position when dropdown opens
   React.useEffect(() => {
@@ -332,6 +337,7 @@ export const SearchableModelSelector: React.FC<
     onValueChange(option.model.id, option.provider);
     setIsOpen(false);
     setSearchQuery("");
+    onClose?.();
   };
 
   return (
@@ -344,7 +350,17 @@ export const SearchableModelSelector: React.FC<
             ? "cursor-not-allowed opacity-50"
             : "cursor-pointer hover:bg-input/40 dark:hover:bg-input/50",
         )}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!disabled) {
+            const newIsOpen = !isOpen;
+            setIsOpen(newIsOpen);
+            if (newIsOpen) {
+              onOpen?.();
+            } else {
+              onClose?.();
+            }
+          }
+        }}
       >
         {selectedOption ? (
           <div className="flex items-center gap-2 max-w-[150px]">
@@ -503,7 +519,7 @@ export const SearchableModelSelector: React.FC<
               onMouseEnter={() => setIsDetailsPanelHovered(true)}
               onMouseLeave={() => setIsDetailsPanelHovered(false)}
             >
-              <div className="p-4">
+              <div className="p-4 h-full">
                 {modelToShow ? (
                   <div className="space-y-4">
                     {/* Model Name */}

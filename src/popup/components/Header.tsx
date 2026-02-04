@@ -9,11 +9,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAnalytics } from "@/services/analytics";
 
 import packageJson from "../../../package.json";
 
 export function Header() {
   const { view, reset } = useGeneratorStore();
+  const { trackButtonClick } = useAnalytics();
 
   return (
     <header
@@ -49,7 +51,10 @@ export function Header() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={reset}
+                  onClick={() => {
+                    trackButtonClick("go_back", { from_view: view });
+                    reset();
+                  }}
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <IconArrowLeft className="w-5 h-5" />
