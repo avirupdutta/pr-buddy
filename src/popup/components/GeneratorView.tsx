@@ -9,7 +9,7 @@ import {
 
 import { useGeneratorStore } from "@/stores/generator-store";
 import { useSettingsStore } from "@/stores/settings-store";
-import { TemplateSelector } from "./TemplateSelector";
+import TemplateSelector from "./TemplateSelector";
 import { ToneSelector } from "./ToneSelector";
 import { ContextInput } from "./ContextInput";
 import { toast } from "sonner";
@@ -23,7 +23,15 @@ interface GeneratorViewProps {
 }
 
 export function GeneratorView({ currentUrl }: GeneratorViewProps) {
-  const { generate, error, isGenerating, template, tone, context, generateTitle } = useGeneratorStore();
+  const {
+    generate,
+    error,
+    isGenerating,
+    template,
+    tone,
+    context,
+    generateTitle,
+  } = useGeneratorStore();
   const settingsStore = useSettingsStore();
   const hasSelectedModel = !!settingsStore.getActiveModel();
   const { trackGenerateClicked, trackButtonClick } = useAnalytics();
@@ -76,7 +84,7 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
           </div>
 
           {/* Template Selection */}
-          <TemplateSelector />
+          <TemplateSelector placeholder="PR Template" size="xs" />
 
           {/* Tone Selector */}
           <ToneSelector />

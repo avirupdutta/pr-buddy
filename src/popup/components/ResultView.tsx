@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ModelSelector from "./ModelSelector";
+import TemplateSelector from "./TemplateSelector";
 import FluentRecordStopFilled from "@/components/icons/FluentRecordStopFilled";
 import { useAnalytics } from "@/services/analytics";
 
@@ -38,17 +39,25 @@ interface ResultViewProps {
   currentUrl: string;
 }
 
-// Shared footer component for ModelSelector + Settings to avoid duplication
-function ModelSelectorFooter({ 
-  disabled = false, 
-  onSettingsClick 
-}: { 
+// Shared footer component for ModelSelector + TemplateSelector + Settings to avoid duplication
+function ModelSelectorFooter({
+  disabled = false,
+  onSettingsClick,
+}: {
   disabled?: boolean;
   onSettingsClick?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <ModelSelector disabled={disabled} />
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-2">
+        <ModelSelector disabled={disabled} />
+        <TemplateSelector
+          placeholder=""
+          disabled={disabled}
+          size="xs"
+          popoverSide="top"
+        />
+      </div>
       <TooltipProvider delayDuration={100}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -86,12 +95,12 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   } = useGeneratorStore();
   const settingsStore = useSettingsStore();
   const activeModel = settingsStore.getActiveModel();
-  const { 
-    trackCopyClicked, 
-    trackApplyClicked, 
-    trackRegenerateClicked, 
+  const {
+    trackCopyClicked,
+    trackApplyClicked,
+    trackRegenerateClicked,
     trackGenerationStopped,
-    trackButtonClick
+    trackButtonClick,
   } = useAnalytics();
 
   const [isCopied, setIsCopied] = useState(false);
@@ -166,7 +175,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
       setIsCopied(true);
       toast.success("Copied to clipboard!");
       setTimeout(() => setIsCopied(false), 2000);
-      
+
       trackCopyClicked({
         description_length: generatedDescription.length,
         has_title: Boolean(generatedTitle),
@@ -188,7 +197,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
         generateTitle ? generatedTitle : undefined,
       );
       toast.success("PR updated!");
-      
+
       trackApplyClicked({
         url: currentUrl,
         description_length: generatedDescription.length,
@@ -196,7 +205,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
         model_id: activeModel?.id || "unknown",
         model_provider: activeModel?.provider || "unknown",
       });
-      
+
       reset();
       setTimeout(() => window.close(), 1500);
     } catch (err) {
@@ -212,13 +221,13 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     if (!hasRegenerated) {
       setHasRegenerated(true);
     }
-    
+
     trackRegenerateClicked({
       url: currentUrl,
       model_id: activeModel?.id || "unknown",
       model_provider: activeModel?.provider || "unknown",
     });
-    
+
     try {
       await generate(currentUrl, true);
     } catch (err) {
@@ -459,8 +468,8 @@ export function ResultView({ currentUrl }: ResultViewProps) {
             </div>
           </div>
         )}
-        <ModelSelectorFooter 
-          disabled={isGenerating} 
+        <ModelSelectorFooter
+          disabled={isGenerating}
           onSettingsClick={() => {
             trackButtonClick("settings", { from_view: "result" });
             openOptionsPage();

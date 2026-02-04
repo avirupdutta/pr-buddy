@@ -40,7 +40,7 @@ export function ContextInput() {
         <Textarea
           value={context}
           onChange={(e) => setContext(e.target.value)}
-          placeholder="- Use conventional commit format for title&#10;- Mention JIRA ticket PROJ-123&#10;- Keep title under 50 chars&#10;- Note breaking changes..."
+          placeholder="Example:&#10;- Use conventional commit format for title&#10;- Clickup Task ID: PROJ-123&#10;- Keep title under 50 chars"
           className="min-h-[100px] resize-y text-sm"
         />
         <p className="text-xs text-muted-foreground">

@@ -10,40 +10,75 @@ import { useGeneratorStore } from "@/stores/generator-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useAnalytics } from "@/services/analytics";
 import type { TemplateSelectedProperties } from "@/data/constants";
+import type React from "react";
+import { cn } from "@/lib/utils";
 
-export function TemplateSelector() {
+interface TemplateSelectorProps {
+  placeholder?: string;
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  disabled?: boolean;
+  popoverSide?: "top" | "right" | "bottom" | "left";
+}
+
+const TemplateSelector: React.FC<TemplateSelectorProps> = ({
+  placeholder = "Template",
+  size = "sm",
+  disabled = false,
+  popoverSide = "bottom",
+}) => {
   const { template, setTemplate } = useGeneratorStore();
   const { templates } = useSettingsStore();
   const { trackTemplateSelected } = useAnalytics();
 
   // Default template IDs that come built-in
-  const defaultTemplateIds = ["default", "bug", "feature", "refactor", "hotfix"];
+  const defaultTemplateIds = [
+    "default",
+    "bug",
+    "feature",
+    "refactor",
+    "hotfix",
+  ];
 
   const handleTemplateChange = (templateId: string) => {
     setTemplate(templateId);
-    
+
     // Find the selected template to get its title
     const selectedTemplate = templates.find((t) => t.id === templateId);
-    
+
     if (selectedTemplate) {
       const properties: TemplateSelectedProperties = {
         template_id: templateId,
         template_title: selectedTemplate.title,
         is_custom_template: !defaultTemplateIds.includes(templateId),
       };
-      
+
       trackTemplateSelected(properties);
     }
   };
 
   return (
     <div className="flex flex-col gap-2" id="tour-template">
-      <Label className="text-sm font-medium">PR Template</Label>
-      <Select value={template} onValueChange={handleTemplateChange}>
-        <SelectTrigger className="h-12 text-sm w-full">
+      {placeholder && (
+        <Label className="text-sm font-medium">{placeholder}</Label>
+      )}
+      <Select
+        value={template}
+        onValueChange={handleTemplateChange}
+        disabled={disabled}
+      >
+        <SelectTrigger
+          className={cn(
+            "text-sm h-12 w-full cursor-pointer",
+            size === "xs" && "text-xs",
+            size === "sm" && "text-sm",
+            size === "md" && "text-base",
+            size === "lg" && "text-lg",
+            size === "xl" && "text-xl",
+          )}
+        >
           <SelectValue placeholder="Select a template" />
         </SelectTrigger>
-        <SelectContent position="popper">
+        <SelectContent position="popper" side={popoverSide}>
           {templates.map((t) => (
             <SelectItem key={t.id} value={t.id}>
               {t.title}
@@ -53,4 +88,6 @@ export function TemplateSelector() {
       </Select>
     </div>
   );
-}
+};
+
+export default TemplateSelector;
