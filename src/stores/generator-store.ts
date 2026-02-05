@@ -177,6 +177,7 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
 
       // Streaming state
       let fullContent = "";
+      let receivedAnyChunk = false;
       const separator = "<<<SEPARATOR>>>";
 
       await new Promise<void>((resolve, reject) => {
@@ -194,6 +195,8 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
             if (abortController.signal.aborted) {
               return;
             }
+
+            receivedAnyChunk = true;
 
             fullContent += chunk;
 
@@ -234,6 +237,18 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
             if (abortController.signal.aborted) {
               return;
             }
+
+            // Guard: never treat an empty completion as success.
+            // This happens when the background posts `complete` even though the provider errored.
+            if (!receivedAnyChunk && fullContent.trim().length === 0) {
+              reject(
+                new Error(
+                  "AI request completed with no output. Check the service worker logs for the provider error (e.g. Groq 413 / TPM).",
+                ),
+              );
+              return;
+            }
+
             set({
               isGenerating: false,
               isRegenerating: false,

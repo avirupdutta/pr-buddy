@@ -91,6 +91,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     generate,
     isGenerating,
     isRegenerating,
+    error,
     reset,
     hasRegenerated,
     setHasRegenerated,
@@ -120,6 +121,15 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
+  const lastToastErrorRef = useRef<string | null>(null);
+
+  // Show an alert toast when generation fails (covers background failures too)
+  useEffect(() => {
+    if (!error) return;
+    if (lastToastErrorRef.current === error) return;
+    toast.error(error);
+    lastToastErrorRef.current = error;
+  }, [error]);
 
   // Auto-scroll to bottom during generation
   useEffect(() => {
