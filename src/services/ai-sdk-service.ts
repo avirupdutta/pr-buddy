@@ -15,6 +15,86 @@ import type {
 } from "@/types/structured-output";
 import { PRResponseSchema } from "@/types/structured-output";
 
+function truncateForUI(text: string, max = 900): string {
+  if (text.length <= max) return text;
+  return text.slice(0, Math.max(0, max - 3)) + "...";
+}
+
+function extractProviderErrorMessageFromBody(body: unknown): string | null {
+  if (!body) return null;
+
+  // Body might already be an object
+  if (typeof body === "object") {
+    const maybe = body as Record<string, unknown>;
+    const err = maybe.error as Record<string, unknown> | undefined;
+    const message = (err?.message ?? maybe.message) as unknown;
+    return typeof message === "string" && message.trim() ? message.trim() : null;
+  }
+
+  if (typeof body !== "string") return null;
+  const trimmed = body.trim();
+  if (!trimmed) return null;
+
+  // Try parse JSON
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      return extractProviderErrorMessageFromBody(parsed);
+    } catch {
+      // fall through
+    }
+  }
+
+  return trimmed;
+}
+
+function formatAISDKErrorMessage(error: unknown): string {
+  const seen = new Set<unknown>();
+
+  const unwrap = (err: unknown): unknown => {
+    if (!err || typeof err !== "object") return err;
+    if (seen.has(err)) return err;
+    seen.add(err);
+
+    const anyErr = err as Record<string, unknown>;
+    return anyErr.cause && typeof anyErr.cause === "object" ? anyErr.cause : err;
+  };
+
+  const err = unwrap(error);
+
+  const anyErr = (err && typeof err === "object" ? (err as Record<string, unknown>) : null);
+  const status =
+    (anyErr?.statusCode as number | undefined) ??
+    (anyErr?.status as number | undefined);
+  const url = typeof anyErr?.url === "string" ? (anyErr.url as string) : undefined;
+  const responseBody =
+    anyErr?.responseBody ??
+    anyErr?.body ??
+    (anyErr?.response as Record<string, unknown> | undefined)?.body;
+
+  const bodyMessage = extractProviderErrorMessageFromBody(responseBody);
+
+  let message = "";
+  if (bodyMessage) {
+    message = bodyMessage;
+  } else if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof (anyErr?.message) === "string") {
+    message = anyErr.message as string;
+  } else {
+    message = "Unknown error";
+  }
+
+  message = message.replace(/^AI SDK Error:\s*/i, "").trim();
+
+  const parts: string[] = [];
+  if (typeof status === "number") parts.push(`HTTP ${status}`);
+  if (url) parts.push(url);
+  parts.push(message);
+
+  return truncateForUI(parts.filter(Boolean).join(": "));
+}
+
 /**
  * Helper function to strip markdown code blocks from text
  * Handles both ```json and ``` code blocks
@@ -140,11 +220,7 @@ export class AISDKService {
         prDetails: { owner: "", repo: "", number: "" }, // TODO: Pass actual PR details from caller
       };
     } catch (error) {
-      throw new Error(
-        `AI SDK Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-      );
+      throw new Error(`AI SDK Error: ${formatAISDKErrorMessage(error)}`);
     }
   }
 
@@ -217,9 +293,7 @@ export class AISDKService {
       };
     } catch (error) {
       yield {
-        error: `AI SDK Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
         isComplete: true,
       };
     }
@@ -315,9 +389,7 @@ export class AISDKService {
 
       return {
         success: false,
-        error: `AI SDK Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
         provider,
         model: params.model.modelId,
       };
@@ -422,9 +494,7 @@ export class AISDKService {
     } catch (error) {
       return {
         success: false,
-        error: `JSON fallback failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        error: `JSON fallback failed: ${formatAISDKErrorMessage(error)}`,
         provider,
         model: params.model.modelId,
       };
@@ -493,9 +563,7 @@ export class AISDKService {
         } catch (error) {
           yield {
             type: "error",
-            error: `AI SDK Error: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`,
+            error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
           };
           return;
         }
@@ -542,9 +610,7 @@ export class AISDKService {
           } catch (error) {
             yield {
               type: "error",
-              error: `AI SDK Error: ${
-                error instanceof Error ? error.message : "Unknown error"
-              }`,
+              error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
             };
             return;
           }
@@ -576,9 +642,7 @@ export class AISDKService {
         } catch (error) {
           yield {
             type: "error",
-            error: `AI SDK Error: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`,
+            error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
           };
           return;
         }
@@ -586,9 +650,7 @@ export class AISDKService {
     } catch (error) {
       yield {
         type: "error",
-        error: `AI SDK Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
       };
     }
   }

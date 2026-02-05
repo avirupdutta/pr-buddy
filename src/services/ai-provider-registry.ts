@@ -174,7 +174,7 @@ export function createAIProviderRegistry(
 export function extractProviderFromModel(modelString: string): AIProviderType {
   // Check for models hosted on specific providers first (before checking model prefixes)
   // These are models that have a provider prefix in their ID but are hosted elsewhere
-  const groqHostedModels = ["openai/gpt-oss-120b"];
+  const groqHostedModels = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"];
   if (groqHostedModels.includes(modelString)) {
     return "groq";
   }
