@@ -15,7 +15,7 @@ import type {
 } from "@/types/structured-output";
 import { PRResponseSchema } from "@/types/structured-output";
 
-function truncateForUI(text: string, max = 900): string {
+function truncateForUI(text: string, max = 1600): string {
   if (text.length <= max) return text;
   return text.slice(0, Math.max(0, max - 3)) + "...";
 }
@@ -48,6 +48,47 @@ function extractProviderErrorMessageFromBody(body: unknown): string | null {
   return trimmed;
 }
 
+function extractNestedErrorMessage(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+
+  const queue: unknown[] = [error];
+  const seen = new Set<unknown>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object" || seen.has(current)) continue;
+    seen.add(current);
+
+    const obj = current as Record<string, unknown>;
+
+    const directMessage =
+      typeof obj.message === "string" && obj.message.trim()
+        ? obj.message.trim()
+        : null;
+    if (directMessage && !/^\[object Object\]$/i.test(directMessage)) {
+      return directMessage;
+    }
+
+    const providerMessage = extractProviderErrorMessageFromBody(
+      obj.error ?? obj.body ?? obj.responseBody,
+    );
+    if (providerMessage) return providerMessage;
+
+    const nestedCandidates = [
+      obj.cause,
+      obj.error,
+      obj.response,
+      obj.data,
+      obj.value,
+    ];
+    for (const candidate of nestedCandidates) {
+      if (candidate && typeof candidate === "object") queue.push(candidate);
+    }
+  }
+
+  return null;
+}
+
 function formatAISDKErrorMessage(error: unknown): string {
   const seen = new Set<unknown>();
 
@@ -77,12 +118,36 @@ function formatAISDKErrorMessage(error: unknown): string {
   let message = "";
   if (bodyMessage) {
     message = bodyMessage;
-  } else if (error instanceof Error) {
-    message = error.message;
-  } else if (typeof (anyErr?.message) === "string") {
-    message = anyErr.message as string;
   } else {
-    message = "Unknown error";
+    const nestedMessage = extractNestedErrorMessage(err);
+    if (nestedMessage) {
+      message = nestedMessage;
+    }
+  }
+
+  if (!message) {
+    const errorCode = typeof anyErr?.code === "string" ? anyErr.code : "";
+    const errorType = typeof anyErr?.type === "string" ? anyErr.type : "";
+    const hint = [errorType, errorCode].filter(Boolean).join("/");
+    if (hint) {
+      message = `Request failed (${hint})`;
+    }
+  }
+
+  if (!message) {
+    const statusText =
+      typeof anyErr?.statusText === "string" ? anyErr.statusText : "";
+    if (statusText) message = statusText;
+  }
+
+  if (!message) {
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (typeof anyErr?.message === "string") {
+      message = anyErr.message as string;
+    } else {
+      message = "Unknown error";
+    }
   }
 
   message = message.replace(/^AI SDK Error:\s*/i, "").trim();

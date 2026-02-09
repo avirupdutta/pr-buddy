@@ -695,13 +695,13 @@ Generate the TITLE and DESCRIPTION now in the requested format.`;
         };
 
         const isEmpty =
-          !sawAnyContent &&
           (!finalData.description || finalData.description.trim().length === 0) &&
+          (!sawAnyContent || !lastDescription || lastDescription.trim().length === 0) &&
           (!finalData.title || finalData.title.trim().length === 0);
 
         if (isEmpty) {
           const msg =
-            "AI request completed with no output. Check the service worker logs for the provider error details.";
+            `No response content from ${model.provider || "unknown"}/${model.modelId}. This usually means the provider rejected the request (for example: 413/token limits). Try a smaller diff/context or switch model.`;
           port.postMessage({ type: "error", error: msg });
           sendToastNotification(`AI Generation Error: ${msg}`, "error");
           return;
@@ -971,13 +971,13 @@ Generate the ${
 
       if (event.type === "complete") {
         const isEmpty =
-          !sawAnyContent &&
           (!lastDescription || lastDescription.trim().length === 0) &&
+          (!sawAnyContent || !lastSentContent || lastSentContent.trim().length === 0) &&
           (!lastTitle || lastTitle.trim().length === 0);
 
         if (isEmpty) {
           const msg =
-            "AI request completed with no output. Check the service worker logs for the provider error details.";
+            `No response content from ${model.provider || "unknown"}/${model.modelId}. This usually means the provider rejected the request (for example: 413/token limits). Try a smaller diff/context or switch model.`;
           port.postMessage({ type: "error", error: msg });
           sendToastNotification(`AI Generation Error: ${msg}`, "error");
           return;

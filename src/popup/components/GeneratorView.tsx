@@ -40,7 +40,10 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
   const lastToastErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!error) return;
+    if (!error) {
+      lastToastErrorRef.current = null;
+      return;
+    }
     if (lastToastErrorRef.current === error) return;
     toast.error(error);
     lastToastErrorRef.current = error;
