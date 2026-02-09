@@ -51,6 +51,63 @@ export async function generateDescription(
 }
 
 /**
+ * Generate PR description via background script (Streamed)
+ */
+export function streamDescription(
+  url: string,
+  settings: GeneratorSettings,
+  onChunk: (content: string) => void,
+  onComplete: (data: GenerateResponse) => void,
+  onError: (error: string) => void
+): () => void {
+  const port = chromeAPI.runtime.connect({
+    name: "GENERATE_DESCRIPTION_STREAM",
+  });
+
+  let finished = false;
+  let manuallyDisconnected = false;
+ 
+  port.onMessage.addListener(
+    (msg: {
+      type: "chunk" | "complete" | "error";
+      content?: string;
+      data?: GenerateResponse;
+      error?: string;
+    }) => {
+    if (msg.type === "chunk" && msg.content) {
+      onChunk(msg.content);
+    } else if (msg.type === "complete" && msg.data) {
+      finished = true;
+      onComplete(msg.data);
+    } else if (msg.type === "error") {
+      finished = true;
+      onError(msg.error || "Unknown error");
+    }
+    },
+  );
+ 
+  port.onDisconnect.addListener(() => {
+    if (manuallyDisconnected || finished) return;
+
+    const lastErrorMessage = chromeAPI.runtime.lastError?.message;
+    onError(lastErrorMessage || "Connection lost while generating. Please try again.");
+  });
+
+  // Send initial request
+  port.postMessage({ url, settings });
+
+  // Return disconnect function
+  return () => {
+    try {
+      manuallyDisconnected = true;
+      port.disconnect();
+    } catch {
+      // Ignore if already disconnected
+    }
+  };
+}
+
+/**
  * Update PR description via GitHub API (background script)
  */
 export async function updatePRDescription(
@@ -83,6 +140,9 @@ export async function getCurrentTabUrl(): Promise<{
     });
   });
 }
+
+// Re-export sendToastNotification from notifications module
+export { sendToastNotification } from "./notifications";
 
 /**
  * Open the options page

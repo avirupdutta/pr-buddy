@@ -18,21 +18,21 @@ export function ThemeToggle({
       <TabsList className="bg-muted/50 border border-border/50 rounded-full p-0.5 h-auto">
         <TabsTrigger
           value="light"
-          className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm px-3 py-1.5 gap-2"
+          className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground px-3 py-1.5 gap-2 text-muted-foreground"
         >
           <IconSun className="h-4 w-4" />
           {variant === "full" && <span className="text-xs">Light</span>}
         </TabsTrigger>
         <TabsTrigger
           value="dark"
-          className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm px-3 py-1.5 gap-2"
+          className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground px-3 py-1.5 gap-2 text-muted-foreground"
         >
           <IconMoon className="h-4 w-4" />
           {variant === "full" && <span className="text-xs">Dark</span>}
         </TabsTrigger>
         <TabsTrigger
           value="system"
-          className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm px-3 py-1.5 gap-2"
+          className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground px-3 py-1.5 gap-2 text-muted-foreground"
         >
           <IconDeviceDesktop className="h-4 w-4" />
           {variant === "full" && <span className="text-xs">System</span>}

@@ -23,5 +23,5 @@ createRoot(document.getElementById("root")!).render(
         <Toaster position="top-center" />
       </ThemeProvider>
     </QueryClientProvider>
-  </StrictMode>
+  </StrictMode>,
 );

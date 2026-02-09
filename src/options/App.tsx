@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   IconPuzzle,
   IconKey,
-  IconRobot,
   IconDeviceFloppy,
   IconCheck,
   IconExternalLink,
@@ -15,7 +14,12 @@ import {
   IconTrash,
   IconCircleCheck,
   IconX,
+  IconSettings,
+  IconHelp,
 } from "@tabler/icons-react";
+import { NextStepProvider, NextStepReact, useNextStep } from "nextstepjs";
+import { useAnalytics } from "@/services/analytics";
+import { OpenRouterLogo } from "@/components/provider-logos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,7 +34,19 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ProviderLogo } from "@/components/provider-logos";
 import type { PRTemplate, AIModel } from "@/types/chrome";
+import type { AIProviderType } from "@/services/ai-provider-registry";
+import modelMappings from "@/data/model-mappings.json";
+import { settingsTourSteps } from "@/data/settings-tour-steps";
+import { SettingsTourCard } from "@/components/onboarding/SettingsTourCard";
 
 // ============================================
 // Template Editor Component
@@ -98,13 +114,36 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
 // ============================================
 interface ModelEditorProps {
   model?: AIModel;
-  onSave: (data: { name: string; modelId: string }) => void;
+  onSave: (data: { name: string; modelId: string; provider?: string }) => void;
   onCancel: () => void;
 }
 
 function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
   const [name, setName] = useState(model?.name || "");
   const [modelId, setModelId] = useState(model?.modelId || "");
+  const [provider, setProvider] = useState(model?.provider || "openrouter");
+
+  // Generate provider options dynamically from model-mappings.json
+  // Filter enabled providers and sort by sortRank
+  const providerOptions = useMemo(() => {
+    return Object.entries(modelMappings.providers)
+      .filter(
+        ([, providerData]: [
+          string,
+          { enabled: boolean; sortRank: number; name: string },
+        ]) => providerData.enabled,
+      )
+      .sort(
+        (
+          [, a]: [string, { sortRank: number }],
+          [, b]: [string, { sortRank: number }],
+        ) => a.sortRank - b.sortRank,
+      )
+      .map(([providerId, providerData]: [string, { name: string }]) => ({
+        value: providerId,
+        label: providerData.name,
+      }));
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +151,15 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
       toast.error("Please fill in all fields");
       return;
     }
-    onSave({ name: name.trim(), modelId: modelId.trim() });
+    if (name.trim().length > 40) {
+      toast.error("Model name must be 40 characters or less");
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      modelId: modelId.trim(),
+      provider: provider.trim() || undefined,
+    });
   };
 
   return (
@@ -128,7 +175,43 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g., GPT-4 Turbo"
           autoFocus
+          maxLength={40}
         />
+        <p className="text-xs text-muted-foreground">
+          {name.length}/40 characters
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="provider">Provider</Label>
+        <Select value={provider} onValueChange={setProvider}>
+          <SelectTrigger>
+            <SelectValue>
+              <div className="flex items-center gap-2">
+                <ProviderLogo provider={provider as AIProviderType} size={16} />
+                <span>
+                  {providerOptions.find((p) => p.value === provider)?.label ||
+                    "Select a provider"}
+                </span>
+              </div>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {providerOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <div className="flex items-center gap-2">
+                  <ProviderLogo
+                    provider={option.value as AIProviderType}
+                    size={16}
+                  />
+                  <span>{option.label}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Choose the AI provider for this model.
+        </p>
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="model-id">Model ID</Label>
@@ -139,10 +222,6 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
           placeholder="e.g., openai/gpt-4-turbo"
           className="font-mono text-sm"
         />
-        <p className="text-xs text-muted-foreground">
-          Enter the OpenRouter model ID (e.g., openai/gpt-4-turbo,
-          anthropic/claude-3-opus)
-        </p>
       </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="ghost" onClick={onCancel}>
@@ -164,8 +243,10 @@ function ModelEditor({ model, onSave, onCancel }: ModelEditorProps) {
 function TemplatesTab() {
   const { templates, addTemplate, updateTemplate, deleteTemplate } =
     useSettingsStore();
+  const { trackTemplateAdded, trackTemplateUpdated, trackTemplateDeleted } =
+    useAnalytics();
   const [editingTemplate, setEditingTemplate] = useState<PRTemplate | null>(
-    null
+    null,
   );
   const [isAdding, setIsAdding] = useState(false);
 
@@ -174,9 +255,17 @@ function TemplatesTab() {
       await addTemplate(data);
       toast.success("Template added successfully");
       setIsAdding(false);
+      // Get the newly added template (should be the last one added with this title)
+      const newTemplate = templates.find(
+        (t) => t.title === data.title && t.structure === data.structure,
+      );
+      trackTemplateAdded({
+        template_id: newTemplate?.id || "unknown",
+        template_title: data.title,
+      });
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to add template"
+        error instanceof Error ? error.message : "Failed to add template",
       );
     }
   };
@@ -187,20 +276,31 @@ function TemplatesTab() {
       await updateTemplate(editingTemplate.id, data);
       toast.success("Template updated successfully");
       setEditingTemplate(null);
+      trackTemplateUpdated({
+        template_id: editingTemplate.id,
+        template_title: data.title,
+      });
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update template"
+        error instanceof Error ? error.message : "Failed to update template",
       );
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
+      const templateToDelete = templates.find((t) => t.id === id);
       await deleteTemplate(id);
       toast.success("Template deleted successfully");
+      if (templateToDelete) {
+        trackTemplateDeleted({
+          template_id: templateToDelete.id,
+          template_title: templateToDelete.title,
+        });
+      }
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete template"
+        error instanceof Error ? error.message : "Failed to delete template",
       );
     }
   };
@@ -293,54 +393,102 @@ function TemplatesTab() {
 // AI Models Tab Component
 // ============================================
 function AIModelsTab() {
-  const { aiModels, addModel, updateModel, deleteModel, setActiveModel } =
-    useSettingsStore();
+  const {
+    aiModels,
+    addModel,
+    updateModel,
+    deleteModel,
+    setActiveModel,
+    getActiveModel,
+  } = useSettingsStore();
+  const {
+    trackModelAdded,
+    trackModelUpdated,
+    trackModelDeleted,
+    trackButtonClick,
+  } = useAnalytics();
   const [editingModel, setEditingModel] = useState<AIModel | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  const handleAdd = async (data: { name: string; modelId: string }) => {
+  const activeModel = getActiveModel();
+
+  const handleAdd = async (data: {
+    name: string;
+    modelId: string;
+    provider?: string;
+  }) => {
     try {
       await addModel(data);
       toast.success("Model added successfully");
       setIsAdding(false);
+      // Get the newly added model (should be the last one added with this modelId)
+      const newModel = aiModels.find((m) => m.modelId === data.modelId);
+      trackModelAdded({
+        model_id: newModel?.id || "unknown",
+        model_name: data.name,
+        model_provider: data.provider || "openrouter",
+      });
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to add model"
+        error instanceof Error ? error.message : "Failed to add model",
       );
     }
   };
 
-  const handleUpdate = async (data: { name: string; modelId: string }) => {
+  const handleUpdate = async (data: {
+    name: string;
+    modelId: string;
+    provider?: string;
+  }) => {
     if (!editingModel) return;
     try {
       await updateModel(editingModel.id, data);
       toast.success("Model updated successfully");
       setEditingModel(null);
+      trackModelUpdated({
+        model_id: editingModel.id,
+        model_name: data.name,
+        model_provider: data.provider || editingModel.provider || "openrouter",
+      });
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update model"
+        error instanceof Error ? error.message : "Failed to update model",
       );
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
+      const modelToDelete = aiModels.find((m) => m.id === id);
       await deleteModel(id);
       toast.success("Model deleted successfully");
+      if (modelToDelete) {
+        trackModelDeleted({
+          model_id: modelToDelete.id,
+          model_name: modelToDelete.name,
+          model_provider: modelToDelete.provider || "openrouter",
+        });
+      }
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete model"
+        error instanceof Error ? error.message : "Failed to delete model",
       );
     }
   };
 
   const handleSetActive = async (id: string) => {
     try {
+      const model = aiModels.find((m) => m.id === id);
       await setActiveModel(id);
       toast.success("Active model updated");
+      trackButtonClick("set_active_model", {
+        model_id: id,
+        model_name: model?.name,
+        model_provider: model?.provider || "openrouter",
+      });
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to set active model"
+        error instanceof Error ? error.message : "Failed to set active model",
       );
     }
   };
@@ -349,7 +497,6 @@ function AIModelsTab() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-medium">AI Models</h3>
           <p className="text-sm text-muted-foreground">
             Manage AI models for generating descriptions
           </p>
@@ -385,26 +532,36 @@ function AIModelsTab() {
           <div
             key={model.id}
             className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
-              model.isActive
+              activeModel?.id === model.id
                 ? "bg-primary/10 border-primary/50"
                 : "bg-card hover:bg-accent/50"
             }`}
           >
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
+                <ProviderLogo
+                  provider={(model.provider || "openrouter") as AIProviderType}
+                  size={18}
+                />
                 <span className="font-medium">{model.name}</span>
-                {model.isActive && (
+                {activeModel?.id === model.id && (
                   <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                     Active
                   </span>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground font-mono">
-                {model.modelId}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground font-mono">
+                  {model.modelId}
+                </span>
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground capitalize">
+                  {model.provider || "openrouter"}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-1">
-              {!model.isActive && (
+              {activeModel?.id !== model.id && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -454,12 +611,22 @@ function AIModelsTab() {
 interface SettingsFormProps {
   initialGithubToken: string;
   initialOpenRouterKey: string;
+  initialOpenAIKey: string;
+  initialAnthropicKey: string;
+  initialGoogleKey: string;
+  initialGroqKey: string;
+  initialCerebrasKey: string;
   initialDevMode: boolean;
   initialDevPrUrl: string;
   isSaving: boolean;
   onSave: (settings: {
     githubToken: string;
     openRouterKey: string;
+    openaiKey: string;
+    anthropicKey: string;
+    googleKey: string;
+    groqKey: string;
+    cerebrasKey: string;
     devMode: boolean;
     devPrUrl: string;
   }) => Promise<void>;
@@ -468,29 +635,71 @@ interface SettingsFormProps {
 function SettingsForm({
   initialGithubToken,
   initialOpenRouterKey,
+  initialOpenAIKey,
+  initialAnthropicKey,
+  initialGoogleKey,
+  initialGroqKey,
+  initialCerebrasKey,
   initialDevMode,
   initialDevPrUrl,
   isSaving,
   onSave,
 }: SettingsFormProps) {
+  const { trackSettingsTabChanged, trackSettingsSaved } = useAnalytics();
   const [localGithubToken, setLocalGithubToken] = useState(initialGithubToken);
   const [localOpenRouterKey, setLocalOpenRouterKey] =
     useState(initialOpenRouterKey);
+  const [localOpenAIKey, setLocalOpenAIKey] = useState(initialOpenAIKey);
+  const [localAnthropicKey, setLocalAnthropicKey] =
+    useState(initialAnthropicKey);
+  const [localGoogleKey, setLocalGoogleKey] = useState(initialGoogleKey);
+  const [localGroqKey, setLocalGroqKey] = useState(initialGroqKey);
+  const [localCerebrasKey, setLocalCerebrasKey] = useState(initialCerebrasKey);
   const [localDevMode, setLocalDevMode] = useState(initialDevMode);
   const [localDevPrUrl, setLocalDevPrUrl] = useState(initialDevPrUrl);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [currentTab, setCurrentTab] = useState("general");
 
   const handleSave = async () => {
     await onSave({
       githubToken: localGithubToken,
       openRouterKey: localOpenRouterKey,
+      openaiKey: localOpenAIKey,
+      anthropicKey: localAnthropicKey,
+      googleKey: localGoogleKey,
+      groqKey: localGroqKey,
+      cerebrasKey: localCerebrasKey,
       devMode: localDevMode,
       devPrUrl: localDevPrUrl,
+    });
+
+    trackSettingsSaved({
+      has_github_token: !!localGithubToken,
+      has_openrouter_key: !!localOpenRouterKey,
+      has_openai_key: !!localOpenAIKey,
+      has_anthropic_key: !!localAnthropicKey,
+      has_google_key: !!localGoogleKey,
+      has_groq_key: !!localGroqKey,
+      has_cerebras_key: !!localCerebrasKey,
+      dev_mode_enabled: localDevMode,
+      theme: "system",
+      custom_models_count: 0,
+      custom_templates_count: 0,
     });
 
     setShowSuccess(true);
     toast.success("Settings saved successfully!");
     setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const handleTabChange = (newTab: string) => {
+    if (newTab !== currentTab) {
+      trackSettingsTabChanged({
+        tab: newTab,
+        previous_tab: currentTab,
+      });
+      setCurrentTab(newTab);
+    }
   };
 
   // Calculate grid columns based on available tabs
@@ -499,22 +708,27 @@ function SettingsForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <Tabs defaultValue="general" className="w-full">
+      <Tabs
+        value={currentTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+        id="settings-tabs"
+      >
         <TabsList className={`grid w-full ${gridCols}`}>
-          <TabsTrigger value="general" className="gap-2">
+          <TabsTrigger value="general" className="gap-2" id="settings-tab-general">
             <IconPuzzle className="w-4 h-4" />
             General
           </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-2">
+          <TabsTrigger value="templates" className="gap-2" id="settings-tab-templates">
             <IconTemplate className="w-4 h-4" />
             Templates
           </TabsTrigger>
-          <TabsTrigger value="ai-models" className="gap-2">
+          <TabsTrigger value="ai-models" className="gap-2" id="settings-tab-models">
             <IconCpu className="w-4 h-4" />
-            AI Models
+            Custom Models
           </TabsTrigger>
           {isDev && (
-            <TabsTrigger value="developer" className="gap-2">
+            <TabsTrigger value="developer" className="gap-2" id="settings-tab-developer">
               <IconCode className="w-4 h-4" />
               Developer
             </TabsTrigger>
@@ -523,7 +737,7 @@ function SettingsForm({
 
         <TabsContent value="general" className="flex flex-col gap-6 mt-4">
           {/* GitHub Token */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3" id="settings-github-token">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                 GitHub Personal Access Token
@@ -541,7 +755,7 @@ function SettingsForm({
             <ApiKeyInput
               value={localGithubToken}
               onChange={setLocalGithubToken}
-              placeholder="ghp_************************************"
+              placeholder="Enter API Key..."
               icon={<IconKey className="w-5 h-5" />}
             />
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -554,13 +768,11 @@ function SettingsForm({
             </p>
           </div>
 
-          <Separator />
-
           {/* OpenRouter Key */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3" id="settings-openrouter-key">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                OpenRouter API Key
+                OpenRouter
               </Label>
               <a
                 href="https://openrouter.ai/keys"
@@ -575,13 +787,105 @@ function SettingsForm({
             <ApiKeyInput
               value={localOpenRouterKey}
               onChange={setLocalOpenRouterKey}
-              placeholder="sk-or-************************************"
-              icon={<IconRobot className="w-5 h-5" />}
+              placeholder="Enter API Key..."
+              icon={<OpenRouterLogo size={20} />}
             />
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="text-primary">ℹ</span>
               Required to generate the text descriptions via LLM.
             </p>
+          </div>
+
+          <Separator />
+
+          {/* AI SDK Provider Keys */}
+          <div className="flex flex-col gap-4">
+            <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              AI Provider Keys (Optional)
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Configure additional AI providers for more model options.
+              OpenRouter will continue to work as the default provider.
+            </p>
+
+            {/* Dynamically render API key inputs for enabled providers (excluding openrouter) */}
+            {Object.entries(modelMappings.providers)
+              .filter(
+                ([providerId, providerData]: [string, { enabled: boolean }]) =>
+                  providerId !== "openrouter" && providerData.enabled,
+              )
+              .sort(
+                (
+                  [, a]: [string, { sortRank: number }],
+                  [, b]: [string, { sortRank: number }],
+                ) => a.sortRank - b.sortRank,
+              )
+              .map(([providerId, providerData]: [string, { name: string }]) => {
+                // Map provider IDs to their state and setters
+                const keyConfig: Record<
+                  string,
+                  { value: string; setter: (val: string) => void; url: string }
+                > = {
+                  openai: {
+                    value: localOpenAIKey,
+                    setter: setLocalOpenAIKey,
+                    url: "https://platform.openai.com/api-keys",
+                  },
+                  anthropic: {
+                    value: localAnthropicKey,
+                    setter: setLocalAnthropicKey,
+                    url: "https://console.anthropic.com/",
+                  },
+                  google: {
+                    value: localGoogleKey,
+                    setter: setLocalGoogleKey,
+                    url: "https://makersuite.google.com/app/apikey",
+                  },
+                  groq: {
+                    value: localGroqKey,
+                    setter: setLocalGroqKey,
+                    url: "https://console.groq.com/keys",
+                  },
+                  cerebras: {
+                    value: localCerebrasKey,
+                    setter: setLocalCerebrasKey,
+                    url: "https://https://cloud.cerebras.ai",
+                  },
+                };
+
+                const config = keyConfig[providerId];
+                if (!config) return null;
+
+                return (
+                  <div key={providerId} className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">
+                        {providerData.name}
+                      </Label>
+                      <a
+                        href={config.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 group"
+                      >
+                        Get Key
+                        <IconExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                      </a>
+                    </div>
+                    <ApiKeyInput
+                      value={config.value}
+                      onChange={config.setter}
+                      placeholder="Enter API Key..."
+                      icon={
+                        <ProviderLogo
+                          provider={providerId as AIProviderType}
+                          size={20}
+                        />
+                      }
+                    />
+                  </div>
+                );
+              })}
           </div>
 
           <Separator />
@@ -598,6 +902,7 @@ function SettingsForm({
               <ThemeToggle variant="full" />
             </div>
           </div>
+
         </TabsContent>
 
         <TabsContent value="templates" className="mt-4">
@@ -653,6 +958,7 @@ function SettingsForm({
           disabled={isSaving}
           className="w-full gap-2 shadow-lg"
           size="lg"
+          id="settings-save-btn"
         >
           {isSaving ? (
             <>
@@ -677,23 +983,95 @@ function SettingsForm({
 }
 
 // ============================================
-// Main Options App Component
+// Options App Content Component (Inner)
 // ============================================
-export function OptionsApp() {
+function OptionsAppContent() {
   const {
     githubToken,
     openRouterKey,
+    openaiKey,
+    anthropicKey,
+    googleKey,
+    groqKey,
+    cerebrasKey,
     devMode,
     devPrUrl,
     isLoading,
     isSaving,
     load,
     save,
+    settingsOnboardingCompleted,
+    settingsOnboardingStarted,
+    setSettingsOnboardingStarted,
+    resetSettingsOnboarding,
   } = useSettingsStore();
+  const { startNextStep, currentStep, currentTour } = useNextStep();
+  const {
+    trackPageView,
+    trackOnboardingStep,
+    trackOnboardingCompleted,
+    trackTourRestarted,
+  } = useAnalytics();
+  const onboardingStartTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Track page view when options page loads
+  useEffect(() => {
+    trackPageView("options");
+  }, [trackPageView]);
+
+  // Auto-start settings onboarding on fresh install
+  useEffect(() => {
+    if (isLoading) return;
+
+    const hasGithubToken = !!githubToken;
+    const hasOpenRouterKey = !!openRouterKey;
+
+    // Start onboarding if no API keys and onboarding hasn't been completed or started
+    if (!hasGithubToken && !hasOpenRouterKey && !settingsOnboardingCompleted && !settingsOnboardingStarted) {
+      const timer = setTimeout(() => {
+        setSettingsOnboardingStarted(true);
+        onboardingStartTimeRef.current = Date.now();
+        startNextStep("settingsOnboarding");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, githubToken, openRouterKey, settingsOnboardingCompleted, settingsOnboardingStarted, setSettingsOnboardingStarted, startNextStep]);
+
+  // Track onboarding steps (currentStep is a number - the step index starting from 0)
+  useEffect(() => {
+    if (currentTour === "settingsOnboarding" && typeof currentStep === "number") {
+      const stepNumber = currentStep + 1; // Convert 0-indexed to 1-indexed
+      const totalSteps = 5; // Total steps in settings onboarding
+      const stepNames = [
+        "Welcome to PR Buddy Setup",
+        "GitHub Token",
+        "OpenRouter Key",
+        "Save Your Keys",
+        "You're Ready!",
+      ];
+      const stepId = `settings_step_${stepNumber}`;
+
+      trackOnboardingStep({
+        step_id: stepId,
+        step_name: stepNames[currentStep] || `Step ${stepNumber}`,
+        step_number: stepNumber,
+        total_steps: totalSteps,
+      });
+
+      // Track completion on last step
+      if (currentStep === totalSteps - 1 && onboardingStartTimeRef.current) {
+        const duration = Date.now() - onboardingStartTimeRef.current;
+        trackOnboardingCompleted({
+          total_steps_completed: totalSteps,
+          duration_ms: duration,
+        });
+      }
+    }
+  }, [currentTour, currentStep, trackOnboardingStep, trackOnboardingCompleted]);
 
   if (isLoading) {
     return (
@@ -722,7 +1100,7 @@ export function OptionsApp() {
                 className="w-fit -ml-2 gap-1 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   window.dispatchEvent(
-                    new CustomEvent("dev-navigate", { detail: { path: "/" } })
+                    new CustomEvent("dev-navigate", { detail: { path: "/" } }),
                   );
                 }}
               >
@@ -732,11 +1110,9 @@ export function OptionsApp() {
             )}
             <div className="flex items-center justify-center sm:justify-start gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-                <IconPuzzle className="w-7 h-7" />
+                <IconSettings className="w-7 h-7" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Extension Settings
-              </h1>
+              <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
             </div>
             <p className="text-muted-foreground text-lg leading-relaxed max-w-xl">
               Configure your API keys to enable AI-generated PR descriptions.
@@ -750,11 +1126,40 @@ export function OptionsApp() {
               <SettingsForm
                 initialGithubToken={githubToken || ""}
                 initialOpenRouterKey={openRouterKey || ""}
+                initialOpenAIKey={openaiKey || ""}
+                initialAnthropicKey={anthropicKey || ""}
+                initialGoogleKey={googleKey || ""}
+                initialGroqKey={groqKey || ""}
+                initialCerebrasKey={cerebrasKey || ""}
                 initialDevMode={devMode || false}
                 initialDevPrUrl={devPrUrl || ""}
                 isSaving={isSaving}
                 onSave={save}
               />
+
+              {/* Restart Tours */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                <Label className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Onboarding Tours
+                </Label>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Restart the setup guide to configure API keys.
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      trackTourRestarted({ tour_name: "settingsOnboarding" });
+                      resetSettingsOnboarding();
+                      startNextStep("settingsOnboarding");
+                    }}
+                  >
+                    <IconHelp className="mr-2 h-4 w-4" />
+                    Restart Setup Guide
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -775,5 +1180,23 @@ export function OptionsApp() {
         </div>
       </main>
     </div>
+  );
+}
+
+// ============================================
+// Main Options App Component
+// ============================================
+export function OptionsApp() {
+  return (
+    <NextStepProvider>
+      <NextStepReact
+        steps={settingsTourSteps}
+        cardComponent={SettingsTourCard}
+        shadowRgb="0, 0, 0"
+        shadowOpacity="0.85"
+      >
+        <OptionsAppContent />
+      </NextStepReact>
+    </NextStepProvider>
   );
 }

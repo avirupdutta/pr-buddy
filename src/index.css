@@ -42,9 +42,9 @@
 }
 
 .dark {
-    --background: oklch(0.13 0.028 261.692);
+    --background: #070416;
     --foreground: oklch(0.985 0.002 247.839);
-    --card: oklch(0.21 0.034 264.665);
+    --card: rgb(10, 5, 30);
     --card-foreground: oklch(0.985 0.002 247.839);
     --popover: oklch(0.21 0.034 264.665);
     --popover-foreground: oklch(0.985 0.002 247.839);
@@ -52,7 +52,7 @@
     --primary-foreground: oklch(0.96 0.02 272);
     --secondary: oklch(0.274 0.006 286.033);
     --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.278 0.033 256.848);
+    --muted: #141236;
     --muted-foreground: oklch(0.707 0.022 261.325);
     --accent: oklch(0.278 0.033 256.848);
     --accent-foreground: oklch(0.985 0.002 247.839);
@@ -127,4 +127,237 @@
   html {
     @apply font-sans;
     }
+}
+
+.shimmer-metallic {
+  background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.85), rgba(255,255,255,0.3));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Skeleton Loading Animation */
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+.dark .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-metallic {
+    animation: none;
+  }
+}
+
+
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border)) !important;
+    border-radius: 3px;
+    border: 1px solid transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground)) !important;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-corner {
+    background: transparent !important;
+  }
+  
+  .scrollbar-beautiful {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)) transparent;
+  }
+  
+  .scrollbar-beautiful::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .scrollbar-beautiful::-webkit-scrollbar-track {
+    background: transparent !important;
+    border-radius: 4px;
+  }
+  
+  .scrollbar-beautiful::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary)) !important;
+    border-radius: 4px;
+    border: 2px solid transparent;
+  }
+  
+  .scrollbar-beautiful::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary-foreground)) !important;
+  }
+  
+  .scrollbar-beautiful::-webkit-scrollbar-corner {
+    background: transparent !important;
+  }
+  
+  /* Dark theme scrollbar overrides */
+  .dark .scrollbar-beautiful::-webkit-scrollbar-track {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .dark .scrollbar-beautiful::-webkit-scrollbar-thumb {
+    background: oklch(0.59 0.20 277) !important;
+    background-color: oklch(0.59 0.20 277) !important;
+    border-color: transparent;
+  }
+
+  .dark .scrollbar-beautiful::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.96 0.02 272) !important;
+    background-color: oklch(0.96 0.02 272) !important;
+  }
+  
+  .dark .scrollbar-beautiful::-webkit-scrollbar-corner {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .dark .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: oklch(1 0 0 / 10%) !important;
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: oklch(0.707 0.022 261.325) !important;
+  }
+  
+  .dark .scrollbar-thin::-webkit-scrollbar-corner {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  /* Force transparent backgrounds for all scrollbars in dark mode */
+  .dark *::-webkit-scrollbar-track {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  .dark *::-webkit-scrollbar-corner {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+/* Fix for Radix ScrollArea display issue: override inline display: table */
+[data-radix-scroll-area-viewport] > div {
+  display: block !important;
+  height: 100%;
+}
+
+/* Dropdown fade-up animation */
+@keyframes dropdown-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-dropdown-fade-up {
+  animation: dropdown-fade-up 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Dropdown fade-up animation for top-positioned popovers */
+@keyframes dropdown-fade-up-top {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-dropdown-fade-up-top {
+  animation: dropdown-fade-up-top 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Fix for NextStepJS wrapper divs height in Chrome extension popup */
+[data-name="nextstep-wrapper"],
+[data-name="nextstep-site"] {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* NextStepJS overlay - darker in dark mode for better contrast */
+[data-nextstep-spotlight] {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75) !important;
+}
+
+.dark [data-nextstep-spotlight] {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Alternative: style the overlay backdrop if it uses a different selector */
+[data-nextstep-overlay],
+[data-nextstep-backdrop] {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.dark [data-nextstep-overlay],
+.dark [data-nextstep-backdrop] {
+  background-color: rgba(0, 0, 0, 0.9) !important;
 }
