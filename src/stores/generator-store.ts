@@ -234,6 +234,26 @@ export const useGeneratorStore = create<GeneratorState>((set, get) => ({
             if (abortController.signal.aborted) {
               return;
             }
+
+            const completionDescription = data.description?.trim() || "";
+            const streamedDescription = fullContent.trim();
+            const selectedProvider = selectedModel?.provider || "unknown";
+            const selectedModelId = selectedModel?.modelId || "unknown";
+
+            // Guard: never treat an empty completion as success.
+            // This happens when the background posts `complete` even though the provider errored.
+            if (
+              completionDescription.length === 0 &&
+              streamedDescription.length === 0
+            ) {
+              reject(
+                new Error(
+                  `No response content from ${selectedProvider}/${selectedModelId}. This usually means the provider rejected the request (for example: 413/token limits). Try a smaller diff/context or switch model.`,
+                ),
+              );
+              return;
+            }
+
             set({
               isGenerating: false,
               isRegenerating: false,

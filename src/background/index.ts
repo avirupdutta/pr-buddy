@@ -19,6 +19,7 @@ import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 import { sendToastNotification } from "@/services/notifications";
 import { aiServiceAdapter } from "@/services/ai-service-adapter";
 import { createAISDKService } from "@/services/ai-sdk-service";
+import { parsePRResponseFromRawText } from "@/services/pr-response-parser";
 import modelMappings from "@/data/model-mappings.json";
 
 // Get structured output setting from storage
@@ -108,14 +109,24 @@ chrome.runtime.onMessage.addListener(
     if (request.action === "GENERATE_DESCRIPTION") {
       handleGeneration(request.url, request.settings)
         .then((result) => sendResponse(result))
-        .catch((err) => sendResponse({ success: false, error: err.message }));
+        .catch((err) => {
+          const errorMessage =
+            err instanceof Error ? err.message : "Generation failed";
+          sendToastNotification(`API Error: ${errorMessage}`, "error");
+          sendResponse({ success: false, error: errorMessage });
+        });
       return true; // Async response
     }
 
     if (request.action === "UPDATE_PR_DESCRIPTION") {
       handleUpdatePR(request.url, request.description, request.title)
         .then((result) => sendResponse(result))
-        .catch((err) => sendResponse({ success: false, error: err.message }));
+        .catch((err) => {
+          const errorMessage =
+            err instanceof Error ? err.message : "Update failed";
+          sendToastNotification(`API Error: ${errorMessage}`, "error");
+          sendResponse({ success: false, error: errorMessage });
+        });
       return true; // Async response
     }
 
@@ -655,27 +666,49 @@ Generate the TITLE and DESCRIPTION now in the requested format.`;
       stream: true,
     });
 
+    let sawAnyContent = false;
+    let lastTitle = "";
+    let lastDescription = "";
+
     for await (const chunk of stream) {
       if (chunk.type === "error" && chunk.error) {
-        throw new Error(chunk.error);
+        // Ensure UI sees the error (no silent completes)
+        port.postMessage({ type: "error", error: chunk.error });
+        sendToastNotification(`AI Generation Error: ${chunk.error}`, "error");
+        return;
       }
       if (chunk.type === "chunk" && chunk.content) {
+        sawAnyContent = true;
+        lastDescription = chunk.content;
+        if (chunk.title) lastTitle = chunk.title;
         port.postMessage({ type: "chunk", content: chunk.content });
       }
       if (chunk.type === "complete") {
-        port.postMessage({
-          type: "complete",
-          data: chunk.data || {
-            success: true,
-            description: "",
-            title: "",
-            prDetails: {
-              owner: metadata.base.ref.split(":")[0] || "unknown",
-              repo: "unknown",
-              number: "0",
-            },
+        const finalData = chunk.data || {
+          success: true,
+          description: lastDescription,
+          title: lastTitle,
+          prDetails: {
+            owner: metadata.base.ref.split(":")[0] || "unknown",
+            repo: "unknown",
+            number: "0",
           },
-        });
+        };
+
+        const isEmpty =
+          (!finalData.description || finalData.description.trim().length === 0) &&
+          (!sawAnyContent || !lastDescription || lastDescription.trim().length === 0) &&
+          (!finalData.title || finalData.title.trim().length === 0);
+
+        if (isEmpty) {
+          const msg =
+            `No response content from ${model.provider || "unknown"}/${model.modelId}. This usually means the provider rejected the request (for example: 413/token limits). Try a smaller diff/context or switch model.`;
+          port.postMessage({ type: "error", error: msg });
+          sendToastNotification(`AI Generation Error: ${msg}`, "error");
+          return;
+        }
+
+        port.postMessage({ type: "complete", data: finalData });
       }
     }
   } catch (error) {
@@ -686,6 +719,10 @@ Generate the TITLE and DESCRIPTION now in the requested format.`;
       sendToastNotification(`AI Generation Error: ${error.message}`, "error");
     }
 
+    // Make sure the popup always gets an error message
+    const errorMessage =
+      error instanceof Error ? error.message : "Generation failed";
+    port.postMessage({ type: "error", error: errorMessage });
     throw error;
   }
 }
@@ -801,7 +838,10 @@ Generate the JSON response with title and description now.`;
   const content = data.choices[0].message.content;
 
   try {
-    const parsed = JSON.parse(content);
+    const parsed = parsePRResponseFromRawText(content);
+    if (!parsed) {
+      throw new Error("Could not parse structured response");
+    }
     const shouldGenerateTitle = settings.generateTitle ?? false;
     return {
       title: shouldGenerateTitle
@@ -892,14 +932,20 @@ Generate the ${
     });
 
     let lastSentContent = "";
+    let sawAnyContent = false;
+    let lastTitle = "";
+    let lastDescription = "";
 
     for await (const event of stream) {
       if (event.type === "error") {
         port.postMessage({ type: "error", error: event.error });
-        throw new Error(event.error);
+        sendToastNotification(`AI Generation Error: ${event.error}`, "error");
+        return;
       }
 
       if (event.type === "partial" && event.data) {
+        if (event.data.title) lastTitle = event.data.title;
+        if (event.data.description) lastDescription = event.data.description;
         // Convert structured output to existing format
         // Only include the separator if we have both title and description
         const hasTitle = !!event.data.title;
@@ -918,6 +964,7 @@ Generate the ${
 
         // Only send if content is new and not empty
         if (content && content !== lastSentContent) {
+          sawAnyContent = true;
           const newContent = content.replace(lastSentContent, "");
           if (newContent) {
             port.postMessage({ type: "chunk", content: newContent });
@@ -927,12 +974,25 @@ Generate the ${
       }
 
       if (event.type === "complete") {
+        const isEmpty =
+          (!lastDescription || lastDescription.trim().length === 0) &&
+          (!sawAnyContent || !lastSentContent || lastSentContent.trim().length === 0) &&
+          (!lastTitle || lastTitle.trim().length === 0);
+
+        if (isEmpty) {
+          const msg =
+            `No response content from ${model.provider || "unknown"}/${model.modelId}. This usually means the provider rejected the request (for example: 413/token limits). Try a smaller diff/context or switch model.`;
+          port.postMessage({ type: "error", error: msg });
+          sendToastNotification(`AI Generation Error: ${msg}`, "error");
+          return;
+        }
+
         port.postMessage({
           type: "complete",
           data: {
             success: true,
-            description: "",
-            title: "",
+            description: lastDescription || "",
+            title: lastTitle || "",
             prDetails: {
               owner: metadata.base.ref.split(":")[0] || "unknown",
               repo: "unknown",
@@ -950,6 +1010,9 @@ Generate the ${
       sendToastNotification(`AI Generation Error: ${error.message}`, "error");
     }
 
+    const errorMessage =
+      error instanceof Error ? error.message : "Generation failed";
+    port.postMessage({ type: "error", error: errorMessage });
     throw error;
   }
 }

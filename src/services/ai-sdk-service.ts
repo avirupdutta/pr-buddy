@@ -5,6 +5,7 @@ import {
   getProviderStructuredOutputCapabilities,
   modelSupportsJsonSchema,
   getModelReasoningEffort,
+  type AIProviderType,
 } from "./ai-provider-registry";
 import type { AIModel, GenerateResponse } from "@/types/chrome";
 import type {
@@ -14,18 +15,151 @@ import type {
   StructuredStreamEvent,
 } from "@/types/structured-output";
 import { PRResponseSchema } from "@/types/structured-output";
+import { parsePRResponseFromRawText } from "./pr-response-parser";
 
-/**
- * Helper function to strip markdown code blocks from text
- * Handles both ```json and ``` code blocks
- */
-function stripMarkdownCodeBlocks(text: string): string {
-  // Match code blocks with optional language specifier
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-  if (codeBlockMatch) {
-    return codeBlockMatch[1].trim();
+function truncateForUI(text: string, max = 1600): string {
+  if (text.length <= max) return text;
+  return text.slice(0, Math.max(0, max - 3)) + "...";
+}
+
+function extractProviderErrorMessageFromBody(body: unknown): string | null {
+  if (!body) return null;
+
+  // Body might already be an object
+  if (typeof body === "object") {
+    const maybe = body as Record<string, unknown>;
+    const err = maybe.error as Record<string, unknown> | undefined;
+    const message = (err?.message ?? maybe.message) as unknown;
+    return typeof message === "string" && message.trim() ? message.trim() : null;
   }
-  return text;
+
+  if (typeof body !== "string") return null;
+  const trimmed = body.trim();
+  if (!trimmed) return null;
+
+  // Try parse JSON
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      return extractProviderErrorMessageFromBody(parsed);
+    } catch {
+      // fall through
+    }
+  }
+
+  return trimmed;
+}
+
+function extractNestedErrorMessage(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+
+  const queue: unknown[] = [error];
+  const seen = new Set<unknown>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object" || seen.has(current)) continue;
+    seen.add(current);
+
+    const obj = current as Record<string, unknown>;
+
+    const directMessage =
+      typeof obj.message === "string" && obj.message.trim()
+        ? obj.message.trim()
+        : null;
+    if (directMessage && !/^\[object Object\]$/i.test(directMessage)) {
+      return directMessage;
+    }
+
+    const providerMessage = extractProviderErrorMessageFromBody(
+      obj.error ?? obj.body ?? obj.responseBody,
+    );
+    if (providerMessage) return providerMessage;
+
+    const nestedCandidates = [
+      obj.cause,
+      obj.error,
+      obj.response,
+      obj.data,
+      obj.value,
+    ];
+    for (const candidate of nestedCandidates) {
+      if (candidate && typeof candidate === "object") queue.push(candidate);
+    }
+  }
+
+  return null;
+}
+
+function formatAISDKErrorMessage(error: unknown): string {
+  const seen = new Set<unknown>();
+
+  const unwrap = (err: unknown): unknown => {
+    if (!err || typeof err !== "object") return err;
+    if (seen.has(err)) return err;
+    seen.add(err);
+
+    const anyErr = err as Record<string, unknown>;
+    return anyErr.cause && typeof anyErr.cause === "object" ? anyErr.cause : err;
+  };
+
+  const err = unwrap(error);
+
+  const anyErr = (err && typeof err === "object" ? (err as Record<string, unknown>) : null);
+  const status =
+    (anyErr?.statusCode as number | undefined) ??
+    (anyErr?.status as number | undefined);
+  const url = typeof anyErr?.url === "string" ? (anyErr.url as string) : undefined;
+  const responseBody =
+    anyErr?.responseBody ??
+    anyErr?.body ??
+    (anyErr?.response as Record<string, unknown> | undefined)?.body;
+
+  const bodyMessage = extractProviderErrorMessageFromBody(responseBody);
+
+  let message = "";
+  if (bodyMessage) {
+    message = bodyMessage;
+  } else {
+    const nestedMessage = extractNestedErrorMessage(err);
+    if (nestedMessage) {
+      message = nestedMessage;
+    }
+  }
+
+  if (!message) {
+    const errorCode = typeof anyErr?.code === "string" ? anyErr.code : "";
+    const errorType = typeof anyErr?.type === "string" ? anyErr.type : "";
+    const hint = [errorType, errorCode].filter(Boolean).join("/");
+    if (hint) {
+      message = `Request failed (${hint})`;
+    }
+  }
+
+  if (!message) {
+    const statusText =
+      typeof anyErr?.statusText === "string" ? anyErr.statusText : "";
+    if (statusText) message = statusText;
+  }
+
+  if (!message) {
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (typeof anyErr?.message === "string") {
+      message = anyErr.message as string;
+    } else {
+      message = "Unknown error";
+    }
+  }
+
+  message = message.replace(/^AI SDK Error:\s*/i, "").trim();
+
+  const parts: string[] = [];
+  if (typeof status === "number") parts.push(`HTTP ${status}`);
+  if (url) parts.push(url);
+  parts.push(message);
+
+  return truncateForUI(parts.filter(Boolean).join(": "));
 }
 
 // Request parameters interface (matching existing implementation)
@@ -80,8 +214,24 @@ export class AISDKService {
 
   private getModelIdentifier(model: AIModel): `${string}:${string}` {
     // For direct provider calls, use provider:modelId format
-    const provider = model.provider || "openrouter";
+    const provider = this.resolveProvider(model);
     return `${provider}:${model.modelId}` as `${string}:${string}`;
+  }
+
+  private resolveProvider(model: AIModel): AIProviderType {
+    const provider = (model.provider || "").toLowerCase();
+    if (
+      provider === "openai" ||
+      provider === "anthropic" ||
+      provider === "google" ||
+      provider === "groq" ||
+      provider === "cerebras" ||
+      provider === "openrouter"
+    ) {
+      return provider;
+    }
+
+    return extractProviderFromModel(model.modelId);
   }
 
   async generateText(params: AIRequestParams): Promise<GenerateResponse> {
@@ -89,7 +239,7 @@ export class AISDKService {
 
     try {
       const modelId = this.getModelIdentifier(params.model);
-      const modelProvider = params.model.provider || "openrouter";
+      const modelProvider = this.resolveProvider(params.model);
 
       // DEBUG: Log reasoning effort lookup
       const reasoningEffort = getModelReasoningEffort(
@@ -140,11 +290,7 @@ export class AISDKService {
         prDetails: { owner: "", repo: "", number: "" }, // TODO: Pass actual PR details from caller
       };
     } catch (error) {
-      throw new Error(
-        `AI SDK Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-      );
+      throw new Error(`AI SDK Error: ${formatAISDKErrorMessage(error)}`);
     }
   }
 
@@ -217,9 +363,7 @@ export class AISDKService {
       };
     } catch (error) {
       yield {
-        error: `AI SDK Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
         isComplete: true,
       };
     }
@@ -249,7 +393,7 @@ export class AISDKService {
     params: AIRequestParams,
   ): Promise<StructuredOutputResult | StructuredOutputError> {
     const registry = this.initializeRegistry();
-    const provider = extractProviderFromModel(params.model.modelId);
+    const provider = this.resolveProvider(params.model);
     const capabilities = getProviderStructuredOutputCapabilities(provider);
     const modelId = this.getModelIdentifier(params.model);
 
@@ -315,9 +459,7 @@ export class AISDKService {
 
       return {
         success: false,
-        error: `AI SDK Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
         provider,
         model: params.model.modelId,
       };
@@ -339,7 +481,7 @@ export class AISDKService {
     modelId: string,
   ): Promise<StructuredOutputResult | StructuredOutputError> {
     const registry = this.initializeRegistry();
-    const modelProvider = params.model.provider || "openrouter";
+    const modelProvider = this.resolveProvider(params.model);
 
     try {
       const { text } = await generateText({
@@ -367,43 +509,14 @@ export class AISDKService {
         }),
       });
 
-      // Try to parse JSON from the response
-      try {
-        // Strip markdown code blocks if present
-        const cleanedText = stripMarkdownCodeBlocks(text);
-        
-        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          const validated = PRResponseSchema.parse(parsed);
-
-          return {
-            success: true,
-            data: validated,
-            provider,
-            model: params.model.modelId,
-          };
-        }
-      } catch {
-        // If JSON parsing fails, try to extract title and description from text
-        const titleMatch = text.match(/TITLE: (.+?)(?=\n\nDESCRIPTION:|$)/s);
-        const descriptionMatch = text.match(/DESCRIPTION: (.+?)$/s);
-
-        if (descriptionMatch) {
-          const result = {
-            title: titleMatch ? titleMatch[1].trim() : undefined,
-            description: descriptionMatch[1].trim(),
-          };
-
-          const validated = PRResponseSchema.parse(result);
-
-          return {
-            success: true,
-            data: validated,
-            provider,
-            model: params.model.modelId,
-          };
-        }
+      const parsed = parsePRResponseFromRawText(text);
+      if (parsed) {
+        return {
+          success: true,
+          data: parsed,
+          provider,
+          model: params.model.modelId,
+        };
       }
 
       // If all parsing fails, treat entire text as description
@@ -422,9 +535,7 @@ export class AISDKService {
     } catch (error) {
       return {
         success: false,
-        error: `JSON fallback failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        error: `JSON fallback failed: ${formatAISDKErrorMessage(error)}`,
         provider,
         model: params.model.modelId,
       };
@@ -436,7 +547,7 @@ export class AISDKService {
     params: AIRequestParams,
   ): AsyncGenerator<StructuredStreamEvent> {
     const registry = this.initializeRegistry();
-    const provider = extractProviderFromModel(params.model.modelId);
+    const provider = this.resolveProvider(params.model);
     const capabilities = getProviderStructuredOutputCapabilities(provider);
     const modelId = this.getModelIdentifier(params.model);
 
@@ -493,9 +604,7 @@ export class AISDKService {
         } catch (error) {
           yield {
             type: "error",
-            error: `AI SDK Error: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`,
+            error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
           };
           return;
         }
@@ -542,32 +651,21 @@ export class AISDKService {
           } catch (error) {
             yield {
               type: "error",
-              error: `AI SDK Error: ${
-                error instanceof Error ? error.message : "Unknown error"
-              }`,
+              error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
             };
             return;
           }
           
-          // Try to parse JSON and extract structured data
-          try {
-            // Strip markdown code blocks if present
-            const cleanedText = stripMarkdownCodeBlocks(accumulatedText);
-            
-            const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              yield {
-                type: "partial",
-                data: {
-                  title: parsed.title,
-                  description: parsed.description,
-                  isComplete: false,
-                },
-              };
-            }
-          } catch {
-            // JSON parsing failed, accumulatedText will be used as description
+          const parsed = parsePRResponseFromRawText(accumulatedText);
+          if (parsed) {
+            yield {
+              type: "partial",
+              data: {
+                title: parsed.title,
+                description: parsed.description,
+                isComplete: false,
+              },
+            };
           }
 
           yield {
@@ -576,9 +674,7 @@ export class AISDKService {
         } catch (error) {
           yield {
             type: "error",
-            error: `AI SDK Error: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`,
+            error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
           };
           return;
         }
@@ -586,9 +682,7 @@ export class AISDKService {
     } catch (error) {
       yield {
         type: "error",
-        error: `AI SDK Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        error: `AI SDK Error: ${formatAISDKErrorMessage(error)}`,
       };
     }
   }

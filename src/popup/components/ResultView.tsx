@@ -9,7 +9,6 @@ import {
   IconEye,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +33,39 @@ import ModelSelector from "./ModelSelector";
 import TemplateSelector from "./TemplateSelector";
 import FluentRecordStopFilled from "@/components/icons/FluentRecordStopFilled";
 import { useAnalytics } from "@/services/analytics";
+
+// Utility functions for JSON parsing
+const isJsonContent = (content: string): boolean => {
+  try {
+    const trimmed = content.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || 
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      JSON.parse(trimmed);
+      return true;
+    }
+    // Also handle case where content might have trailing whitespace/newlines
+    if ((content.trimStart().startsWith('{') && /}\s*$/.test(content)) ||
+        (content.trimStart().startsWith('[') && /\]\s*$/.test(content))) {
+      JSON.parse(content.trim());
+      return true;
+    }
+  } catch {
+    // Not JSON
+  }
+  return false;
+};
+
+const parseJsonDescription = (content: string): string | null => {
+  try {
+    const parsed = JSON.parse(content.trim());
+    if (parsed && typeof parsed === 'object' && 'description' in parsed) {
+      return parsed.description;
+    }
+  } catch {
+    // Invalid JSON
+  }
+  return null;
+};
 
 interface ResultViewProps {
   currentUrl: string;
@@ -91,6 +123,7 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     generate,
     isGenerating,
     isRegenerating,
+    error,
     reset,
     hasRegenerated,
     setHasRegenerated,
@@ -120,6 +153,18 @@ export function ResultView({ currentUrl }: ResultViewProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
+  const lastToastErrorRef = useRef<string | null>(null);
+
+  // Show an alert toast when generation fails (covers background failures too)
+  useEffect(() => {
+    if (!error) {
+      lastToastErrorRef.current = null;
+      return;
+    }
+    if (lastToastErrorRef.current === error) return;
+    toast.error(error);
+    lastToastErrorRef.current = error;
+  }, [error]);
 
   // Auto-scroll to bottom during generation
   useEffect(() => {
@@ -160,14 +205,34 @@ export function ResultView({ currentUrl }: ResultViewProps) {
     }
   }, [generatedDescription, isGenerating, generateTitle]);
 
+  // Process generated description for JSON and markdown formatting
   useEffect(() => {
     if (!isGenerating && generatedDescription) {
-      const trimmed = generatedDescription.trim();
+      let processedDescription = generatedDescription;
+      let needsUpdate = false;
+      
+      // First, check if content is JSON and extract description field
+      if (isJsonContent(processedDescription)) {
+        const parsedDescription = parseJsonDescription(processedDescription);
+        if (parsedDescription) {
+          processedDescription = parsedDescription;
+          needsUpdate = true;
+        }
+      }
+      
+      // Then, handle markdown formatting if present
+      const trimmed = processedDescription.trim();
       if (trimmed.startsWith("```markdown") && trimmed.endsWith("```")) {
         const cleaned = trimmed
           .replace(/^```markdown\s*/, "")
           .replace(/\s*```$/, "");
-        setGeneratedDescription(cleaned);
+        processedDescription = cleaned;
+        needsUpdate = true;
+      }
+      
+      // Only update state if we made changes
+      if (needsUpdate && processedDescription !== generatedDescription) {
+        setGeneratedDescription(processedDescription);
       }
     }
   }, [generatedDescription, isGenerating, setGeneratedDescription]);

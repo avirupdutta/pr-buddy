@@ -64,20 +64,33 @@ export function streamDescription(
     name: "GENERATE_DESCRIPTION_STREAM",
   });
 
-   port.onMessage.addListener((msg: {type: 'chunk' | 'complete' | 'error', content?: string, data?: GenerateResponse, error?: string}) => {
+  let finished = false;
+  let manuallyDisconnected = false;
+ 
+  port.onMessage.addListener(
+    (msg: {
+      type: "chunk" | "complete" | "error";
+      content?: string;
+      data?: GenerateResponse;
+      error?: string;
+    }) => {
     if (msg.type === "chunk" && msg.content) {
       onChunk(msg.content);
     } else if (msg.type === "complete" && msg.data) {
+      finished = true;
       onComplete(msg.data);
     } else if (msg.type === "error") {
+      finished = true;
       onError(msg.error || "Unknown error");
     }
-  });
-
+    },
+  );
+ 
   port.onDisconnect.addListener(() => {
-    if (chromeAPI.runtime.lastError) {
-      onError(chromeAPI.runtime.lastError.message || "Connection disconnected");
-    }
+    if (manuallyDisconnected || finished) return;
+
+    const lastErrorMessage = chromeAPI.runtime.lastError?.message;
+    onError(lastErrorMessage || "Connection lost while generating. Please try again.");
   });
 
   // Send initial request
@@ -86,6 +99,7 @@ export function streamDescription(
   // Return disconnect function
   return () => {
     try {
+      manuallyDisconnected = true;
       port.disconnect();
     } catch {
       // Ignore if already disconnected

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { IconSparkles, IconSettings } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,17 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
   const hasSelectedModel = !!settingsStore.getActiveModel();
   const { trackGenerateClicked, trackButtonClick } = useAnalytics();
   const activeModel = settingsStore.getActiveModel();
+  const lastToastErrorRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!error) {
+      lastToastErrorRef.current = null;
+      return;
+    }
+    if (lastToastErrorRef.current === error) return;
+    toast.error(error);
+    lastToastErrorRef.current = error;
+  }, [error]);
 
   const handleGenerate = async () => {
     if (!currentUrl || !currentUrl.includes("github.com/")) {
@@ -68,11 +80,6 @@ export function GeneratorView({ currentUrl }: GeneratorViewProps) {
       toast.error(err instanceof Error ? err.message : "Generation failed");
     }
   };
-
-  // Show error if any
-  if (error) {
-    toast.error(error);
-  }
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden px-0">

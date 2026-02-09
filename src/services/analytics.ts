@@ -51,6 +51,14 @@ class AnalyticsService {
       capture_pageleave: false,
       autocapture: false, // We'll capture events manually for better control
       disable_session_recording: true, // Disable for privacy in extension
+      // Chrome Extensions (MV3) disallow loading remote scripts in extension pages.
+      // PostHog can lazy-load external dependencies (e.g. remote config / dead-clicks)
+      // via <script src="https://us-assets.i.posthog.com/..."> which gets blocked by CSP.
+      disable_external_dependency_loading: true,
+      // Further reduce reliance on remote config/decide endpoints.
+      advanced_disable_decide: true,
+      advanced_disable_feature_flags: true,
+      advanced_disable_flags: true,
       persistence: "localStorage", // Use localStorage for extension context
       loaded: () => {
         this.isInitialized = true;
