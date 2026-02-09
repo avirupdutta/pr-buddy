@@ -19,6 +19,7 @@ import { DEFAULT_AI_MODELS, DEFAULT_TEMPLATES } from "@/stores/settings-store";
 import { sendToastNotification } from "@/services/notifications";
 import { aiServiceAdapter } from "@/services/ai-service-adapter";
 import { createAISDKService } from "@/services/ai-sdk-service";
+import { parsePRResponseFromRawText } from "@/services/pr-response-parser";
 import modelMappings from "@/data/model-mappings.json";
 
 // Get structured output setting from storage
@@ -837,7 +838,10 @@ Generate the JSON response with title and description now.`;
   const content = data.choices[0].message.content;
 
   try {
-    const parsed = JSON.parse(content);
+    const parsed = parsePRResponseFromRawText(content);
+    if (!parsed) {
+      throw new Error("Could not parse structured response");
+    }
     const shouldGenerateTitle = settings.generateTitle ?? false;
     return {
       title: shouldGenerateTitle

@@ -5,6 +5,7 @@ import {
   getProviderStructuredOutputCapabilities,
   modelSupportsJsonSchema,
   getModelReasoningEffort,
+  type AIProviderType,
 } from "./ai-provider-registry";
 import type { AIModel, GenerateResponse } from "@/types/chrome";
 import type {
@@ -14,6 +15,7 @@ import type {
   StructuredStreamEvent,
 } from "@/types/structured-output";
 import { PRResponseSchema } from "@/types/structured-output";
+import { parsePRResponseFromRawText } from "./pr-response-parser";
 
 function truncateForUI(text: string, max = 1600): string {
   if (text.length <= max) return text;
@@ -160,19 +162,6 @@ function formatAISDKErrorMessage(error: unknown): string {
   return truncateForUI(parts.filter(Boolean).join(": "));
 }
 
-/**
- * Helper function to strip markdown code blocks from text
- * Handles both ```json and ``` code blocks
- */
-function stripMarkdownCodeBlocks(text: string): string {
-  // Match code blocks with optional language specifier
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-  if (codeBlockMatch) {
-    return codeBlockMatch[1].trim();
-  }
-  return text;
-}
-
 // Request parameters interface (matching existing implementation)
 export interface AIRequestParams {
   model: AIModel;
@@ -225,8 +214,24 @@ export class AISDKService {
 
   private getModelIdentifier(model: AIModel): `${string}:${string}` {
     // For direct provider calls, use provider:modelId format
-    const provider = model.provider || "openrouter";
+    const provider = this.resolveProvider(model);
     return `${provider}:${model.modelId}` as `${string}:${string}`;
+  }
+
+  private resolveProvider(model: AIModel): AIProviderType {
+    const provider = (model.provider || "").toLowerCase();
+    if (
+      provider === "openai" ||
+      provider === "anthropic" ||
+      provider === "google" ||
+      provider === "groq" ||
+      provider === "cerebras" ||
+      provider === "openrouter"
+    ) {
+      return provider;
+    }
+
+    return extractProviderFromModel(model.modelId);
   }
 
   async generateText(params: AIRequestParams): Promise<GenerateResponse> {
@@ -234,7 +239,7 @@ export class AISDKService {
 
     try {
       const modelId = this.getModelIdentifier(params.model);
-      const modelProvider = params.model.provider || "openrouter";
+      const modelProvider = this.resolveProvider(params.model);
 
       // DEBUG: Log reasoning effort lookup
       const reasoningEffort = getModelReasoningEffort(
@@ -388,7 +393,7 @@ export class AISDKService {
     params: AIRequestParams,
   ): Promise<StructuredOutputResult | StructuredOutputError> {
     const registry = this.initializeRegistry();
-    const provider = extractProviderFromModel(params.model.modelId);
+    const provider = this.resolveProvider(params.model);
     const capabilities = getProviderStructuredOutputCapabilities(provider);
     const modelId = this.getModelIdentifier(params.model);
 
@@ -476,7 +481,7 @@ export class AISDKService {
     modelId: string,
   ): Promise<StructuredOutputResult | StructuredOutputError> {
     const registry = this.initializeRegistry();
-    const modelProvider = params.model.provider || "openrouter";
+    const modelProvider = this.resolveProvider(params.model);
 
     try {
       const { text } = await generateText({
@@ -504,43 +509,14 @@ export class AISDKService {
         }),
       });
 
-      // Try to parse JSON from the response
-      try {
-        // Strip markdown code blocks if present
-        const cleanedText = stripMarkdownCodeBlocks(text);
-        
-        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          const validated = PRResponseSchema.parse(parsed);
-
-          return {
-            success: true,
-            data: validated,
-            provider,
-            model: params.model.modelId,
-          };
-        }
-      } catch {
-        // If JSON parsing fails, try to extract title and description from text
-        const titleMatch = text.match(/TITLE: (.+?)(?=\n\nDESCRIPTION:|$)/s);
-        const descriptionMatch = text.match(/DESCRIPTION: (.+?)$/s);
-
-        if (descriptionMatch) {
-          const result = {
-            title: titleMatch ? titleMatch[1].trim() : undefined,
-            description: descriptionMatch[1].trim(),
-          };
-
-          const validated = PRResponseSchema.parse(result);
-
-          return {
-            success: true,
-            data: validated,
-            provider,
-            model: params.model.modelId,
-          };
-        }
+      const parsed = parsePRResponseFromRawText(text);
+      if (parsed) {
+        return {
+          success: true,
+          data: parsed,
+          provider,
+          model: params.model.modelId,
+        };
       }
 
       // If all parsing fails, treat entire text as description
@@ -571,7 +547,7 @@ export class AISDKService {
     params: AIRequestParams,
   ): AsyncGenerator<StructuredStreamEvent> {
     const registry = this.initializeRegistry();
-    const provider = extractProviderFromModel(params.model.modelId);
+    const provider = this.resolveProvider(params.model);
     const capabilities = getProviderStructuredOutputCapabilities(provider);
     const modelId = this.getModelIdentifier(params.model);
 
@@ -680,25 +656,16 @@ export class AISDKService {
             return;
           }
           
-          // Try to parse JSON and extract structured data
-          try {
-            // Strip markdown code blocks if present
-            const cleanedText = stripMarkdownCodeBlocks(accumulatedText);
-            
-            const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              yield {
-                type: "partial",
-                data: {
-                  title: parsed.title,
-                  description: parsed.description,
-                  isComplete: false,
-                },
-              };
-            }
-          } catch {
-            // JSON parsing failed, accumulatedText will be used as description
+          const parsed = parsePRResponseFromRawText(accumulatedText);
+          if (parsed) {
+            yield {
+              type: "partial",
+              data: {
+                title: parsed.title,
+                description: parsed.description,
+                isComplete: false,
+              },
+            };
           }
 
           yield {
